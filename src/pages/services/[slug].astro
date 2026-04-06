@@ -1,0 +1,61 @@
+---
+import "../../styles/global.css";
+import SiteHeader from "../../components/SiteHeader";
+import SiteFooter from "../../components/SiteFooter";
+import { services } from "../../data/site";
+
+export function getStaticPaths() {
+  return services.map((service) => ({
+    params: { slug: service.slug },
+    props: { service },
+  }));
+}
+
+const { service } = Astro.props;
+---
+
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{service.title}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=DM+Sans:wght@400;500&family=Jaldi:wght@400;700&family=JetBrains+Mono:wght@400&family=Manrope:wght@200;400;500&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <main class="bg-white text-[#111] [font-family:DM_Sans,Manrope,'Liberation_Sans',sans-serif]">
+      <SiteHeader />
+      <section class="px-4 py-10 md:px-10 md:py-14">
+        <div class="mx-auto max-w-[1480px]">
+          <p class="text-[13px] uppercase tracking-[1.5px] text-[#7a7a75] [font-family:Jaldi,'JetBrains_Mono',monospace]">Услуги / {service.title}</p>
+          <div class="mt-8 grid gap-10 xl:grid-cols-[0.9fr_1.1fr] xl:items-center">
+            <img src={service.image} alt="" aria-hidden="true" width="800" height="800" class="mx-auto aspect-square w-full max-w-[420px] object-contain" />
+            <div>
+              <h1 class="max-w-[900px] text-[56px] leading-[0.92] md:text-[92px] [font-family:'Cormorant_Garamond',serif]">{service.heroTitle}</h1>
+              <p class="mt-8 max-w-[900px] text-[20px] leading-[1.65] text-[#5d5d58] md:text-[26px]">{service.lead}</p>
+              <div class="mt-10 grid gap-4">
+                {service.bullets.map((bullet) => (
+                  <div class="border border-[#e8e3db] px-6 py-5 text-[17px] leading-7 text-[#5f5f5a]">{bullet}</div>
+                ))}
+              </div>
+              <div class="mt-10 flex flex-wrap gap-4">
+                <a href="/checkout" class="inline-flex h-14 items-center justify-center bg-[#111] px-8 text-[14px] uppercase tracking-[1.5px] text-white [font-family:Jaldi,'JetBrains_Mono',monospace]">
+                  Рассчитать стоимость
+                </a>
+                <a href="/services" class="inline-flex h-14 items-center justify-center border border-[#111] px-8 text-[14px] uppercase tracking-[1.5px] text-[#111] [font-family:Jaldi,'JetBrains_Mono',monospace]">
+                  Все услуги
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <SiteFooter />
+    </main>
+  </body>
+</html>

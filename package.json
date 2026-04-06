@@ -1,0 +1,23 @@
+{
+  "name": "stayse-project",
+  "type": "module",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "node scripts/dev-with-assets.mjs dev",
+    "prebuild": "node scripts/sync-stayse-assets.mjs",
+    "start": "node scripts/dev-with-assets.mjs dev",
+    "build": "astro build",
+    "postbuild": "node scripts/sync-stayse-assets.mjs",
+    "prepreview": "node scripts/sync-stayse-assets.mjs",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "@astrojs/react": "^4.3.0",
+    "@tailwindcss/vite": "^4.1.4",
+    "astro": "^5.7.4",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "tailwindcss": "^4.1.4"
+  }
+}

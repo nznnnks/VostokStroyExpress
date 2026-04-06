@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 220">
+  <rect width="240" height="220" fill="#f8f7f5"/>
+  <rect x="18" y="18" width="204" height="184" fill="#fff" stroke="#e5e3df"/>
+  <circle cx="120" cy="82" r="34" fill="none" stroke="#111" stroke-width="2"/>
+  <path d="M105 104V61h15c12 0 18 7 18 16 0 7-4 12-11 14l14 13h-10l-12-12h-5v12z" fill="#111"/>
+  <text x="120" y="154" font-family="Georgia, serif" font-size="24" text-anchor="middle" fill="#111">BRAND</text>
+  <text x="120" y="182" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#666">recommended</text>
+</svg>
