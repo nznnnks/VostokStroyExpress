@@ -1,8 +1,27 @@
 import SiteFooter from "./SiteFooter";
 import SiteHeader from "./SiteHeader";
-import { newsPosts } from "../data/site";
+import { newsPosts as fallbackNewsPosts } from "../data/site";
+import type { NewsPostView } from "../lib/backend-api";
 
-export function NewsPage() {
+type NewsPageProps = {
+  posts?: NewsPostView[];
+};
+
+function getFallbackNews() {
+  return fallbackNewsPosts.map((post) => ({
+    id: post.slug,
+    slug: post.slug,
+    title: post.title,
+    excerpt: post.excerpt,
+    image: post.image,
+    category: post.category,
+    content: [...post.content],
+    dateLabel: "—",
+    status: "Опубликовано",
+  }));
+}
+
+export function NewsPage({ posts = getFallbackNews() }: NewsPageProps) {
   return (
     <main className="bg-white text-[#111] [font-family:DM_Sans,Manrope,'Liberation_Sans',sans-serif]">
       <SiteHeader />
@@ -13,7 +32,7 @@ export function NewsPage() {
             Новостной блок и заметки по инженерной интеграции
           </h1>
           <div className="mt-12 grid gap-8 md:grid-cols-2">
-            {newsPosts.map((post) => (
+            {posts.map((post) => (
               <article key={post.slug} className="border border-[#e8e3db] bg-white">
                 <img src={post.image} alt="" aria-hidden="true" width="1200" height="760" className="aspect-[16/10] w-full object-cover" />
                 <div className="p-6">

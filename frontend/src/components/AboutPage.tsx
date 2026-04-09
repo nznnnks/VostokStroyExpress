@@ -1,8 +1,27 @@
 import SiteFooter from "./SiteFooter";
 import SiteHeader from "./SiteHeader";
-import { newsPosts, services } from "../data/site";
+import { newsPosts as fallbackNewsPosts, services } from "../data/site";
+import type { NewsPostView } from "../lib/backend-api";
 
-export function AboutPage() {
+type AboutPageProps = {
+  newsPosts?: NewsPostView[];
+};
+
+function getFallbackNews() {
+  return fallbackNewsPosts.map((post) => ({
+    id: post.slug,
+    slug: post.slug,
+    title: post.title,
+    excerpt: post.excerpt,
+    image: post.image,
+    category: post.category,
+    content: [...post.content],
+    dateLabel: "—",
+    status: "Опубликовано",
+  }));
+}
+
+export function AboutPage({ newsPosts = getFallbackNews() }: AboutPageProps) {
   return (
     <main className="bg-white text-[#111] [font-family:DM_Sans,Manrope,'Liberation_Sans',sans-serif]">
       <SiteHeader />

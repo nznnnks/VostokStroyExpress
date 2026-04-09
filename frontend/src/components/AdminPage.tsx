@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { adminNav, adminUser } from "../data/admin";
+import { getStoredAuthSession } from "../lib/auth";
 
 const metrics = [
   ["Выручка (RUB)", "120 000 RUB", "", "+14%", "/админка/денюжки выручка.svg", "/админка/выручка полосочка.svg"],
@@ -34,6 +35,11 @@ type AdminPageProps = {
 };
 
 export function AdminPage({ activeKey = "dashboard" }: AdminPageProps) {
+  const session = getStoredAuthSession();
+  const adminName =
+    [session?.admin?.firstName, session?.admin?.lastName].filter(Boolean).join(" ").trim() ||
+    session?.admin?.email ||
+    "Администратор";
   const [eventFilter, setEventFilter] = useState<(typeof eventFilters)[number][0]>("all");
   const [filtersOpen, setFiltersOpen] = useState(false);
 
@@ -142,7 +148,7 @@ export function AdminPage({ activeKey = "dashboard" }: AdminPageProps) {
                 className="h-[18px] w-[18px] object-contain"
               />
               <div className="h-10 w-px bg-[#ece8e1]" />
-              <span className="text-[18px]">{adminUser.name}</span>
+              <span className="text-[18px]">{adminName}</span>
               <img
                 src={adminUser.avatar}
                 alt="Профиль администратора"

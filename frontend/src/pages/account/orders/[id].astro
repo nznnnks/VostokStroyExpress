@@ -1,16 +1,10 @@
 ---
 import { AccountOrderDetailPage } from "../../../components/AccountOrderDetailPage";
-import { accountOrders } from "../../../data/account";
 import "../../../styles/global.css";
 
-export function getStaticPaths() {
-  return accountOrders.map((order) => ({
-    params: { id: order.id.toLowerCase() },
-    props: { id: order.id.toLowerCase() },
-  }));
-}
+export const prerender = false;
 
-const { id } = Astro.props;
+const id = Astro.params.id ?? "";
 ---
 
 <!doctype html>
@@ -18,12 +12,12 @@ const { id } = Astro.props;
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Детали заказа</title>
+    <title>Р”РµС‚Р°Р»Рё Р·Р°РєР°Р·Р°</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=DM+Sans:wght@400;500&family=Jaldi:wght@400;700&family=JetBrains+Mono:wght@400&family=Manrope:wght@200;400;500&display=swap" rel="stylesheet" />
   </head>
   <body>
-    <AccountOrderDetailPage orderId={id} />
+    <AccountOrderDetailPage client:load orderId={id} />
   </body>
 </html>

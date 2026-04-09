@@ -2,16 +2,18 @@
 import "../../styles/global.css";
 import SiteHeader from "../../components/SiteHeader";
 import SiteFooter from "../../components/SiteFooter";
-import { newsPosts } from "../../data/site";
+import { loadNewsPostBySlug, loadNewsPosts } from "../../lib/backend-api";
 
-export function getStaticPaths() {
+export async function getStaticPaths() {
+  const newsPosts = await loadNewsPosts();
+
   return newsPosts.map((post) => ({
     params: { slug: post.slug },
-    props: { post },
   }));
 }
 
-const { post } = Astro.props;
+const slug = Astro.params.slug ?? "";
+const post = await loadNewsPostBySlug(slug);
 ---
 
 <!doctype html>
@@ -19,7 +21,7 @@ const { post } = Astro.props;
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{post.title}</title>
+    <title>{post?.title ?? "Новость"}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -32,17 +34,23 @@ const { post } = Astro.props;
       <SiteHeader />
       <section class="px-4 py-10 md:px-10 md:py-14">
         <article class="mx-auto max-w-[1180px]">
-          <p class="text-[13px] uppercase tracking-[1.5px] text-[#7a7a75] [font-family:Jaldi,'JetBrains_Mono',monospace]">{post.category} / Новость</p>
-          <h1 class="mt-8 max-w-[900px] text-[56px] leading-[0.92] md:text-[92px] [font-family:'Cormorant_Garamond',serif]">{post.title}</h1>
-          <img src={post.image} alt="" aria-hidden="true" width="1200" height="760" class="mt-10 aspect-[16/9] w-full object-cover" />
-          <div class="mt-10 space-y-8 text-[20px] leading-[1.8] text-[#5d5d58] md:text-[24px]">
-            {post.content.map((paragraph) => (
-              <p>{paragraph}</p>
-            ))}
-          </div>
+          <p class="text-[13px] uppercase tracking-[1.5px] text-[#7a7a75] [font-family:Jaldi,'JetBrains_Mono',monospace]">{post?.category ?? "Новости"} / РќРѕРІРѕСЃС‚СЊ</p>
+          <h1 class="mt-8 max-w-[900px] text-[56px] leading-[0.92] md:text-[92px] [font-family:'Cormorant_Garamond',serif]">{post?.title ?? "Материал не найден"}</h1>
+          {post ? (
+            <>
+              <img src={post.image} alt="" aria-hidden="true" width="1200" height="760" class="mt-10 aspect-[16/9] w-full object-cover" />
+              <div class="mt-10 space-y-8 text-[20px] leading-[1.8] text-[#5d5d58] md:text-[24px]">
+                {post.content.map((paragraph) => (
+                  <p>{paragraph}</p>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div class="mt-10 border border-[#e8e3db] px-8 py-12 text-[20px] text-[#5d5d58]">Материал не найден.</div>
+          )}
           <div class="mt-10">
             <a href="/news" class="inline-flex h-14 items-center justify-center border border-[#111] px-8 text-[14px] uppercase tracking-[1.5px] text-[#111] [font-family:Jaldi,'JetBrains_Mono',monospace]">
-              Назад к блогу
+              РќР°Р·Р°Рґ Рє Р±Р»РѕРіСѓ
             </a>
           </div>
         </article>

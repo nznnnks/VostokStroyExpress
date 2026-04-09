@@ -1,16 +1,18 @@
 ---
 import { ProductPage } from "../../components/ProductPage";
-import { featuredProduct, products } from "../../data/products";
+import { loadCatalogProductBySlug, loadCatalogProducts } from "../../lib/backend-api";
 import "../../styles/global.css";
 
-export function getStaticPaths() {
-  return [...products, featuredProduct].map((product) => ({
+export async function getStaticPaths() {
+  const catalogProducts = await loadCatalogProducts();
+
+  return catalogProducts.map((product) => ({
     params: { slug: product.slug },
-    props: { product },
   }));
 }
 
-const { product } = Astro.props;
+const slug = Astro.params.slug ?? "";
+const { product, relatedProducts } = await loadCatalogProductBySlug(slug);
 ---
 
 <!doctype html>
@@ -28,6 +30,6 @@ const { product } = Astro.props;
     />
   </head>
   <body>
-    <ProductPage product={product} />
+    <ProductPage product={product} relatedProducts={relatedProducts} />
   </body>
 </html>

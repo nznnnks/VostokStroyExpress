@@ -1,6 +1,9 @@
 ---
 import { NewsPage } from "../components/NewsPage";
+import { loadNewsPosts } from "../lib/backend-api";
 import "../styles/global.css";
+
+const posts = await loadNewsPosts();
 ---
 
 <!doctype html>
@@ -17,6 +20,6 @@ import "../styles/global.css";
     />
   </head>
   <body>
-    <NewsPage />
+    <NewsPage posts={posts} />
   </body>
 </html>
