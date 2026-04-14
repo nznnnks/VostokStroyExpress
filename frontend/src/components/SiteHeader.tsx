@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import AuthHeaderButton from "./AuthHeaderButton";
 import { navLinks } from "../data/site";
-import { featuredProduct, formatPrice, products, type Product } from "../data/products";
+import { formatPrice, type Product } from "../data/products";
 import { loadCatalogProducts } from "../lib/backend-api";
 
 type SiteHeaderProps = {
@@ -71,10 +71,7 @@ export function SiteHeader({ light = true }: SiteHeaderProps) {
   }, [isSearchOpen]);
 
   const trimmedQuery = searchQuery.trim().toLowerCase();
-  const fallbackSource = [featuredProduct, ...products].filter(
-    (item, index, all) => all.findIndex((entry) => entry.slug === item.slug) === index,
-  );
-  const searchSource = catalogProducts && catalogProducts.length > 0 ? catalogProducts : fallbackSource;
+  const searchSource = catalogProducts ?? [];
   const searchResults = trimmedQuery
     ? searchSource.filter((item) =>
         [item.title, item.brand, item.brandLabel, item.category, item.slug].some((value) =>
@@ -210,7 +207,7 @@ export function SiteHeader({ light = true }: SiteHeaderProps) {
                   visibleResults.map((item) => (
                     <a
                       key={item.slug}
-                      href={`/product/${item.slug}`}
+                      href={`/catalog/${item.slug}`}
                       className={`flex items-center gap-3 rounded-[10px] border px-3 py-3 transition ${
                         light ? "border-[#ece8e1] hover:border-[#d3b46a]" : "border-white/10 hover:border-white/40"
                       }`}

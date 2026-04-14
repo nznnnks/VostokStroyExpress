@@ -1,5 +1,4 @@
-import { featuredProduct, formatPrice, products, type Product } from "../data/products";
-import { newsPosts } from "../data/site";
+import { formatPrice, type Product } from "../data/products";
 import { ApiError, apiRequest } from "./api-client";
 import { getStoredAccessToken } from "./auth";
 
@@ -577,82 +576,35 @@ async function loadPublicNewsRaw() {
 }
 
 export async function loadCatalogProducts(): Promise<Product[]> {
-  try {
-    const data = await loadPublicProductsRaw();
-    return Array.isArray(data) ? data.map(mapApiProduct) : [];
-  } catch (error) {
-    console.warn("[backend-api] Falling back to local catalog data:", error);
-    return products;
-  }
+  const data = await loadPublicProductsRaw();
+  return Array.isArray(data) ? data.map(mapApiProduct) : [];
 }
 
 export async function loadCatalogProductBySlug(slug: string) {
-  try {
-    const data = await loadPublicProductsRaw();
-    const current = data.find((item) => item.slug === slug);
+  const data = await loadPublicProductsRaw();
+  const current = data.find((item) => item.slug === slug);
 
-    if (!current) {
-      throw new Error(`Product with slug ${slug} was not found.`);
-    }
-
-    const mappedCurrent = mapApiProduct(current);
-    const relatedProducts = data
-      .filter((item) => item.slug !== slug)
-      .filter((item) => item.category?.id === current.category?.id || item.brand === current.brand)
-      .slice(0, 4)
-      .map(mapApiProduct);
-
-    return {
-      product: mappedCurrent,
-      relatedProducts,
-      allProducts: data.map(mapApiProduct),
-    };
-  } catch (error) {
-    console.warn("[backend-api] Falling back to local product data:", error);
-    const fallbackAll = [featuredProduct, ...products].reduce<Product[]>((acc, item) => {
-      if (!acc.find((entry) => entry.slug === item.slug)) {
-        acc.push(item);
-      }
-      return acc;
-    }, []);
-    const fallbackCurrent = fallbackAll.find((item) => item.slug === slug) ?? featuredProduct;
-    const relatedProducts =
-      fallbackCurrent.relatedSlugs?.length
-        ? fallbackCurrent.relatedSlugs
-            .map((relatedSlug) => fallbackAll.find((item) => item.slug === relatedSlug))
-            .filter((item): item is Product => Boolean(item))
-            .slice(0, 4)
-        : fallbackAll
-            .filter((item) => item.slug !== fallbackCurrent.slug)
-            .filter((item) => item.category === fallbackCurrent.category || item.brand === fallbackCurrent.brand)
-            .slice(0, 4);
-
-    return {
-      product: fallbackCurrent,
-      relatedProducts,
-      allProducts: fallbackAll,
-    };
+  if (!current) {
+    throw new Error(`Product with slug ${slug} was not found.`);
   }
+
+  const mappedCurrent = mapApiProduct(current);
+  const relatedProducts = data
+    .filter((item) => item.slug !== slug)
+    .filter((item) => item.category?.id === current.category?.id || item.brand === current.brand)
+    .slice(0, 4)
+    .map(mapApiProduct);
+
+  return {
+    product: mappedCurrent,
+    relatedProducts,
+    allProducts: data.map(mapApiProduct),
+  };
 }
 
 export async function loadNewsPosts() {
-  try {
-    const data = await loadPublicNewsRaw();
-    return Array.isArray(data) ? data.map(mapApiNews) : [];
-  } catch (error) {
-    console.warn("[backend-api] Falling back to local news data:", error);
-    return newsPosts.map((post, index) => ({
-      id: `local-${index}`,
-      slug: post.slug,
-      title: post.title,
-      excerpt: post.excerpt,
-      image: post.image,
-      category: post.category,
-      content: [...post.content],
-      dateLabel: "—",
-      status: "LOCAL",
-    }));
-  }
+  const data = await loadPublicNewsRaw();
+  return Array.isArray(data) ? data.map(mapApiNews) : [];
 }
 
 export async function loadNewsPostBySlug(slug: string) {
