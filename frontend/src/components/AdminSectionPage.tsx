@@ -8,7 +8,7 @@ import {
   createAdminProduct,
   createAdminCategory,
   createAdminClientProfile,
-  createAdminService,
+  createAdminOrder,
   createAdminDiscount,
   createAdminUser,
   createAdminPayment,
@@ -18,11 +18,11 @@ import {
   deleteAdminNews,
   deleteAdminOrder,
   deleteAdminProduct,
-  deleteAdminService,
   deleteAdminDiscount,
   deleteAdminUser,
   deleteAdminPayment,
   deleteUser,
+  loadAdminCategoryById,
   loadAdminSectionData,
   loadAdminCategories,
   loadAdminServices,
@@ -38,11 +38,11 @@ import {
   type AdminNewsView,
   type AdminOrderView,
   updateAdminNews,
+  updateAdminOrder,
   updateAdminOrderStatus,
   updateAdminProduct,
   updateAdminClientProfile,
   updateAdminCategory,
-  updateAdminService,
   updateAdminDiscount,
   updateAdminUser,
   updateAdminPayment,
@@ -113,6 +113,124 @@ function slugify(value: string) {
     .replace(/-+/g, "-");
 }
 
+function formatRussianPhone(value: string) {
+  const digits = value.replace(/\D/g, "");
+
+  if (!digits) {
+    return "";
+  }
+
+  let normalized = digits;
+
+  if (normalized.startsWith("8")) {
+    normalized = `7${normalized.slice(1)}`;
+  } else if (normalized.startsWith("9")) {
+    normalized = `7${normalized}`;
+  } else if (!normalized.startsWith("7")) {
+    normalized = `7${normalized}`;
+  }
+
+  normalized = normalized.slice(0, 11);
+
+  const local = normalized.slice(1);
+  let result = "+7";
+
+  if (local.length > 0) {
+    result += `(${local.slice(0, 3)}`;
+  }
+  if (local.length >= 3) {
+    result += ")";
+  }
+  if (local.length > 3) {
+    result += ` ${local.slice(3, 6)}`;
+  }
+  if (local.length > 6) {
+    result += `-${local.slice(6, 8)}`;
+  }
+  if (local.length > 8) {
+    result += `-${local.slice(8, 10)}`;
+  }
+
+  return result;
+}
+
+function isValidRussianPhone(value: string) {
+  return value.replace(/\D/g, "").length === 11;
+}
+
+const emptySeoFields = {
+  metaTitle: "",
+  metaDescription: "",
+  metaKeywords: "",
+};
+
+const emptyClientForm = {
+  id: "",
+  userId: "",
+  firstName: "",
+  lastName: "",
+  companyName: "",
+  inn: "",
+  contactPhone: "",
+  addressLine1: "",
+  city: "",
+  postalCode: "",
+  comment: "",
+  personalDiscountPercent: "",
+  totalSpent: "0 ₽",
+};
+
+const emptyOrderForm = {
+  id: "",
+  userId: "",
+  status: "NEW",
+  contactName: "",
+  contactPhone: "",
+  deliveryMethod: "",
+  deliveryAddress: "",
+  comment: "",
+  items: "",
+};
+
+const emptyOrderItemDraft = {
+  kind: "product",
+  entityId: "",
+  quantity: "1",
+};
+
+function SeoFields({
+  value,
+  onChange,
+}: {
+  value: typeof emptySeoFields;
+  onChange: (field: keyof typeof emptySeoFields, nextValue: string) => void;
+}) {
+  return (
+    <div className="mt-6 border border-[#ece8e1] bg-[#faf8f4] p-6">
+      <p className="text-[12px] uppercase tracking-[3px] text-[#9a958d] [font-family:Jaldi,'JetBrains_Mono',monospace]">SEO</p>
+      <div className="mt-4 admin-form-grid">
+        <label className="admin-toolbar__label">
+          Meta Title
+          <input className="admin-input mt-2" value={value.metaTitle} onChange={(event) => onChange("metaTitle", event.target.value)} placeholder="Заголовок страницы для поисковиков" />
+        </label>
+        <label className="admin-toolbar__label">
+          Meta Keywords
+          <input className="admin-input mt-2" value={value.metaKeywords} onChange={(event) => onChange("metaKeywords", event.target.value)} placeholder="слово 1, слово 2, слово 3" />
+        </label>
+      </div>
+      <label className="admin-toolbar__label mt-4">
+        Meta Description
+        <textarea
+          className="admin-input admin-textarea mt-2"
+          value={value.metaDescription}
+          onChange={(event) => onChange("metaDescription", event.target.value)}
+          placeholder="Краткое описание страницы для сниппета"
+        />
+      </label>
+    </div>
+  );
+}
+
 export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPageProps) {
   const session = getStoredAuthSession();
   const adminName =
@@ -144,6 +262,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
     category: "",
     excerpt: "",
     status: "DRAFT",
+    ...emptySeoFields,
   });
   const [catalogForm, setCatalogForm] = useState({
     id: "",
@@ -169,6 +288,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
     stock: "",
     status: "DRAFT",
     categoryId: "",
+    ...emptySeoFields,
   });
   const [categoryForm, setCategoryForm] = useState({
     id: "",
@@ -176,39 +296,10 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
     slug: "",
     description: "",
     parentId: "",
+    ...emptySeoFields,
   });
-  const [clientForm, setClientForm] = useState({
-    id: "",
-    userId: "",
-    firstName: "",
-    lastName: "",
-    companyName: "",
-    inn: "",
-    contactPhone: "",
-    addressLine1: "",
-    city: "",
-    postalCode: "",
-    comment: "",
-    personalDiscountPercent: "",
-  });
-  const [orderForm, setOrderForm] = useState({
-    id: "",
-    status: "NEW",
-  });
-  const [serviceForm, setServiceForm] = useState({
-    id: "",
-    name: "",
-    slug: "",
-    shortDescription: "",
-    description: "",
-    heroTitle: "",
-    lead: "",
-    bullets: "",
-    imageUrl: "",
-    basePrice: "",
-    durationHours: "",
-    isActive: true,
-  });
+  const [clientForm, setClientForm] = useState(emptyClientForm);
+  const [orderForm, setOrderForm] = useState(emptyOrderForm);
   const [discountForm, setDiscountForm] = useState({
     id: "",
     name: "",
@@ -254,6 +345,8 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
     currency: "RUB",
     paidAt: "",
   });
+  const [orderItemDraft, setOrderItemDraft] = useState(emptyOrderItemDraft);
+  const [orderEntityQuery, setOrderEntityQuery] = useState("");
 
   async function refreshAdminData() {
     const data = await loadAdminSectionData();
@@ -268,7 +361,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
       setCatalogForm((prev) => ({ ...prev, categoryId: prev.categoryId || nextCategories[0]?.id || "" }));
     }
 
-    if (activeKey === "projects") {
+    if (activeKey === "orders") {
       const nextServices = await loadAdminServices();
       setServices(nextServices.map((item) => ({ id: item.id, name: item.name, slug: item.slug })));
     }
@@ -333,6 +426,9 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
           excerpt: newsForm.excerpt.trim() || undefined,
           category: newsForm.category.trim() || undefined,
           status: newsForm.status as "DRAFT" | "PUBLISHED" | "ARCHIVED",
+          metaTitle: newsForm.metaTitle.trim() || undefined,
+          metaDescription: newsForm.metaDescription.trim() || undefined,
+          metaKeywords: newsForm.metaKeywords.trim() || undefined,
         });
       } else {
         await createAdminNews({
@@ -341,11 +437,14 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
           excerpt: newsForm.excerpt.trim() || undefined,
           category: newsForm.category.trim() || undefined,
           status: newsForm.status as "DRAFT" | "PUBLISHED" | "ARCHIVED",
+          metaTitle: newsForm.metaTitle.trim() || undefined,
+          metaDescription: newsForm.metaDescription.trim() || undefined,
+          metaKeywords: newsForm.metaKeywords.trim() || undefined,
         });
       }
 
       await refreshAdminData();
-      setNewsForm({ id: "", title: "", slug: "", category: "", excerpt: "", status: "DRAFT" });
+      setNewsForm({ id: "", title: "", slug: "", category: "", excerpt: "", status: "DRAFT", ...emptySeoFields });
     } catch (nextError) {
       setActionError(nextError instanceof Error ? nextError.message : "Не удалось сохранить новость.");
     } finally {
@@ -364,7 +463,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
     try {
       await deleteAdminNews(newsForm.id);
       await refreshAdminData();
-      setNewsForm({ id: "", title: "", slug: "", category: "", excerpt: "", status: "DRAFT" });
+      setNewsForm({ id: "", title: "", slug: "", category: "", excerpt: "", status: "DRAFT", ...emptySeoFields });
     } catch (nextError) {
       setActionError(nextError instanceof Error ? nextError.message : "Не удалось удалить новость.");
     } finally {
@@ -417,6 +516,9 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
         images: imagesValue.length ? imagesValue : undefined,
         stock: Number.isNaN(stockValue ?? 0) ? undefined : stockValue,
         status: catalogForm.status as "ACTIVE" | "DRAFT" | "ARCHIVED",
+        metaTitle: catalogForm.metaTitle.trim() || undefined,
+        metaDescription: catalogForm.metaDescription.trim() || undefined,
+        metaKeywords: catalogForm.metaKeywords.trim() || undefined,
       };
 
       if (catalogForm.id) {
@@ -450,6 +552,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
         stock: "",
         status: "DRAFT",
         categoryId: categories[0]?.id || "",
+        ...emptySeoFields,
       });
     } catch (nextError) {
       setActionError(nextError instanceof Error ? nextError.message : "Не удалось сохранить товар.");
@@ -493,6 +596,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
         stock: "",
         status: "DRAFT",
         categoryId: categories[0]?.id || "",
+        ...emptySeoFields,
       });
     } catch (nextError) {
       setActionError(nextError instanceof Error ? nextError.message : "Не удалось удалить товар.");
@@ -514,6 +618,9 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
         category: item.category ?? "",
         excerpt: item.excerpt ?? "",
         status: item.status ?? "DRAFT",
+        metaTitle: item.metaTitle ?? "",
+        metaDescription: item.metaDescription ?? "",
+        metaKeywords: item.metaKeywords ?? "",
       });
     } catch (nextError) {
       setActionError(nextError instanceof Error ? nextError.message : "Не удалось загрузить новость.");
@@ -552,9 +659,35 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
         stock: item.stock !== undefined && item.stock !== null ? String(item.stock) : "",
         status: item.status ?? "DRAFT",
         categoryId: item.category?.id ?? item.categoryId ?? categories[0]?.id ?? "",
+        metaTitle: item.metaTitle ?? "",
+        metaDescription: item.metaDescription ?? "",
+        metaKeywords: item.metaKeywords ?? "",
       });
     } catch (nextError) {
       setActionError(nextError instanceof Error ? nextError.message : "Не удалось загрузить товар.");
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleSelectCategory(id: string) {
+    setActionLoading(true);
+    setActionError(null);
+
+    try {
+      const item = await loadAdminCategoryById(id);
+      setCategoryForm({
+        id: item.id,
+        name: item.name,
+        slug: item.slug,
+        description: item.description ?? "",
+        parentId: item.parentId ?? "",
+        metaTitle: item.metaTitle ?? "",
+        metaDescription: item.metaDescription ?? "",
+        metaKeywords: item.metaKeywords ?? "",
+      });
+    } catch (nextError) {
+      setActionError(nextError instanceof Error ? nextError.message : "Не удалось загрузить категорию.");
     } finally {
       setActionLoading(false);
     }
@@ -579,6 +712,9 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
           slug: resolvedSlug,
           description: categoryForm.description.trim() || undefined,
           parentId: categoryForm.parentId || undefined,
+          metaTitle: categoryForm.metaTitle.trim() || undefined,
+          metaDescription: categoryForm.metaDescription.trim() || undefined,
+          metaKeywords: categoryForm.metaKeywords.trim() || undefined,
         });
       } else {
         await createAdminCategory({
@@ -586,13 +722,16 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
           slug: resolvedSlug,
           description: categoryForm.description.trim() || undefined,
           parentId: categoryForm.parentId || undefined,
+          metaTitle: categoryForm.metaTitle.trim() || undefined,
+          metaDescription: categoryForm.metaDescription.trim() || undefined,
+          metaKeywords: categoryForm.metaKeywords.trim() || undefined,
         });
       }
 
       const nextCategories = await loadAdminCategories();
       setCategories(nextCategories);
       setCatalogForm((prev) => ({ ...prev, categoryId: prev.categoryId || nextCategories[0]?.id || "" }));
-      setCategoryForm({ id: "", name: "", slug: "", description: "", parentId: "" });
+      setCategoryForm({ id: "", name: "", slug: "", description: "", parentId: "", ...emptySeoFields });
     } catch (nextError) {
       setActionError(nextError instanceof Error ? nextError.message : "Не удалось сохранить категорию.");
     } finally {
@@ -613,7 +752,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
       const nextCategories = await loadAdminCategories();
       setCategories(nextCategories);
       setCatalogForm((prev) => ({ ...prev, categoryId: nextCategories[0]?.id || "" }));
-      setCategoryForm({ id: "", name: "", slug: "", description: "", parentId: "" });
+      setCategoryForm({ id: "", name: "", slug: "", description: "", parentId: "", ...emptySeoFields });
     } catch (nextError) {
       setActionError(nextError instanceof Error ? nextError.message : "Не удалось удалить категорию.");
     } finally {
@@ -630,6 +769,11 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
       return;
     }
 
+    if (clientForm.contactPhone && !isValidRussianPhone(clientForm.contactPhone)) {
+      setActionError("Телефон клиента должен быть в формате +7(999) 999-99-99.");
+      return;
+    }
+
     setActionLoading(true);
     setActionError(null);
 
@@ -640,7 +784,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
         lastName: clientForm.lastName.trim() || undefined,
         companyName: clientForm.companyName.trim() || undefined,
         inn: clientForm.inn.trim() || undefined,
-        contactPhone: clientForm.contactPhone.trim() || undefined,
+        contactPhone: clientForm.contactPhone || undefined,
         addressLine1: clientForm.addressLine1.trim() || undefined,
         city: clientForm.city.trim() || undefined,
         postalCode: clientForm.postalCode.trim() || undefined,
@@ -657,20 +801,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
       }
 
       await refreshAdminData();
-      setClientForm({
-        id: "",
-        userId: "",
-        firstName: "",
-        lastName: "",
-        companyName: "",
-        inn: "",
-        contactPhone: "",
-        addressLine1: "",
-        city: "",
-        postalCode: "",
-        comment: "",
-        personalDiscountPercent: "",
-      });
+      setClientForm(emptyClientForm);
     } catch (nextError) {
       setActionError(nextError instanceof Error ? nextError.message : "Не удалось сохранить клиента.");
     } finally {
@@ -689,20 +820,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
     try {
       await deleteAdminClientProfile(clientForm.id);
       await refreshAdminData();
-      setClientForm({
-        id: "",
-        userId: "",
-        firstName: "",
-        lastName: "",
-        companyName: "",
-        inn: "",
-        contactPhone: "",
-        addressLine1: "",
-        city: "",
-        postalCode: "",
-        comment: "",
-        personalDiscountPercent: "",
-      });
+      setClientForm(emptyClientForm);
     } catch (nextError) {
       setActionError(nextError instanceof Error ? nextError.message : "Не удалось удалить клиента.");
     } finally {
@@ -729,6 +847,98 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
     }
   }
 
+  function parseOrderItems(rawValue: string) {
+    return rawValue
+      .split("\n")
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const [kind, entityId, quantityValue] = line.split(":").map((item) => item.trim());
+        const quantity = Number(quantityValue);
+
+        if (!(kind === "product" || kind === "service") || !entityId || !Number.isInteger(quantity) || quantity < 1) {
+          throw new Error('Каждая строка должна быть в формате "product:UUID:2" или "service:UUID:1".');
+        }
+
+        return kind === "product"
+          ? { productId: entityId, quantity }
+          : { serviceId: entityId, quantity };
+      });
+  }
+
+  async function handleOrderSubmit() {
+    const status = orderForm.status as "NEW" | "PENDING_PAYMENT" | "PAID" | "ASSEMBLY" | "SHIPPING" | "DELIVERED" | "CANCELLED";
+    const userId = orderForm.userId.trim();
+    const deliveryMethodValue = orderForm.deliveryMethod.trim();
+    const deliveryAddressValue = orderForm.deliveryAddress.trim();
+    let items: Array<{ productId: string; quantity: number } | { serviceId: string; quantity: number }> = [];
+
+    if (!orderForm.id && !userId) {
+      setActionError("Для нового заказа обязателен userId клиента.");
+      return;
+    }
+
+    if (orderForm.contactPhone && !isValidRussianPhone(orderForm.contactPhone)) {
+      setActionError("Телефон заказа должен быть в формате +7(999) 999-99-99.");
+      return;
+    }
+
+    if (!["Самовывоз", "Доставка"].includes(deliveryMethodValue)) {
+      setActionError("Выберите способ доставки: Самовывоз или Доставка.");
+      return;
+    }
+
+    if (deliveryMethodValue === "Доставка" && !deliveryAddressValue) {
+      setActionError("Для доставки укажите адрес.");
+      return;
+    }
+
+    setActionLoading(true);
+    setActionError(null);
+
+    try {
+      items = orderForm.id ? [] : parseOrderItems(orderForm.items);
+
+      if (!orderForm.id && items.length === 0) {
+        setActionError("Добавьте хотя бы одну позицию в заказ.");
+        return;
+      }
+
+      if (orderForm.id) {
+        await updateAdminOrder(orderForm.id, {
+          status,
+          contactName: orderForm.contactName.trim() || undefined,
+          contactPhone: orderForm.contactPhone || undefined,
+          deliveryMethod: deliveryMethodValue || undefined,
+          deliveryAddress: deliveryMethodValue === "Доставка" ? deliveryAddressValue : "",
+          comment: orderForm.comment.trim() || undefined,
+        });
+      } else {
+        const createdOrder = await createAdminOrder({
+          userId,
+          contactName: orderForm.contactName.trim() || undefined,
+          contactPhone: orderForm.contactPhone || undefined,
+          deliveryMethod: deliveryMethodValue || undefined,
+          deliveryAddress: deliveryMethodValue === "Доставка" ? deliveryAddressValue : undefined,
+          comment: orderForm.comment.trim() || undefined,
+          items,
+        });
+
+        if (status !== "NEW") {
+          await updateAdminOrderStatus(createdOrder.id, status);
+        }
+      }
+
+      await refreshAdminData();
+      setOrderForm(emptyOrderForm);
+      setOrderItemDraft(emptyOrderItemDraft);
+    } catch (nextError) {
+      setActionError(nextError instanceof Error ? nextError.message : "Не удалось сохранить заказ.");
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
   async function handleOrderDelete() {
     if (!orderForm.id) {
       return;
@@ -740,102 +950,10 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
     try {
       await deleteAdminOrder(orderForm.id);
       await refreshAdminData();
-      setOrderForm({ id: "", status: "NEW" });
+      setOrderForm(emptyOrderForm);
+      setOrderItemDraft(emptyOrderItemDraft);
     } catch (nextError) {
       setActionError(nextError instanceof Error ? nextError.message : "Не удалось удалить заказ.");
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
-  async function handleServiceSubmit() {
-    const nameValue = serviceForm.name.trim();
-    const resolvedSlug = serviceForm.slug.trim() || slugify(nameValue);
-    const basePriceValue = serviceForm.basePrice ? Number(serviceForm.basePrice) : undefined;
-    const durationValue = serviceForm.durationHours ? Number(serviceForm.durationHours) : undefined;
-    const bulletsValue = serviceForm.bullets
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean);
-
-    if (!nameValue || !resolvedSlug) {
-      setActionError("Название и slug услуги обязательны.");
-      return;
-    }
-
-    setActionLoading(true);
-    setActionError(null);
-
-    try {
-      const payload = {
-        name: nameValue,
-        slug: resolvedSlug,
-        shortDescription: serviceForm.shortDescription.trim() || undefined,
-        description: serviceForm.description.trim() || undefined,
-        heroTitle: serviceForm.heroTitle.trim() || undefined,
-        lead: serviceForm.lead.trim() || undefined,
-        bullets: bulletsValue.length ? bulletsValue : undefined,
-        imageUrl: serviceForm.imageUrl.trim() || undefined,
-        basePrice: Number.isNaN(basePriceValue ?? 0) ? undefined : basePriceValue,
-        durationHours: Number.isNaN(durationValue ?? 0) ? undefined : durationValue,
-        isActive: serviceForm.isActive,
-      };
-
-      if (serviceForm.id) {
-        await updateAdminService(serviceForm.id, payload);
-      } else {
-        await createAdminService(payload);
-      }
-
-      await refreshAdminData();
-      setServiceForm({
-        id: "",
-        name: "",
-        slug: "",
-        shortDescription: "",
-        description: "",
-        heroTitle: "",
-        lead: "",
-        bullets: "",
-        imageUrl: "",
-        basePrice: "",
-        durationHours: "",
-        isActive: true,
-      });
-    } catch (nextError) {
-      setActionError(nextError instanceof Error ? nextError.message : "Не удалось сохранить услугу.");
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
-  async function handleServiceDelete() {
-    if (!serviceForm.id) {
-      return;
-    }
-
-    setActionLoading(true);
-    setActionError(null);
-
-    try {
-      await deleteAdminService(serviceForm.id);
-      await refreshAdminData();
-      setServiceForm({
-        id: "",
-        name: "",
-        slug: "",
-        shortDescription: "",
-        description: "",
-        heroTitle: "",
-        lead: "",
-        bullets: "",
-        imageUrl: "",
-        basePrice: "",
-        durationHours: "",
-        isActive: true,
-      });
-    } catch (nextError) {
-      setActionError(nextError instanceof Error ? nextError.message : "Не удалось удалить услугу.");
     } finally {
       setActionLoading(false);
     }
@@ -1099,13 +1217,18 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
       return;
     }
 
+    if (userForm.phone && !isValidRussianPhone(userForm.phone)) {
+      setActionError("Телефон пользователя должен быть в формате +7(999) 999-99-99.");
+      return;
+    }
+
     setActionLoading(true);
     setActionError(null);
 
     try {
       const payload = {
         email: emailValue,
-        phone: userForm.phone.trim() || undefined,
+        phone: userForm.phone || undefined,
         passwordHash: userForm.passwordHash.trim() || undefined,
         role: userForm.role as "CLIENT" | "MANAGER",
         status: userForm.status as "ACTIVE" | "BLOCKED",
@@ -1167,8 +1290,110 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
     }
   }
 
+  function parseOrderItemLine(line: string) {
+    const [kind, entityId, quantityValue] = line.split(":").map((item) => item.trim());
+    const quantity = Number(quantityValue);
+
+    if (!(kind === "product" || kind === "service") || !entityId || !Number.isInteger(quantity) || quantity < 1) {
+      return null;
+    }
+
+    return { kind, entityId, quantity };
+  }
+
+  function describeOrderItemLine(line: string) {
+    const parsed = parseOrderItemLine(line);
+
+    if (!parsed) {
+      return line;
+    }
+
+    const entity =
+      parsed.kind === "product"
+        ? catalog.find((item) => item.id === parsed.entityId)
+        : services.find((item) => item.id === parsed.entityId);
+
+    const label = entity
+      ? parsed.kind === "product"
+        ? `${entity.title} (${entity.brand})`
+        : entity.name
+      : parsed.entityId;
+
+    return `${parsed.kind === "product" ? "Товар" : "Услуга"}: ${label} x ${parsed.quantity}`;
+  }
+
+  function handleAddOrderItem() {
+    const quantity = Number(orderItemDraft.quantity);
+
+    if (!orderItemDraft.entityId) {
+      setActionError("Выберите товар или услугу для заказа.");
+      return;
+    }
+
+    if (!Number.isInteger(quantity) || quantity < 1) {
+      setActionError("Количество должно быть целым числом больше нуля.");
+      return;
+    }
+
+    const nextLine = `${orderItemDraft.kind}:${orderItemDraft.entityId}:${quantity}`;
+
+    setOrderForm((prev) => ({
+      ...prev,
+      items: prev.items ? `${prev.items}\n${nextLine}` : nextLine,
+    }));
+    setOrderItemDraft((prev) => ({ ...prev, entityId: "", quantity: "1" }));
+    setActionError(null);
+  }
+
+  function handleRemoveOrderItem(index: number) {
+    const lines = orderForm.items
+      .split("\n")
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    lines.splice(index, 1);
+
+    setOrderForm((prev) => ({
+      ...prev,
+      items: lines.join("\n"),
+    }));
+  }
+
+  function fillClientForm(item: AdminClientView) {
+    setClientForm({
+      id: item.id,
+      userId: item.userId ?? "",
+      firstName: item.firstName ?? item.name.split(" ")[0] ?? item.name,
+      lastName: item.lastName ?? item.name.split(" ").slice(1).join(" "),
+      companyName: item.companyName ?? "",
+      inn: item.inn ?? "",
+      contactPhone: formatRussianPhone(item.contactPhone ?? ""),
+      addressLine1: item.addressLine1 ?? "",
+      city: item.city ?? "",
+      postalCode: item.postalCode ?? "",
+      comment: item.comment ?? "",
+      personalDiscountPercent: item.personalDiscountPercent ?? "",
+      totalSpent: item.totalSpent ?? "0 ₽",
+    });
+  }
+
+  function fillOrderForm(item: AdminOrderView) {
+    setOrderItemDraft(emptyOrderItemDraft);
+    setOrderForm({
+      id: item.id,
+      userId: item.userId ?? "",
+      status: item.statusCode ?? "NEW",
+      contactName: item.contactName ?? "",
+      contactPhone: formatRussianPhone(item.contactPhone ?? ""),
+      deliveryMethod: item.deliveryMethod ?? "",
+      deliveryAddress: item.deliveryAddress ?? "",
+      comment: item.comment ?? "",
+      items: item.itemLines ?? "",
+    });
+  }
+
   useEffect(() => {
-    if (!["clients", "orders", "news", "catalog", "projects", "requests", "settings"].includes(activeKey)) {
+    if (!["clients", "orders", "news", "catalog", "requests", "settings"].includes(activeKey)) {
       setLoading(false);
       return;
     }
@@ -1180,7 +1405,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
       try {
         const data = await loadAdminSectionData();
         const nextCategories = activeKey === "catalog" ? await loadAdminCategories() : [];
-        const nextServices = activeKey === "projects" ? await loadAdminServices() : [];
+        const nextServices = activeKey === "orders" ? await loadAdminServices() : [];
         const nextPayments = activeKey === "requests" ? await loadAdminPayments() : [];
         const nextDiscounts = activeKey === "settings" ? await loadAdminDiscounts() : [];
         const nextAdmins = activeKey === "settings" ? await loadAdminUsers() : [];
@@ -1281,6 +1506,39 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
       return matchesQuery && matchesStock;
     });
   }, [catalog, query, secondaryFilter]);
+
+  const availableOrderEntities = useMemo(() => {
+    return orderItemDraft.kind === "product"
+      ? catalog.map((item) => ({
+          id: item.id,
+          label: `${item.title} (${item.brand})`,
+        }))
+      : services.map((item) => ({
+          id: item.id,
+          label: item.name,
+        }));
+  }, [catalog, orderItemDraft.kind, services]);
+
+  const filteredOrderEntities = useMemo(() => {
+    const q = orderEntityQuery.trim().toLowerCase();
+    if (!q) {
+      return availableOrderEntities;
+    }
+
+    return availableOrderEntities.filter((item) => `${item.label} ${item.id}`.toLowerCase().includes(q));
+  }, [availableOrderEntities, orderEntityQuery]);
+
+  const orderItemDescriptions = useMemo(() => {
+    return orderForm.items
+      .split("\n")
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .map((line, index) => ({
+        index,
+        line,
+        label: describeOrderItemLine(line),
+      }));
+  }, [catalog, orderForm.items, services]);
 
   const authRequired = error instanceof ApiError && error.status === 401;
 
@@ -1469,8 +1727,10 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
                         <input
                           className="admin-input mt-2"
                           value={clientForm.contactPhone}
-                          onChange={(event) => setClientForm((prev) => ({ ...prev, contactPhone: event.target.value }))}
-                          placeholder="+7 999 123 45 67"
+                          onChange={(event) => setClientForm((prev) => ({ ...prev, contactPhone: formatRussianPhone(event.target.value) }))}
+                          placeholder="+7(999) 999-99-99"
+                          inputMode="tel"
+                          maxLength={17}
                         />
                       </label>
                       <label className="admin-toolbar__label">
@@ -1509,6 +1769,10 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
                           placeholder="7"
                         />
                       </label>
+                      <label className="admin-toolbar__label">
+                        Сумма выкупа
+                        <input className="admin-input mt-2 bg-[#f7f3ed]" value={clientForm.totalSpent} readOnly />
+                      </label>
                     </div>
                     <label className="admin-toolbar__label mt-4">
                       Комментарий
@@ -1527,22 +1791,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
                       <button
                         className="admin-action-btn admin-action-btn--ghost"
                         type="button"
-                        onClick={() =>
-                          setClientForm({
-                            id: "",
-                            userId: "",
-                            firstName: "",
-                            lastName: "",
-                            companyName: "",
-                            inn: "",
-                            contactPhone: "",
-                            addressLine1: "",
-                            city: "",
-                            postalCode: "",
-                            comment: "",
-                            personalDiscountPercent: "",
-                          })
-                        }
+                        onClick={() => setClientForm(emptyClientForm)}
                         disabled={actionLoading}
                       >
                         Очистить
@@ -1557,26 +1806,20 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
 
                   <div className="mt-8">
                     <AdminTable
-                      columns={["Клиент", "Сегмент", "Менеджер", "Заказы", "Статус"]}
+                      columns={["Клиент", "Сегмент", "Менеджер", "Заказы", "Сумма выкупа", "Статус"]}
                       rows={filteredClients.map((item) => [
                         <button
                           key={item.id}
                           type="button"
                           className="text-left underline-offset-4 hover:underline"
-                          onClick={() =>
-                            setClientForm((prev) => ({
-                              ...prev,
-                              id: item.id,
-                              firstName: item.name.split(" ")[0] ?? item.name,
-                              lastName: item.name.split(" ").slice(1).join(" "),
-                            }))
-                          }
+                          onClick={() => fillClientForm(item)}
                         >
                           {item.name}
                         </button>,
                         item.segment,
                         item.manager,
                         item.orders,
+                        item.totalSpent ?? "0 ₽",
                         <StatusBadge key={item.id} tone={item.status === "Активен" ? "green" : "gray"} label={item.status} />,
                       ])}
                     />
@@ -1587,21 +1830,16 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
               {!loading && !error && activeKey === "orders" ? (
                 <div className="mt-10">
                   <div className="admin-form-card">
-                    <div className="admin-form-grid">
+                    <div className="admin-form-grid admin-form-grid--catalog">
                       <label className="admin-toolbar__label">
-                        Заказ
-                        <select
+                        User ID
+                        <input
                           className="admin-input mt-2"
-                          value={orderForm.id}
-                          onChange={(event) => setOrderForm((prev) => ({ ...prev, id: event.target.value }))}
-                        >
-                          <option value="">Выберите заказ</option>
-                          {orders.map((item) => (
-                            <option key={item.id} value={item.id}>
-                              {item.orderNumber} — {item.client}
-                            </option>
-                          ))}
-                        </select>
+                          value={orderForm.userId}
+                          onChange={(event) => setOrderForm((prev) => ({ ...prev, userId: event.target.value }))}
+                          placeholder="UUID клиента"
+                          disabled={Boolean(orderForm.id)}
+                        />
                       </label>
                       <label className="admin-toolbar__label">
                         Статус
@@ -1619,11 +1857,152 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
                           <option value="CANCELLED">Отменен</option>
                         </select>
                       </label>
+                      <label className="admin-toolbar__label">
+                        Контакт
+                        <input
+                          className="admin-input mt-2"
+                          value={orderForm.contactName}
+                          onChange={(event) => setOrderForm((prev) => ({ ...prev, contactName: event.target.value }))}
+                          placeholder="Имя получателя"
+                        />
+                      </label>
+                      <label className="admin-toolbar__label">
+                        Телефон
+                        <input
+                          className="admin-input mt-2"
+                          value={orderForm.contactPhone}
+                          onChange={(event) => setOrderForm((prev) => ({ ...prev, contactPhone: formatRussianPhone(event.target.value) }))}
+                          placeholder="+7(999) 999-99-99"
+                          inputMode="tel"
+                          maxLength={17}
+                        />
+                      </label>
+                      <label className="admin-toolbar__label">
+                        Способ доставки
+                        <select
+                          className="admin-input mt-2"
+                          value={orderForm.deliveryMethod}
+                          onChange={(event) =>
+                            setOrderForm((prev) => ({
+                              ...prev,
+                              deliveryMethod: event.target.value,
+                              deliveryAddress: event.target.value === "Самовывоз" ? "" : prev.deliveryAddress,
+                            }))
+                          }
+                        >
+                          <option value="">Выберите способ</option>
+                          <option value="Самовывоз">Самовывоз</option>
+                          <option value="Доставка">Доставка</option>
+                        </select>
+                      </label>
+                      <label className="admin-toolbar__label">
+                        Адрес
+                        <input
+                          className="admin-input mt-2"
+                          value={orderForm.deliveryAddress}
+                          onChange={(event) => setOrderForm((prev) => ({ ...prev, deliveryAddress: event.target.value }))}
+                          placeholder={orderForm.deliveryMethod === "Самовывоз" ? "Адрес не требуется" : "Москва, Калужская, 12"}
+                          disabled={orderForm.deliveryMethod === "Самовывоз"}
+                        />
+                      </label>
                     </div>
+                    <label className="admin-toolbar__label mt-4">
+                      Позиции заказа
+                      <div className="mt-2 grid gap-3 md:grid-cols-[180px_minmax(0,1fr)_minmax(0,1fr)_120px_auto]">
+                        <select
+                          className="admin-input"
+                          value={orderItemDraft.kind}
+                          onChange={(event) => {
+                            setOrderEntityQuery("");
+                            setOrderItemDraft({
+                              kind: event.target.value,
+                              entityId: "",
+                              quantity: "1",
+                            });
+                          }}
+                          disabled={Boolean(orderForm.id)}
+                        >
+                          <option value="product">Товар</option>
+                          <option value="service">Услуга</option>
+                        </select>
+                        <input
+                          className="admin-input"
+                          value={orderEntityQuery}
+                          onChange={(event) => setOrderEntityQuery(event.target.value)}
+                          placeholder={orderItemDraft.kind === "product" ? "Поиск товара по названию/бренду/UUID" : "Поиск услуги по названию/UUID"}
+                          disabled={Boolean(orderForm.id)}
+                        />
+                        <select
+                          className="admin-input"
+                          value={orderItemDraft.entityId}
+                          onChange={(event) => setOrderItemDraft((prev) => ({ ...prev, entityId: event.target.value }))}
+                          disabled={Boolean(orderForm.id)}
+                        >
+                          <option value="">Выберите позицию</option>
+                          {filteredOrderEntities.map((item) => (
+                            <option key={item.id} value={item.id}>
+                              {item.label}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          className="admin-input"
+                          value={orderItemDraft.quantity}
+                          onChange={(event) => setOrderItemDraft((prev) => ({ ...prev, quantity: event.target.value.replace(/\D/g, "").slice(0, 3) || "1" }))}
+                          placeholder="1"
+                          inputMode="numeric"
+                          disabled={Boolean(orderForm.id)}
+                        />
+                        <button className="admin-action-btn" type="button" onClick={handleAddOrderItem} disabled={Boolean(orderForm.id)}>
+                          Добавить
+                        </button>
+                      </div>
+                    </label>
+                    <p className="mt-2 text-[13px] text-[#7a7a75]">
+                      При редактировании уже созданного заказа состав доступен только для просмотра. Из админки можно менять статус и контактные данные.
+                    </p>
+                    <div className="mt-4 space-y-3">
+                      {orderItemDescriptions.length ? (
+                        orderItemDescriptions.map((item) => (
+                          <div key={`${item.index}-${item.line}`} className="flex items-center justify-between gap-4 border border-[#ece8e1] bg-[#faf8f4] px-4 py-3">
+                            <span className="text-[14px] text-[#2b2a27]">{item.label}</span>
+                            {!orderForm.id ? (
+                              <button className="admin-action-btn admin-action-btn--ghost" type="button" onClick={() => handleRemoveOrderItem(item.index)}>
+                                Удалить
+                              </button>
+                            ) : null}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="border border-dashed border-[#d8d2c8] px-4 py-5 text-[14px] text-[#7a7a75]">
+                          Позиции заказа ещё не добавлены.
+                        </div>
+                      )}
+                    </div>
+                    <label className="admin-toolbar__label mt-4">
+                      Комментарий
+                      <textarea
+                        className="admin-input admin-textarea mt-2"
+                        value={orderForm.comment}
+                        onChange={(event) => setOrderForm((prev) => ({ ...prev, comment: event.target.value }))}
+                        placeholder="Комментарий менеджера"
+                      />
+                    </label>
                     {actionError ? <p className="mt-3 text-[14px] text-[#9b3d2f]">{actionError}</p> : null}
                     <div className="admin-form-actions">
-                      <button className="admin-action-btn" type="button" onClick={handleOrderStatusSave} disabled={actionLoading}>
-                        Сохранить статус
+                      <button className="admin-action-btn" type="button" onClick={handleOrderSubmit} disabled={actionLoading}>
+                        {orderForm.id ? "Сохранить" : "Создать заказ"}
+                      </button>
+                      <button
+                        className="admin-action-btn admin-action-btn--ghost"
+                        type="button"
+                        onClick={() => {
+                          setOrderForm(emptyOrderForm);
+                          setOrderItemDraft(emptyOrderItemDraft);
+                        }}
+                        disabled={actionLoading}
+                      >
+                        Очистить
                       </button>
                       {orderForm.id ? (
                         <button className="admin-action-btn admin-action-btn--ghost" type="button" onClick={handleOrderDelete} disabled={actionLoading}>
@@ -1641,7 +2020,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
                           key={item.id}
                           type="button"
                           className="text-left underline-offset-4 hover:underline"
-                          onClick={() => setOrderForm({ id: item.id, status: "PENDING_PAYMENT" })}
+                          onClick={() => fillOrderForm(item)}
                         >
                           {item.orderNumber}
                         </button>,
@@ -1709,6 +2088,10 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
                         placeholder="Короткий анонс новости"
                       />
                     </label>
+                    <SeoFields
+                      value={newsForm}
+                      onChange={(field, nextValue) => setNewsForm((prev) => ({ ...prev, [field]: nextValue }))}
+                    />
                     {actionError ? <p className="mt-3 text-[14px] text-[#9b3d2f]">{actionError}</p> : null}
                     <div className="admin-form-actions">
                       <button className="admin-action-btn" type="button" onClick={handleNewsSubmit} disabled={actionLoading}>
@@ -1717,7 +2100,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
                       <button
                         className="admin-action-btn admin-action-btn--ghost"
                         type="button"
-                        onClick={() => setNewsForm({ id: "", title: "", slug: "", category: "", excerpt: "", status: "DRAFT" })}
+                        onClick={() => setNewsForm({ id: "", title: "", slug: "", category: "", excerpt: "", status: "DRAFT", ...emptySeoFields })}
                         disabled={actionLoading}
                       >
                         Очистить
@@ -1805,6 +2188,10 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
                         />
                       </label>
                     </div>
+                    <SeoFields
+                      value={categoryForm}
+                      onChange={(field, nextValue) => setCategoryForm((prev) => ({ ...prev, [field]: nextValue }))}
+                    />
                     {actionError ? <p className="mt-3 text-[14px] text-[#9b3d2f]">{actionError}</p> : null}
                     <div className="admin-form-actions">
                       <button className="admin-action-btn" type="button" onClick={handleCategorySubmit} disabled={actionLoading}>
@@ -1813,7 +2200,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
                       <button
                         className="admin-action-btn admin-action-btn--ghost"
                         type="button"
-                        onClick={() => setCategoryForm({ id: "", name: "", slug: "", description: "", parentId: "" })}
+                        onClick={() => setCategoryForm({ id: "", name: "", slug: "", description: "", parentId: "", ...emptySeoFields })}
                         disabled={actionLoading}
                       >
                         Очистить
@@ -1834,15 +2221,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
                             key={item.id}
                             type="button"
                             className="admin-action-btn admin-action-btn--ghost"
-                            onClick={() =>
-                              setCategoryForm({
-                                id: item.id,
-                                name: item.name,
-                                slug: item.slug,
-                                description: "",
-                                parentId: "",
-                              })
-                            }
+                            onClick={() => handleSelectCategory(item.id)}
                           >
                             {item.name}
                           </button>
@@ -2067,6 +2446,10 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
                         />
                       </label>
                     </div>
+                    <SeoFields
+                      value={catalogForm}
+                      onChange={(field, nextValue) => setCatalogForm((prev) => ({ ...prev, [field]: nextValue }))}
+                    />
                     {actionError ? <p className="mt-3 text-[14px] text-[#9b3d2f]">{actionError}</p> : null}
                     <div className="admin-form-actions">
                       <button className="admin-action-btn" type="button" onClick={handleCatalogSubmit} disabled={actionLoading}>
@@ -2089,7 +2472,6 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
                             type: "",
                             shortDescription: "",
                             description: "",
-                            rating: "",
                             efficiency: "",
                             efficiencyClass: "",
                             coverage: "",
@@ -2101,6 +2483,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
                             stock: "",
                             status: "DRAFT",
                             categoryId: categories[0]?.id || "",
+                            ...emptySeoFields,
                           })
                         }
                         disabled={actionLoading}
@@ -2134,172 +2517,6 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
                       </article>
                     ))}
                     {filteredCatalog.length === 0 ? <SectionMessage title="Пусто" description="Товары по текущему фильтру не найдены." /> : null}
-                  </div>
-                </div>
-              ) : null}
-
-              {!loading && !error && activeKey === "projects" ? (
-                <div className="mt-10">
-                  <div className="admin-form-card">
-                    <div className="admin-form-grid admin-form-grid--catalog">
-                      <label className="admin-toolbar__label">
-                        Название услуги
-                        <input
-                          className="admin-input mt-2"
-                          value={serviceForm.name}
-                          onChange={(event) => setServiceForm((prev) => ({ ...prev, name: event.target.value }))}
-                          placeholder="Тепловой контроль"
-                        />
-                      </label>
-                      <label className="admin-toolbar__label">
-                        Slug
-                        <input
-                          className="admin-input mt-2"
-                          value={serviceForm.slug}
-                          onChange={(event) => setServiceForm((prev) => ({ ...prev, slug: event.target.value }))}
-                          placeholder="thermal-control"
-                        />
-                      </label>
-                      <label className="admin-toolbar__label">
-                        Заголовок hero
-                        <input
-                          className="admin-input mt-2"
-                          value={serviceForm.heroTitle}
-                          onChange={(event) => setServiceForm((prev) => ({ ...prev, heroTitle: event.target.value }))}
-                          placeholder="Тепловой контроль"
-                        />
-                      </label>
-                      <label className="admin-toolbar__label">
-                        Лид
-                        <input
-                          className="admin-input mt-2"
-                          value={serviceForm.lead}
-                          onChange={(event) => setServiceForm((prev) => ({ ...prev, lead: event.target.value }))}
-                          placeholder="Короткий подзаголовок"
-                        />
-                      </label>
-                      <label className="admin-toolbar__label">
-                        Цена
-                        <input
-                          className="admin-input mt-2"
-                          value={serviceForm.basePrice}
-                          onChange={(event) => setServiceForm((prev) => ({ ...prev, basePrice: event.target.value }))}
-                          placeholder="120000"
-                        />
-                      </label>
-                      <label className="admin-toolbar__label">
-                        Длительность (часы)
-                        <input
-                          className="admin-input mt-2"
-                          value={serviceForm.durationHours}
-                          onChange={(event) => setServiceForm((prev) => ({ ...prev, durationHours: event.target.value }))}
-                          placeholder="8"
-                        />
-                      </label>
-                      <label className="admin-toolbar__label">
-                        Изображение (URL)
-                        <input
-                          className="admin-input mt-2"
-                          value={serviceForm.imageUrl}
-                          onChange={(event) => setServiceForm((prev) => ({ ...prev, imageUrl: event.target.value }))}
-                          placeholder="https://..."
-                        />
-                      </label>
-                      <label className="admin-toolbar__label">
-                        Активна
-                        <select
-                          className="admin-input mt-2"
-                          value={serviceForm.isActive ? "1" : "0"}
-                          onChange={(event) => setServiceForm((prev) => ({ ...prev, isActive: event.target.value === "1" }))}
-                        >
-                          <option value="1">Да</option>
-                          <option value="0">Нет</option>
-                        </select>
-                      </label>
-                    </div>
-                    <label className="admin-toolbar__label mt-4">
-                      Короткое описание
-                      <textarea
-                        className="admin-input admin-textarea mt-2"
-                        value={serviceForm.shortDescription}
-                        onChange={(event) => setServiceForm((prev) => ({ ...prev, shortDescription: event.target.value }))}
-                        placeholder="Описание для карточки"
-                      />
-                    </label>
-                    <label className="admin-toolbar__label mt-4">
-                      Полное описание
-                      <textarea
-                        className="admin-input admin-textarea mt-2"
-                        value={serviceForm.description}
-                        onChange={(event) => setServiceForm((prev) => ({ ...prev, description: event.target.value }))}
-                        placeholder="Описание услуги"
-                      />
-                    </label>
-                    <label className="admin-toolbar__label mt-4">
-                      Буллеты (через запятую)
-                      <input
-                        className="admin-input mt-2"
-                        value={serviceForm.bullets}
-                        onChange={(event) => setServiceForm((prev) => ({ ...prev, bullets: event.target.value }))}
-                        placeholder="Сроки, гарантия, монтаж"
-                      />
-                    </label>
-                    {actionError ? <p className="mt-3 text-[14px] text-[#9b3d2f]">{actionError}</p> : null}
-                    <div className="admin-form-actions">
-                      <button className="admin-action-btn" type="button" onClick={handleServiceSubmit} disabled={actionLoading}>
-                        {serviceForm.id ? "Сохранить" : "Создать"}
-                      </button>
-                      <button
-                        className="admin-action-btn admin-action-btn--ghost"
-                        type="button"
-                        onClick={() =>
-                          setServiceForm({
-                            id: "",
-                            name: "",
-                            slug: "",
-                            shortDescription: "",
-                            description: "",
-                            heroTitle: "",
-                            lead: "",
-                            bullets: "",
-                            imageUrl: "",
-                            basePrice: "",
-                            durationHours: "",
-                            isActive: true,
-                          })
-                        }
-                        disabled={actionLoading}
-                      >
-                        Очистить
-                      </button>
-                      {serviceForm.id ? (
-                        <button className="admin-action-btn admin-action-btn--ghost" type="button" onClick={handleServiceDelete} disabled={actionLoading}>
-                          Удалить
-                        </button>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    {services.map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        className="border border-[#e8e3db] bg-white p-6 text-left"
-                        onClick={() =>
-                          setServiceForm((prev) => ({
-                            ...prev,
-                            id: item.id,
-                            name: item.name,
-                            slug: item.slug,
-                          }))
-                        }
-                      >
-                        <p className="text-[12px] uppercase tracking-[3px] text-[#b1ada6] [font-family:Jaldi,'JetBrains_Mono',monospace]">услуга</p>
-                        <h3 className="mt-3 text-[22px] [font-family:'Cormorant_Garamond',serif]">{item.name}</h3>
-                        <p className="mt-2 text-[14px] text-[#7a7a75]">{item.slug}</p>
-                      </button>
-                    ))}
                   </div>
                 </div>
               ) : null}
@@ -2756,8 +2973,10 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
                         <input
                           className="admin-input mt-2"
                           value={userForm.phone}
-                          onChange={(event) => setUserForm((prev) => ({ ...prev, phone: event.target.value }))}
-                          placeholder="+7 999 123 45 67"
+                          onChange={(event) => setUserForm((prev) => ({ ...prev, phone: formatRussianPhone(event.target.value) }))}
+                          placeholder="+7(999) 999-99-99"
+                          inputMode="tel"
+                          maxLength={17}
                         />
                       </label>
                       <label className="admin-toolbar__label">
@@ -2865,7 +3084,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
                 </div>
               ) : null}
 
-              {!["clients", "orders", "news", "catalog", "projects", "requests", "settings"].includes(activeKey) ? (
+              {!["clients", "orders", "news", "catalog", "requests", "settings"].includes(activeKey) ? (
                 <SectionMessage
                   title="Раздел не подключен"
                   description="Для этого раздела в текущем backend нет подходящего endpoint, либо он не входит в текущий этап интеграции. Экран оставлен без полной API-интеграции."

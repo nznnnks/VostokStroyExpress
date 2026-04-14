@@ -2,7 +2,6 @@ export const navLinks = [
   { href: "/", label: "главная" },
   { href: "/about", label: "о нас" },
   { href: "/services", label: "услуги" },
-  { href: "/news", label: "проекты" },
   { href: "/catalog", label: "каталог" },
   { href: "/news", label: "блог" },
 ] as const;

@@ -17,6 +17,18 @@ export class CreateCategoryDto {
   imageUrl?: string;
 
   @IsOptional()
+  @IsString()
+  metaTitle?: string;
+
+  @IsOptional()
+  @IsString()
+  metaDescription?: string;
+
+  @IsOptional()
+  @IsString()
+  metaKeywords?: string;
+
+  @IsOptional()
   @IsUUID()
   parentId?: string;
 

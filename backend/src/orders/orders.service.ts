@@ -1,10 +1,12 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { DiscountType, ItemKind, Prisma } from '@prisma/client';
 
-import {
-  AuthPrincipal,
-  AuthenticatedUser,
-} from '../auth/interfaces/auth-principal.interface';
+import { AuthPrincipal } from '../auth/interfaces/auth-principal.interface';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -84,8 +86,15 @@ export class OrdersService {
     return this.toOrderResponse(order);
   }
 
-  async create(dto: CreateOrderDto, user: AuthenticatedUser) {
-    const userId = user.userId;
+  async create(dto: CreateOrderDto, auth: AuthPrincipal) {
+    const userId =
+      auth.type === 'admin'
+        ? dto.userId
+        : auth.userId;
+
+    if (!userId) {
+      throw new BadRequestException('userId is required when an admin creates an order.');
+    }
 
     await this.ensureUserExists(userId);
 

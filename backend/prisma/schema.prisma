@@ -122,6 +122,9 @@ model Category {
   slug        String      @unique
   description String?
   imageUrl    String?
+  metaTitle   String?
+  metaDescription String?
+  metaKeywords String?
   sortOrder   Int         @default(0)
   parentId    String?     @db.Uuid
   createdAt   DateTime    @default(now())
@@ -154,6 +157,9 @@ model Product {
   coverage         String?
   acoustics        String?
   filtration       String?
+  metaTitle        String?
+  metaDescription  String?
+  metaKeywords     String?
   images           String[]      @default([])
   stock            Int           @default(0)
   status           ProductStatus @default(DRAFT)
@@ -173,8 +179,14 @@ model Service {
   description      String?
   heroTitle        String?
   lead             String?
+  detailTitle      String?
   bullets          String[]    @default([])
+  detailImages     String[]    @default([])
+  deliverables     String[]    @default([])
   imageUrl         String?
+  metaTitle        String?
+  metaDescription  String?
+  metaKeywords     String?
   basePrice        Decimal?    @db.Decimal(12, 2)
   durationHours    Int?
   isActive         Boolean     @default(true)
@@ -322,6 +334,9 @@ model News {
   excerpt       String?
   category      String?
   coverImageUrl String?
+  metaTitle     String?
+  metaDescription String?
+  metaKeywords  String?
   contentBlocks String[]    @default([])
   status        NewsStatus  @default(DRAFT)
   publishedAt   DateTime?

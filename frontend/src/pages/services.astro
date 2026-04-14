@@ -1,6 +1,11 @@
 ---
 import { ServicesPage } from "../components/ServicesPage";
+import { loadServices } from "../lib/backend-api";
 import "../styles/global.css";
+
+export const prerender = false;
+
+const services = await loadServices();
 ---
 
 <!doctype html>
@@ -17,6 +22,6 @@ import "../styles/global.css";
     />
   </head>
   <body>
-    <ServicesPage client:load />
+    <ServicesPage services={services} />
   </body>
 </html>

@@ -20,6 +20,9 @@ export type Product = {
   filtration?: string;
   description?: string[];
   relatedSlugs?: string[];
+  metaTitle?: string;
+  metaDescription?: string;
+  metaKeywords?: string;
 };
 
 export const products: Product[] = [

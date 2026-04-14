@@ -34,14 +34,42 @@ export class CreateServiceOfferingDto {
   lead?: string;
 
   @IsOptional()
+  @IsString()
+  detailTitle?: string;
+
+  @IsOptional()
   @IsArray()
   @ArrayUnique()
   @IsString({ each: true })
   bullets?: string[];
 
   @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsString({ each: true })
+  detailImages?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsString({ each: true })
+  deliverables?: string[];
+
+  @IsOptional()
   @IsString()
   imageUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  metaTitle?: string;
+
+  @IsOptional()
+  @IsString()
+  metaDescription?: string;
+
+  @IsOptional()
+  @IsString()
+  metaKeywords?: string;
 
   @IsOptional()
   @Type(() => Number)

@@ -2,16 +2,16 @@
 import "../../styles/global.css";
 import SiteHeader from "../../components/SiteHeader";
 import SiteFooter from "../../components/SiteFooter";
-import { services } from "../../data/site";
+import { loadServiceBySlug } from "../../lib/backend-api";
 
-export function getStaticPaths() {
-  return services.map((service) => ({
-    params: { slug: service.slug },
-    props: { service },
-  }));
+export const prerender = false;
+
+const slug = Astro.params.slug ?? "";
+const service = await loadServiceBySlug(slug);
+
+if (!service) {
+  return Astro.redirect("/services");
 }
-
-const { service } = Astro.props;
 ---
 
 <!doctype html>
@@ -19,7 +19,9 @@ const { service } = Astro.props;
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{service.title}</title>
+    <title>{service.metaTitle ?? service.title}</title>
+    <meta name="description" content={service.metaDescription ?? service.lead} />
+    {service.metaKeywords ? <meta name="keywords" content={service.metaKeywords} /> : null}
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -74,7 +76,7 @@ const { service } = Astro.props;
               </ul>
             </div>
             <div class="grid gap-6 sm:grid-cols-2">
-              {(service.detailImages ?? [service.image, service.image]).map((src, index) => (
+              {service.detailImages.map((src, index) => (
                 <div class="overflow-hidden border border-[#e8e3db] bg-[#f7f5f1]">
                   <img src={src} alt="" aria-hidden="true" width="600" height="600" class="h-full w-full object-cover" loading={index === 0 ? "eager" : "lazy"} />
                 </div>

@@ -26,10 +26,13 @@ export type SeedService = {
   title: string;
   shortText: string;
   image: string;
+  detailImages?: string[];
   heroTitle: string;
   lead: string;
+  detailTitle?: string;
   detailText: string;
   bullets: string[];
+  deliverables?: string[];
 };
 
 export type SeedNews = {

@@ -6,6 +6,12 @@ type ApiCategory = {
   id: string;
   name: string;
   slug: string;
+  description?: string | null;
+  imageUrl?: string | null;
+  parentId?: string | null;
+  metaTitle?: string | null;
+  metaDescription?: string | null;
+  metaKeywords?: string | null;
 };
 
 export type AdminCategoryView = ApiCategory;
@@ -51,6 +57,10 @@ type ApiProduct = {
   images?: string[];
   stock?: number;
   status?: string;
+  oldPrice?: number | null;
+  metaTitle?: string | null;
+  metaDescription?: string | null;
+  metaKeywords?: string | null;
   category?: ApiCategory | null;
   discount?: ApiDiscount;
 };
@@ -66,6 +76,9 @@ type ApiNews = {
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
   publishedAt?: string | null;
   createdAt: string;
+  metaTitle?: string | null;
+  metaDescription?: string | null;
+  metaKeywords?: string | null;
   author?: {
     id: string;
     email: string;
@@ -77,9 +90,11 @@ type ApiNews = {
 
 type ApiClientProfile = {
   id: string;
+  userId: string;
   firstName: string;
   lastName?: string | null;
   companyName?: string | null;
+  inn?: string | null;
   contactPhone?: string | null;
   addressLine1?: string | null;
   city?: string | null;
@@ -103,11 +118,17 @@ type ApiService = {
   description?: string | null;
   heroTitle?: string | null;
   lead?: string | null;
+  detailTitle?: string | null;
   bullets?: string[];
+  detailImages?: string[];
+  deliverables?: string[];
   imageUrl?: string | null;
   basePrice?: number | null;
   durationHours?: number | null;
   isActive?: boolean;
+  metaTitle?: string | null;
+  metaDescription?: string | null;
+  metaKeywords?: string | null;
 };
 
 type ApiAdminUser = {
@@ -149,6 +170,8 @@ type ApiAccountDiscount = {
 
 type ApiOrderItem = {
   id: string;
+  productId?: string | null;
+  serviceId?: string | null;
   title: string;
   quantity: number;
   unitPrice: number;
@@ -157,7 +180,7 @@ type ApiOrderItem = {
   sku?: string | null;
 };
 
-type ApiPayment = {
+type ApiOrderPayment = {
   status: "PENDING" | "PAID" | "FAILED" | "REFUNDED";
   method: "CARD" | "SBP" | "INVOICE" | "CASH";
 };
@@ -168,10 +191,13 @@ type ApiOrder = {
   status: "NEW" | "PENDING_PAYMENT" | "PAID" | "ASSEMBLY" | "SHIPPING" | "DELIVERED" | "CANCELLED";
   deliveryMethod?: string | null;
   deliveryAddress?: string | null;
+  contactName?: string | null;
+  contactPhone?: string | null;
+  comment?: string | null;
   placedAt?: string | null;
   createdAt: string;
   items: ApiOrderItem[];
-  payments: ApiPayment[];
+  payments: ApiOrderPayment[];
   summary: {
     itemsCount: number;
     subtotal: number;
@@ -180,6 +206,7 @@ type ApiOrder = {
     total: number;
   };
   user?: {
+    id: string;
     email?: string | null;
     clientProfile?: ApiClientProfile | null;
   } | null;
@@ -242,6 +269,29 @@ export type NewsPostView = {
   content: string[];
   dateLabel: string;
   status: string;
+  metaTitle?: string;
+  metaDescription?: string;
+  metaKeywords?: string;
+};
+
+export type ServiceView = {
+  id: string;
+  slug: string;
+  title: string;
+  shortText: string;
+  image: string;
+  heroTitle: string;
+  lead: string;
+  detailTitle: string;
+  detailText: string;
+  bullets: string[];
+  detailImages: string[];
+  deliverables: string[];
+  basePrice?: number;
+  durationHours?: number;
+  metaTitle?: string;
+  metaDescription?: string;
+  metaKeywords?: string;
 };
 
 export type AccountProfileView = {
@@ -332,21 +382,41 @@ function mapCartResponse(cart: ApiCart): CartView {
 
 export type AdminClientView = {
   id: string;
+  userId?: string;
   name: string;
+  firstName?: string;
+  lastName?: string;
+  companyName?: string;
+  inn?: string;
+  contactPhone?: string;
+  addressLine1?: string;
+  city?: string;
+  postalCode?: string;
+  comment?: string;
+  personalDiscountPercent?: string;
   segment: string;
   manager: string;
   orders: string;
+  totalSpent?: string;
   status: string;
 };
 
 export type AdminOrderView = {
   id: string;
+  userId?: string;
   orderNumber: string;
   client: string;
   items: string;
+  itemLines?: string;
   amount: string;
   status: string;
+  statusCode?: AdminOrderStatus;
   date: string;
+  deliveryMethod?: string;
+  deliveryAddress?: string;
+  contactName?: string;
+  contactPhone?: string;
+  comment?: string;
 };
 
 export type AdminNewsView = {
@@ -485,6 +555,9 @@ function mapApiProduct(product: ApiProduct): Product {
     acoustics: product.acoustics ?? undefined,
     filtration: product.filtration ?? undefined,
     description: splitDescription(product.description),
+    metaTitle: product.metaTitle ?? undefined,
+    metaDescription: product.metaDescription ?? undefined,
+    metaKeywords: product.metaKeywords ?? undefined,
   };
 }
 
@@ -499,6 +572,9 @@ function mapApiNews(item: ApiNews): NewsPostView {
     content: item.contentBlocks?.length ? item.contentBlocks : [],
     dateLabel: formatDate(item.publishedAt ?? item.createdAt),
     status: mapNewsStatus(item.status),
+    metaTitle: item.metaTitle ?? undefined,
+    metaDescription: item.metaDescription ?? undefined,
+    metaKeywords: item.metaKeywords ?? undefined,
   };
 }
 
@@ -575,6 +651,12 @@ async function loadPublicNewsRaw() {
   });
 }
 
+async function loadPublicServicesRaw() {
+  return apiRequest<ApiService[]>("/api/services", {
+    query: { limit: 100 },
+  });
+}
+
 export async function loadCatalogProducts(): Promise<Product[]> {
   const data = await loadPublicProductsRaw();
   return Array.isArray(data) ? data.map(mapApiProduct) : [];
@@ -602,6 +684,28 @@ export async function loadCatalogProductBySlug(slug: string) {
   };
 }
 
+function mapApiService(item: ApiService): ServiceView {
+  return {
+    id: item.id,
+    slug: item.slug,
+    title: item.name,
+    shortText: item.shortDescription ?? "",
+    image: item.imageUrl ?? "",
+    heroTitle: item.heroTitle ?? item.name,
+    lead: item.lead ?? "",
+    detailTitle: item.detailTitle ?? item.name,
+    detailText: item.description ?? "",
+    bullets: item.bullets?.length ? item.bullets : [],
+    detailImages: item.detailImages?.length ? item.detailImages : item.imageUrl ? [item.imageUrl] : [],
+    deliverables: item.deliverables?.length ? item.deliverables : [],
+    basePrice: item.basePrice ?? undefined,
+    durationHours: item.durationHours ?? undefined,
+    metaTitle: item.metaTitle ?? undefined,
+    metaDescription: item.metaDescription ?? undefined,
+    metaKeywords: item.metaKeywords ?? undefined,
+  };
+}
+
 export async function loadNewsPosts() {
   const data = await loadPublicNewsRaw();
   return Array.isArray(data) ? data.map(mapApiNews) : [];
@@ -610,6 +714,17 @@ export async function loadNewsPosts() {
 export async function loadNewsPostBySlug(slug: string) {
   const posts = await loadNewsPosts();
   return posts.find((post) => post.slug === slug) ?? null;
+}
+
+export async function loadServices() {
+  const services = await loadPublicServicesRaw();
+  return services.filter((item) => item.isActive !== false).map(mapApiService);
+}
+
+export async function loadServiceBySlug(slug: string) {
+  const services = await loadPublicServicesRaw();
+  const service = services.find((item) => item.slug === slug && item.isActive !== false);
+  return service ? mapApiService(service) : null;
 }
 
 export async function loadAccountSnapshot() {
@@ -804,7 +919,7 @@ export async function loadAdminSectionData() {
   }
 
   const [clients, orders, news, catalog] = await Promise.all([
-    apiRequest<Array<ApiClientProfile & { user?: { email?: string | null } | null }>>("/api/client-profiles", {
+    apiRequest<Array<ApiClientProfile & { user?: { id: string; email?: string | null; status?: "ACTIVE" | "BLOCKED" } | null }>>("/api/client-profiles", {
       authToken,
       query: { limit: 50 },
     }),
@@ -821,6 +936,75 @@ export async function loadAdminSectionData() {
       query: { limit: 50 },
     }),
   ]);
+
+  const ordersByUserId = new Map<string, { count: number; total: number }>();
+
+  for (const order of orders) {
+    const userId = order.user?.id;
+
+    if (!userId) {
+      continue;
+    }
+
+    const current = ordersByUserId.get(userId) ?? { count: 0, total: 0 };
+    current.count += 1;
+    current.total += order.summary.total;
+    ordersByUserId.set(userId, current);
+  }
+
+  const mappedClients = clients.map((item) => {
+    const stats = ordersByUserId.get(item.userId) ?? { count: 0, total: 0 };
+
+      return {
+        id: item.id,
+        userId: item.userId,
+        name: profileName(item, item.user?.email ?? null),
+      firstName: item.firstName,
+      lastName: item.lastName ?? "",
+      companyName: item.companyName ?? "",
+      inn: item.inn ?? "",
+      contactPhone: item.contactPhone ?? "",
+      addressLine1: item.addressLine1 ?? "",
+      city: item.city ?? "",
+      postalCode: item.postalCode ?? "",
+      comment: item.comment ?? "",
+        personalDiscountPercent:
+          toNumber(item.personalDiscountPercent) !== null
+            ? String(toNumber(item.personalDiscountPercent))
+            : "",
+        segment: item.companyName ?? "Частный клиент",
+        manager: "—",
+        orders: String(stats.count),
+        totalSpent: formatPrice(stats.total),
+        status: item.user?.status === "BLOCKED" ? "Заблокирован" : "Активен",
+      };
+    }) satisfies AdminClientView[];
+
+  const mappedOrders = orders.map((item) => ({
+    id: item.id,
+    userId: item.user?.id ?? "",
+    orderNumber: item.orderNumber,
+    client: profileName(item.user?.clientProfile, item.user?.email ?? null),
+    items: `${item.summary.itemsCount} поз.`,
+    itemLines: item.items
+      .map((orderItem) => {
+        const kind = orderItem.productId ? "product" : "service";
+        const entityId = orderItem.productId ?? orderItem.serviceId;
+
+        return entityId ? `${kind}:${entityId}:${orderItem.quantity}` : "";
+      })
+      .filter(Boolean)
+      .join("\n"),
+    amount: formatPrice(item.summary.total),
+    status: mapOrderStatus(item.status)[0],
+    statusCode: item.status,
+    date: formatDate(item.placedAt ?? item.createdAt),
+    deliveryMethod: item.deliveryMethod ?? "",
+    deliveryAddress: item.deliveryAddress ?? "",
+    contactName: item.contactName ?? "",
+    contactPhone: item.contactPhone ?? "",
+    comment: item.comment ?? "",
+  })) satisfies AdminOrderView[];
 
   return {
     clients: clients.map((item) => ({
@@ -840,6 +1024,10 @@ export async function loadAdminSectionData() {
       status: mapOrderStatus(item.status)[0],
       date: formatDate(item.placedAt ?? item.createdAt),
     })) satisfies AdminOrderView[],
+    ...{
+      clients: mappedClients,
+      orders: mappedOrders,
+    },
     news: news.map((item) => ({
       id: item.id,
       title: item.title,
@@ -860,6 +1048,10 @@ export async function loadAdminSectionData() {
 export async function loadAdminCategories() {
   const authToken = getStoredAccessToken("admin");
 
+  if (!authToken) {
+    throw new ApiError("Требуется авторизация администратора.", 401);
+  }
+
   return apiRequest<ApiCategory[]>("/api/categories", {
     authToken,
     query: { limit: 50 },
@@ -876,6 +1068,30 @@ export async function loadAdminServices() {
   return apiRequest<ApiService[]>("/api/services", {
     authToken,
     query: { limit: 50 },
+  });
+}
+
+export async function loadAdminCategoryById(id: string) {
+  const authToken = getStoredAccessToken("admin");
+
+  if (!authToken) {
+    throw new ApiError("Требуется авторизация администратора.", 401);
+  }
+
+  return apiRequest<ApiCategory>(`/api/categories/${id}`.replace(/\/+/g, "/"), {
+    authToken,
+  });
+}
+
+export async function loadAdminServiceById(id: string) {
+  const authToken = getStoredAccessToken("admin");
+
+  if (!authToken) {
+    throw new ApiError("Требуется авторизация администратора.", 401);
+  }
+
+  return apiRequest<ApiService>(`/api/services/${id}`.replace(/\/+/g, "/"), {
+    authToken,
   });
 }
 
@@ -1002,11 +1218,17 @@ export async function createAdminService(payload: {
   description?: string;
   heroTitle?: string;
   lead?: string;
+  detailTitle?: string;
   bullets?: string[];
+  detailImages?: string[];
+  deliverables?: string[];
   imageUrl?: string;
   basePrice?: number;
   durationHours?: number;
   isActive?: boolean;
+  metaTitle?: string;
+  metaDescription?: string;
+  metaKeywords?: string;
 }) {
   const authToken = getStoredAccessToken("admin");
 
@@ -1030,11 +1252,17 @@ export async function updateAdminService(
     description?: string;
     heroTitle?: string;
     lead?: string;
+    detailTitle?: string;
     bullets?: string[];
+    detailImages?: string[];
+    deliverables?: string[];
     imageUrl?: string;
     basePrice?: number;
     durationHours?: number;
     isActive?: boolean;
+    metaTitle?: string;
+    metaDescription?: string;
+    metaKeywords?: string;
   },
 ) {
   const authToken = getStoredAccessToken("admin");
@@ -1253,6 +1481,55 @@ export async function deleteAdminPayment(id: string) {
   });
 }
 
+export async function createAdminOrder(payload: {
+  userId: string;
+  deliveryMethod?: string;
+  deliveryAddress?: string;
+  contactName?: string;
+  contactPhone?: string;
+  comment?: string;
+  items: Array<
+    | { productId: string; quantity: number }
+    | { serviceId: string; quantity: number }
+  >;
+}) {
+  const authToken = getStoredAccessToken("admin");
+
+  if (!authToken) {
+    throw new ApiError("Требуется авторизация администратора.", 401);
+  }
+
+  return apiRequest<ApiOrder>("/api/orders", {
+    method: "POST",
+    authToken,
+    body: payload,
+  });
+}
+
+export async function updateAdminOrder(
+  id: string,
+  payload: {
+    status?: AdminOrderStatus;
+    deliveryMethod?: string;
+    deliveryAddress?: string;
+    contactName?: string;
+    contactPhone?: string;
+    comment?: string;
+  },
+) {
+  const authToken = getStoredAccessToken("admin");
+
+  if (!authToken) {
+    throw new ApiError("Требуется авторизация администратора.", 401);
+  }
+
+  return apiRequest<ApiOrder>(`/api/orders/${id}`.replace(/\/+/g, "/"), {
+    method: "PATCH",
+    authToken,
+    body: payload,
+  });
+}
+
 export async function updateAdminOrderStatus(id: string, status: AdminOrderStatus) {
   const authToken = getStoredAccessToken("admin");
 
@@ -1381,6 +1658,9 @@ export async function createAdminCategory(payload: {
   description?: string;
   imageUrl?: string;
   parentId?: string;
+  metaTitle?: string;
+  metaDescription?: string;
+  metaKeywords?: string;
 }) {
   const authToken = getStoredAccessToken("admin");
 
@@ -1403,6 +1683,9 @@ export async function updateAdminCategory(
     description?: string;
     imageUrl?: string;
     parentId?: string;
+    metaTitle?: string;
+    metaDescription?: string;
+    metaKeywords?: string;
   },
 ) {
   const authToken = getStoredAccessToken("admin");
@@ -1437,6 +1720,9 @@ export async function createAdminNews(payload: {
   excerpt?: string;
   category?: string;
   status?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+  metaTitle?: string;
+  metaDescription?: string;
+  metaKeywords?: string;
 }) {
   const authToken = getStoredAccessToken("admin");
 
@@ -1459,6 +1745,9 @@ export async function updateAdminNews(
     excerpt?: string;
     category?: string;
     status?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+    metaTitle?: string;
+    metaDescription?: string;
+    metaKeywords?: string;
   },
 ) {
   const authToken = getStoredAccessToken("admin");
@@ -1522,6 +1811,9 @@ export async function createAdminProduct(payload: {
   images?: string[];
   stock?: number;
   status?: "ACTIVE" | "DRAFT" | "ARCHIVED";
+  metaTitle?: string;
+  metaDescription?: string;
+  metaKeywords?: string;
 }) {
   const authToken = getStoredAccessToken("admin");
 
@@ -1561,6 +1853,9 @@ export async function updateAdminProduct(
     images?: string[];
     stock?: number;
     status?: "ACTIVE" | "DRAFT" | "ARCHIVED";
+    metaTitle?: string;
+    metaDescription?: string;
+    metaKeywords?: string;
   },
 ) {
   const authToken = getStoredAccessToken("admin");

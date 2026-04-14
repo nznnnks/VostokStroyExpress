@@ -13,7 +13,6 @@ export const adminNav: AdminNavItem[] = [
   { key: "clients", label: "Клиенты", href: "/admin/clients", icon: "/admin/client-news-catalog.svg" },
   { key: "news", label: "Новости", href: "/admin/news", icon: "/admin/client-news-catalog.svg" },
   { key: "catalog", label: "Каталог", href: "/admin/catalog", icon: "/admin/client-news-catalog.svg" },
-  { key: "projects", label: "Проекты", href: "/admin/projects", icon: "/admin/requests-projects.svg" },
   { key: "settings", label: "Настройки", href: "/admin/settings", icon: "/admin/settings.svg" },
 ];
 
@@ -48,7 +47,6 @@ export const adminRequests = [
     date: "02.04.2026",
   },
 ];
-
 export const adminOrders = [
   {
     id: "AE-7729-01",
@@ -139,29 +137,5 @@ export const adminCatalog = [
     brand: "Aeris Pro",
     price: "118 500 ₽",
     stock: "В наличии",
-  },
-];
-
-export const adminProjects = [
-  {
-    name: "Skyline Residences",
-    client: "ООО Вертикаль",
-    stage: "Проектирование",
-    deadline: "20.04.2026",
-    lead: "Мария П.",
-  },
-  {
-    name: "Nordic Museum",
-    client: "Бюро A1",
-    stage: "Монтаж",
-    deadline: "14.05.2026",
-    lead: "Илья Д.",
-  },
-  {
-    name: "Central House",
-    client: "Art City",
-    stage: "Сервис",
-    deadline: "29.04.2026",
-    lead: "Кирилл М.",
   },
 ];

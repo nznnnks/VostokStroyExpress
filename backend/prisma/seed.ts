@@ -4,6 +4,43 @@ import { seedNews, seedProducts, seedServices, type SeedNews, type SeedProduct, 
 
 const prisma = new PrismaClient();
 
+const serviceContentBySlug: Record<
+  string,
+  {
+    detailTitle: string;
+    detailImages: string[];
+    deliverables: string[];
+  }
+> = {
+  "thermal-control": {
+    detailTitle: "Комфорт, который держит заданный режим даже в сложных сценариях",
+    detailImages: ["/image/services-1.png", "/image/steps-1.png"],
+    deliverables: [
+      "Точный тепловой баланс по зонам и сценариям",
+      "Стабильная температура без скачков и пересушивания",
+      "Автоматика, которая не требует постоянных настроек",
+    ],
+  },
+  "air-cleaning": {
+    detailTitle: "Чистый воздух без перегрузки пространства и лишнего шума",
+    detailImages: ["/image/services-2.png", "/image/steps-2.png"],
+    deliverables: [
+      "Показатели качества воздуха на уровне премиальных стандартов",
+      "Сбалансированная влажность без ощущения сквозняков",
+      "Незаметная работа системы в жилых сценариях",
+    ],
+  },
+  "acoustic-tuning": {
+    detailTitle: "Тихая работа системы в акустически чувствительных интерьерах",
+    detailImages: ["/image/services-3.png", "/image/steps-3.png"],
+    deliverables: [
+      "Снижение акустического фона до комфортных значений",
+      "Отсутствие вибраций в отделке и мебели",
+      "Чистый звук помещения без механических призвуков",
+    ],
+  },
+};
+
 function buildCategorySlug(name: string, index: number) {
   return `catalog-category-${index + 1}`;
 }
@@ -101,6 +138,8 @@ async function seedProductsData(seedProducts: SeedProduct[], categories: Map<str
 
 async function seedServicesData(seedServices: readonly SeedService[]) {
   for (const [index, item] of seedServices.entries()) {
+    const extra = serviceContentBySlug[item.slug];
+
     await prisma.service.upsert({
       where: { slug: item.slug },
       update: {
@@ -109,7 +148,10 @@ async function seedServicesData(seedServices: readonly SeedService[]) {
         description: item.detailText,
         heroTitle: item.heroTitle,
         lead: item.lead,
+        detailTitle: item.detailTitle ?? extra?.detailTitle,
         bullets: [...item.bullets],
+        detailImages: item.detailImages?.length ? [...item.detailImages] : extra?.detailImages ?? [],
+        deliverables: item.deliverables?.length ? [...item.deliverables] : extra?.deliverables ?? [],
         imageUrl: item.image,
         basePrice: 150000 + index * 25000,
         durationHours: 8 + index * 2,
@@ -122,7 +164,10 @@ async function seedServicesData(seedServices: readonly SeedService[]) {
         description: item.detailText,
         heroTitle: item.heroTitle,
         lead: item.lead,
+        detailTitle: item.detailTitle ?? extra?.detailTitle,
         bullets: [...item.bullets],
+        detailImages: item.detailImages?.length ? [...item.detailImages] : extra?.detailImages ?? [],
+        deliverables: item.deliverables?.length ? [...item.deliverables] : extra?.deliverables ?? [],
         imageUrl: item.image,
         basePrice: 150000 + index * 25000,
         durationHours: 8 + index * 2,

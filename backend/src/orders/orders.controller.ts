@@ -13,12 +13,7 @@ import { UserRole } from '@prisma/client';
 import { AdminAccess } from '../auth/decorators/admin-access.decorator';
 import { AuthenticatedAccess } from '../auth/decorators/authenticated-access.decorator';
 import { CurrentAuth } from '../auth/decorators/current-auth.decorator';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { UserAccess } from '../auth/decorators/user-access.decorator';
-import {
-  AuthPrincipal,
-  AuthenticatedUser,
-} from '../auth/interfaces/auth-principal.interface';
+import { AuthPrincipal } from '../auth/interfaces/auth-principal.interface';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
@@ -41,9 +36,9 @@ export class OrdersController {
   }
 
   @Post()
-  @UserAccess()
-  create(@Body() dto: CreateOrderDto, @CurrentUser() user: AuthenticatedUser) {
-    return this.ordersService.create(dto, user);
+  @AuthenticatedAccess()
+  create(@Body() dto: CreateOrderDto, @CurrentAuth() auth: AuthPrincipal) {
+    return this.ordersService.create(dto, auth);
   }
 
   @Patch(':id')

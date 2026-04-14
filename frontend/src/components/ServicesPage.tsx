@@ -1,8 +1,8 @@
 import SiteFooter from "./SiteFooter";
 import SiteHeader from "./SiteHeader";
-import { services } from "../data/site";
+import type { ServiceView } from "../lib/backend-api";
 
-export function ServicesPage() {
+export function ServicesPage({ services }: { services: ServiceView[] }) {
   return (
     <main className="flex min-h-screen flex-col bg-white text-[#111] [font-family:DM_Sans,Manrope,'Liberation_Sans',sans-serif]">
       <div className="flex-1">
