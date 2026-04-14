@@ -9,8 +9,8 @@ import { UpdateNewsDto } from './dto/update-news.dto';
 export class NewsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  findAll(query: PaginationQueryDto) {
-    return this.prisma.news.findMany({
+  async findAll(query: PaginationQueryDto) {
+    const items = await this.prisma.news.findMany({
       where: query.search
         ? {
             OR: [
@@ -38,6 +38,8 @@ export class NewsService {
       skip: (query.page - 1) * query.limit,
       take: query.limit,
     });
+
+    return items.map((item) => this.normalizeNewsUploads(item));
   }
 
   async findOne(id: string) {
@@ -63,7 +65,7 @@ export class NewsService {
       throw new NotFoundException(`News ${id} not found.`);
     }
 
-    return news;
+    return this.normalizeNewsUploads(news);
   }
 
   create(dto: CreateNewsDto, authorId?: string) {
@@ -132,5 +134,41 @@ export class NewsService {
     if (!news) {
       throw new NotFoundException(`News ${id} not found.`);
     }
+  }
+
+  private normalizeUploadRef(value?: string | null) {
+    if (!value) {
+      return value;
+    }
+
+    if (value.startsWith('/api/uploads/')) {
+      return value;
+    }
+
+    const fromUploads = (pathname: string) =>
+      pathname.startsWith('/uploads/') ? `/api${pathname}` : undefined;
+
+    if (value.startsWith('/uploads/')) {
+      return `/api${value}`;
+    }
+
+    try {
+      const url = new URL(value);
+      const normalized = fromUploads(url.pathname);
+      return normalized ?? value;
+    } catch {
+      return value;
+    }
+  }
+
+  private normalizeNewsUploads<T extends { coverImageUrl?: string | null; images?: string[] | null }>(news: T): T {
+    const cover = this.normalizeUploadRef(news.coverImageUrl);
+    const images = Array.isArray(news.images) ? news.images.map((item) => this.normalizeUploadRef(item) ?? item) : news.images;
+
+    return {
+      ...news,
+      coverImageUrl: cover as T['coverImageUrl'],
+      images: images as T['images'],
+    };
   }
 }

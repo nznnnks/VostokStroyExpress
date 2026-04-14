@@ -87,7 +87,7 @@ export class ProductsController {
 
     const host = request.get('host');
     const baseUrl = `${request.protocol}://${host}`;
-    const path = `/uploads/products/${file.filename}`;
+    const path = `/api/uploads/products/${file.filename}`;
 
     return {
       url: `${baseUrl}${path}`,

@@ -19,7 +19,19 @@ export class ApiError extends Error {
 }
 
 export function getApiBaseUrl() {
-  return (import.meta.env.PUBLIC_API_BASE_URL ?? "http://localhost:3000").replace(/\/+$/, "");
+  const explicit = import.meta.env.PUBLIC_API_BASE_URL;
+
+  if (explicit) {
+    return String(explicit).replace(/\/+$/, "");
+  }
+
+  // In production the frontend is usually served behind a reverse proxy that routes `/api/*` to the backend.
+  // Falling back to `window.location.origin` avoids the common "requests go to localhost:3000" production bug.
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return window.location.origin.replace(/\/+$/, "");
+  }
+
+  return "http://localhost:3000";
 }
 
 export function buildApiUrl(path: string, query?: Record<string, QueryValue>) {

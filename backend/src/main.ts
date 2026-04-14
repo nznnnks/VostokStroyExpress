@@ -18,6 +18,8 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
   app.useStaticAssets(uploadsPath, { prefix: '/uploads/' });
+  // Production deployments often proxy only `/api/*` to the backend. Expose uploads there too.
+  app.useStaticAssets(uploadsPath, { prefix: '/api/uploads/' });
   app.enableCors({
     origin: ['http://localhost:4321', 'http://127.0.0.1:4321'],
     credentials: true,

@@ -119,6 +119,7 @@ export class ProductsService {
 
     return {
       ...product,
+      images: this.normalizeUploads(product.images),
       price,
       oldPrice: product.oldPrice?.toNumber() ?? null,
       power: product.power?.toNumber() ?? null,
@@ -126,5 +127,36 @@ export class ProductsService {
       finalPrice,
       discount,
     };
+  }
+
+  private normalizeUploads(images: string[] | null | undefined) {
+    if (!Array.isArray(images)) {
+      return images ?? [];
+    }
+
+    return images.map((value) => {
+      if (!value) {
+        return value;
+      }
+
+      if (value.startsWith('/api/uploads/')) {
+        return value;
+      }
+
+      if (value.startsWith('/uploads/')) {
+        return `/api${value}`;
+      }
+
+      try {
+        const url = new URL(value);
+        if (url.pathname.startsWith('/uploads/')) {
+          return `/api${url.pathname}`;
+        }
+      } catch {
+        // ignore
+      }
+
+      return value;
+    });
   }
 }

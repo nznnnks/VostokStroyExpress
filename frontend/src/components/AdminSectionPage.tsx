@@ -420,7 +420,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
       const uploaded = await Promise.all(
         imageFiles.map(async (file) => {
           const result = await uploadAdminNewsImage(file);
-          return result.url;
+          return result.path || result.url;
         }),
       );
       const merged = [...newsImageList, ...uploaded];
@@ -448,7 +448,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
       const uploaded = await Promise.all(
         imageFiles.map(async (file) => {
           const result = await uploadAdminProductImage(file);
-          return result.url;
+          return result.path || result.url;
         }),
       );
       const merged = [...catalogImageList, ...uploaded];

@@ -89,7 +89,7 @@ export class NewsController {
 
     const host = request.get('host');
     const baseUrl = `${request.protocol}://${host}`;
-    const path = `/uploads/news/${file.filename}`;
+    const path = `/api/uploads/news/${file.filename}`;
 
     return {
       url: `${baseUrl}${path}`,
