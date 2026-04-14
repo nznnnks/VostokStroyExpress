@@ -259,12 +259,14 @@ export function StayseLandingTailwind() {
           <div className="mt-12 grid gap-12 md:grid-cols-2">
             {reviews.map(([avatar, text, author, role]) => (
               <article key={author as string} className="grid gap-5">
-                <p className="max-w-[620px] text-[clamp(14px,0.5vw+12px,18px)] leading-[1.65] text-[#2f2f2c]">{text}</p>
+                <p className="max-w-[620px] text-[clamp(24px,1.1vw+15px,44px)] leading-[1.28] italic tracking-[0.01em] text-[#1c1c19] [font-family:'Cormorant_Garamond',serif]">
+                  {text}
+                </p>
                 <footer className="flex flex-wrap items-center gap-3">
                   <img src={avatar as string} alt={author as string} loading="lazy" decoding="async" width="120" height="120" className="h-11 w-11 rounded-full object-cover" />
                   <div className="min-w-[160px]">
-                    <strong className="block text-[clamp(13px,0.45vw+11px,16px)]">{author}</strong>
-                    <span className="block text-[clamp(12px,0.4vw+10px,14px)] text-[#5f5f5b]">{role}</span>
+                    <strong className="block text-[clamp(26px,0.85vw+16px,38px)] leading-[1.04] tracking-[0.005em] [font-family:'Cormorant_Garamond',serif]">{author}</strong>
+                    <span className="block text-[clamp(20px,0.7vw+13px,30px)] leading-[1.1] text-[#5f5f5b] [font-family:'Cormorant_Garamond',serif]">{role}</span>
                   </div>
                   <a href="/about" className="ml-auto inline-flex h-10 items-center justify-center bg-[#1a1a1a] px-6 text-[clamp(12px,0.4vw+10px,14px)] uppercase tracking-[1.2px] text-white [font-family:'JetBrains_Mono',monospace]">
                     отзыв

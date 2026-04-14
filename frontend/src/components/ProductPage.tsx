@@ -221,7 +221,12 @@ export function ProductPage({ product, relatedProducts, allProducts }: ProductPa
               </div>
 
               <div className="mt-12 flex justify-end">
-                <div className="w-full max-w-[250px] border border-[#d9d3cb] p-5 text-center">
+                <a
+                  href={`/catalog?brand=${encodeURIComponent(product.brand)}`}
+                  className="block w-full max-w-[250px] border border-[#d9d3cb] p-5 text-center transition-colors hover:border-[#b6aea3]"
+                  aria-label={`Показать товары бренда ${product.brandLabel}`}
+                  title={`Смотреть товары ${product.brandLabel}`}
+                >
                   <div
                     role="img"
                     aria-label={`Флаг: ${product.country}`}
@@ -236,7 +241,7 @@ export function ProductPage({ product, relatedProducts, allProducts }: ProductPa
                   <p className="mt-2 text-[clamp(0.95rem,0.9vw,1.15rem)] uppercase tracking-[2px] [font-family:Jaldi,'JetBrains_Mono',monospace]">
                     заказов: 230
                   </p>
-                </div>
+                </a>
               </div>
             </aside>
           </div>

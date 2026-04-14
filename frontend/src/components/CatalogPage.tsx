@@ -101,6 +101,23 @@ export function CatalogPage({ products }: CatalogPageProps) {
     resultsTopRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [safePage]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const brandFromQuery = params.get("brand")?.trim();
+    if (!brandFromQuery) return;
+
+    const matchedBrand = brands.find((brand) => brand.toLowerCase() === brandFromQuery.toLowerCase());
+    if (matchedBrand) {
+      setSelectedBrands([matchedBrand]);
+      setPage(1);
+      return;
+    }
+
+    setQuery(brandFromQuery);
+    setPage(1);
+  }, [brands]);
+
   function toggleValue(value: string, selected: string[], setter: (values: string[]) => void) {
     setter(selected.includes(value) ? selected.filter((item) => item !== value) : [...selected, value]);
     setPage(1);
