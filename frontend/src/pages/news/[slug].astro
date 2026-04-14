@@ -28,7 +28,7 @@ const post = await loadNewsPostBySlug(slug);
   <body>
     <main class="bg-white text-[#111] [font-family:DM_Sans,Manrope,'Liberation_Sans',sans-serif]">
       <SiteHeader client:load />
-      <section class="px-4 py-10 md:px-10 md:py-14">
+      <section class="px-4 py-8 md:px-10 md:py-14">
         <article class="mx-auto max-w-[1180px]">
           <p class="text-[13px] uppercase tracking-[1.5px] text-[#7a7a75] [font-family:Jaldi,'JetBrains_Mono',monospace]">
             <a href="/" class="hover:text-[#111]">Главная</a>
@@ -37,10 +37,10 @@ const post = await loadNewsPostBySlug(slug);
             <span class="mx-2 text-[#b5b2ab]">/</span>
             <span>{post?.category ?? "Новость"}</span>
           </p>
-          <h1 class="mt-8 max-w-[900px] text-[56px] leading-[0.92] md:text-[92px] [font-family:'Cormorant_Garamond',serif]">{post?.title ?? "Материал не найден"}</h1>
+          <h1 class="mt-6 max-w-[900px] break-words text-[clamp(2.1rem,9vw,5.75rem)] leading-[0.94] [font-family:'Cormorant_Garamond',serif] md:mt-8">{post?.title ?? "Материал не найден"}</h1>
           {post ? (
             <>
-              {post.image ? <img src={post.image} alt="" aria-hidden="true" width="1200" height="760" class="mt-10 aspect-[16/9] w-full object-cover" /> : null}
+              {post.image ? <img src={post.image} alt="" aria-hidden="true" width="1200" height="760" class="mt-7 aspect-[16/9] w-full object-cover md:mt-10" /> : null}
               {post.images?.length > 1 ? (
                 <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {post.images.slice(1).map((image) => (
@@ -48,17 +48,17 @@ const post = await loadNewsPostBySlug(slug);
                   ))}
                 </div>
               ) : null}
-              <div class="mt-10 space-y-8 text-[20px] leading-[1.8] text-[#5d5d58] md:text-[24px]">
+              <div class="mt-7 space-y-5 text-[17px] leading-[1.65] text-[#5d5d58] md:mt-10 md:space-y-8 md:text-[24px] md:leading-[1.8]">
                 {post.content.map((paragraph) => (
                   <p>{paragraph}</p>
                 ))}
               </div>
             </>
           ) : (
-            <div class="mt-10 border border-[#e8e3db] px-8 py-12 text-[20px] text-[#5d5d58]">Материал не найден.</div>
+            <div class="mt-7 border border-[#e8e3db] px-5 py-8 text-[17px] text-[#5d5d58] md:mt-10 md:px-8 md:py-12 md:text-[20px]">Материал не найден.</div>
           )}
-          <div class="mt-10">
-            <a href="/news" class="inline-flex h-14 items-center justify-center border border-[#111] px-8 text-[14px] uppercase tracking-[1.5px] text-[#111] [font-family:Jaldi,'JetBrains_Mono',monospace]">
+          <div class="mt-7 md:mt-10">
+            <a href="/news" class="inline-flex h-12 items-center justify-center border border-[#111] px-6 text-[13px] uppercase tracking-[1.2px] text-[#111] md:h-14 md:px-8 md:text-[14px] md:tracking-[1.5px] [font-family:Jaldi,'JetBrains_Mono',monospace]">
               Назад к блогу
             </a>
           </div>

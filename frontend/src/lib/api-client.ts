@@ -25,6 +25,12 @@ export function getApiBaseUrl() {
     return String(explicit).replace(/\/+$/, "");
   }
 
+  // During local development frontend and backend usually run on different ports.
+  // Defaulting to the frontend origin in DEV causes `/api/*` 404 from Astro.
+  if (import.meta.env.DEV) {
+    return "http://localhost:3000";
+  }
+
   // In production the frontend is usually served behind a reverse proxy that routes `/api/*` to the backend.
   // Falling back to `window.location.origin` avoids the common "requests go to localhost:3000" production bug.
   if (typeof window !== "undefined" && window.location?.origin) {

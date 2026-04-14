@@ -110,20 +110,20 @@ export function ProductPage({ product, relatedProducts, allProducts }: ProductPa
       <div className="flex-1">
         <SiteHeader />
 
-        <section className="px-4 py-8 md:px-10 md:py-12">
+        <section className="px-4 py-6 md:px-10 md:py-12">
           <div className="mx-auto max-w-[1480px]">
-          <div className="flex flex-wrap items-center gap-5 text-[clamp(0.68rem,0.5vw,0.85rem)] uppercase tracking-[1.6px] text-[#787872] [font-family:Jaldi,'JetBrains_Mono',monospace]">
-            <a href="/catalog" className="inline-flex h-12 items-center justify-center bg-[#111] px-8 text-white">назад</a>
+          <div className="flex items-center gap-4 overflow-x-auto whitespace-nowrap pb-2 text-[clamp(0.68rem,0.5vw,0.85rem)] uppercase tracking-[1.6px] text-[#787872] [font-family:Jaldi,'JetBrains_Mono',monospace]">
+            <a href="/catalog" className="inline-flex h-10 items-center justify-center bg-[#111] px-5 text-white">назад</a>
             <a href="/" className="hover:text-[#111]">Главная</a>
             <span className="text-[#b5b2ab]">/</span>
             <a href="/catalog" className="hover:text-[#111]">Каталог</a>
             <span className="text-[#b5b2ab]">/</span>
             <span>Системы климат-контроля</span>
             <span className="text-[#b5b2ab]">/</span>
-            <span>{product.title}</span>
+            <span className="max-w-[240px] truncate">{product.title}</span>
           </div>
 
-          <div className="mt-10 grid gap-10 xl:grid-cols-[1.15fr_0.85fr]">
+          <div className="mt-7 grid gap-8 md:mt-9 md:gap-10 xl:grid-cols-[1.15fr_0.85fr]">
             <div>
               <div className="relative aspect-[4/5] overflow-hidden bg-[#f7f7f4]">
                 {previousImage && isImageTransitioning ? (
@@ -153,12 +153,12 @@ export function ProductPage({ product, relatedProducts, allProducts }: ProductPa
                   onClick={showNextImage}
                   disabled={gallery.length <= 1}
                   aria-label="Следующее фото"
-                  className="absolute right-6 top-1/2 -translate-y-1/2 text-[clamp(2.5rem,4vw,4.5rem)] leading-none text-[#73736f] disabled:cursor-not-allowed disabled:opacity-40"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[clamp(2rem,4vw,4.5rem)] leading-none text-[#73736f] disabled:cursor-not-allowed disabled:opacity-40 md:right-6"
                 >
                   ›
                 </button>
               </div>
-              <div className="mt-4 grid grid-cols-4 gap-4">
+              <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-3 md:gap-4">
                 {gallery.map((image, index) => (
                   <button
                     key={`${image}-${index}`}
@@ -185,32 +185,32 @@ export function ProductPage({ product, relatedProducts, allProducts }: ProductPa
               <p className="text-[clamp(0.68rem,0.5vw,0.85rem)] uppercase tracking-[1.8px] text-[#7e7e79] [font-family:Jaldi,'JetBrains_Mono',monospace]">
                 артикул: {product.article} / бренд: {product.brandLabel}
               </p>
-              <h1 className="mt-6 max-w-[560px] text-[clamp(2.6rem,5vw,5.4rem)] leading-[0.98] tracking-[-0.04em] text-[#111] [font-family:'Cormorant_Garamond',serif]">
+              <h1 className="mt-4 max-w-[560px] text-[clamp(2rem,5vw,5.4rem)] leading-[0.98] tracking-[-0.04em] text-[#111] [font-family:'Cormorant_Garamond',serif] md:mt-6">
                 {product.title}
               </h1>
-              <p className="mt-8 text-[clamp(1.8rem,2.6vw,2.6rem)] leading-none text-[#111] [font-family:DM_Sans,Manrope,sans-serif]">{formatPrice(product.price)}</p>
+              <p className="mt-6 text-[clamp(1.7rem,2.6vw,2.6rem)] leading-none text-[#111] [font-family:DM_Sans,Manrope,sans-serif] md:mt-8">{formatPrice(product.price)}</p>
 
-              <dl className="mt-14 divide-y divide-[#e8e3db] border-y border-[#e8e3db]">
+              <dl className="mt-8 divide-y divide-[#e8e3db] border-y border-[#e8e3db] md:mt-14">
                 {specs.map(([label, value]) => (
-                  <div key={label} className="grid grid-cols-[1fr_auto] gap-6 py-5">
+                  <div key={label} className="grid gap-1 py-4 md:grid-cols-[1fr_auto] md:gap-6 md:py-5">
                     <dt className="text-[clamp(0.75rem,0.6vw,0.95rem)] uppercase tracking-[1.5px] text-[#6f6f69] [font-family:Jaldi,'JetBrains_Mono',monospace]">{label}</dt>
-                    <dd className="text-right text-[clamp(0.95rem,1vw,1.15rem)] text-[#111] [font-family:DM_Sans,Manrope,sans-serif]">{value}</dd>
+                    <dd className="text-left text-[clamp(0.95rem,1vw,1.15rem)] text-[#111] [font-family:DM_Sans,Manrope,sans-serif] md:text-right">{value}</dd>
                   </div>
                 ))}
               </dl>
 
-              <div className="mt-12 grid gap-5">
-                <a href={`/cart?add=${product.slug}`} className="inline-flex h-18 items-center justify-center bg-[#111] px-8 text-[clamp(0.95rem,0.9vw,1.15rem)] uppercase tracking-[3px] text-white [font-family:Jaldi,'JetBrains_Mono',monospace]">
+              <div className="mt-8 grid gap-4 md:mt-12 md:gap-5">
+                <a href={`/cart?add=${product.slug}`} className="inline-flex h-[52px] items-center justify-center bg-[#111] px-8 text-[clamp(0.9rem,0.9vw,1.15rem)] uppercase tracking-[2.2px] text-white [font-family:Jaldi,'JetBrains_Mono',monospace] md:h-18 md:tracking-[3px]">
                   в корзину
                 </a>
-                <a href={`/checkout?product=${product.slug}`} className="inline-flex h-18 items-center justify-center border border-[#111] px-8 text-[clamp(0.95rem,0.9vw,1.15rem)] uppercase tracking-[3px] text-[#111] [font-family:Jaldi,'JetBrains_Mono',monospace]">
+                <a href={`/checkout?product=${product.slug}`} className="inline-flex h-[52px] items-center justify-center border border-[#111] px-8 text-[clamp(0.9rem,0.9vw,1.15rem)] uppercase tracking-[2.2px] text-[#111] [font-family:Jaldi,'JetBrains_Mono',monospace] md:h-18 md:tracking-[3px]">
                   купить в 1 клик
                 </a>
               </div>
 
-              <div className="mt-14 grid gap-8 border-t border-[#e8e3db] pt-8 md:grid-cols-2">
+              <div className="mt-10 grid gap-6 border-t border-[#e8e3db] pt-6 md:mt-14 md:gap-8 md:pt-8 md:grid-cols-2">
                 {perks.map(([icon, title, note]) => (
-                  <div key={title as string} className="flex items-start gap-4">
+                  <div key={title as string} className="flex items-center gap-4 text-center md:items-start md:text-left">
                     <img src={icon as string} alt="" aria-hidden="true" width="20" height="20" className="mt-1 h-5 w-5" />
                     <div>
                       <p className="text-[clamp(0.85rem,0.8vw,1rem)] uppercase tracking-[1px] text-[#111] [font-family:Jaldi,'JetBrains_Mono',monospace]">{title}</p>
@@ -220,10 +220,10 @@ export function ProductPage({ product, relatedProducts, allProducts }: ProductPa
                 ))}
               </div>
 
-              <div className="mt-12 flex justify-end">
+              <div className="mt-10 flex justify-center md:mt-12 md:justify-end">
                 <a
                   href={`/catalog?brand=${encodeURIComponent(product.brand)}`}
-                  className="block w-full max-w-[250px] border border-[#d9d3cb] p-5 text-center transition-colors hover:border-[#b6aea3]"
+                  className="block w-full max-w-[300px] border border-[#d9d3cb] p-5 text-center transition-colors hover:border-[#b6aea3] md:max-w-[250px]"
                   aria-label={`Показать товары бренда ${product.brandLabel}`}
                   title={`Смотреть товары ${product.brandLabel}`}
                 >
@@ -250,17 +250,17 @@ export function ProductPage({ product, relatedProducts, allProducts }: ProductPa
 
       <section className="px-4 py-8 md:px-10 md:py-14">
         <div className="mx-auto max-w-[1480px] border-t border-[#e8e3db] pt-8">
-          <div className="flex gap-14 text-[clamp(0.85rem,0.8vw,1rem)] uppercase tracking-[1.5px] text-[#8b8b86] [font-family:Jaldi,'JetBrains_Mono',monospace]">
+          <div className="flex gap-8 overflow-x-auto whitespace-nowrap pb-2 text-[clamp(0.85rem,0.8vw,1rem)] uppercase tracking-[1.5px] text-[#8b8b86] [font-family:Jaldi,'JetBrains_Mono',monospace] md:gap-14">
             <a href="#description" className="border-t-2 border-[#111] pt-5 text-[#111]">Описание</a>
             <a href="#specs" className="pt-5">Характеристики</a>
           </div>
 
-          <div className="mt-16 grid gap-12 xl:grid-cols-[1fr_530px]">
+          <div className="mt-10 grid gap-10 md:mt-16 md:gap-12 xl:grid-cols-[1fr_530px]">
             <div id="description">
               <h2 className="text-[clamp(2rem,3.4vw,4rem)] leading-none [font-family:'Cormorant_Garamond',serif]">
                 {descriptionTitle}
               </h2>
-              <div className="mt-10 max-w-[930px] space-y-10 text-[clamp(1rem,1.2vw,1.5rem)] leading-[1.7] text-[#676761] [font-family:DM_Sans,Manrope,sans-serif]">
+              <div className="mt-6 max-w-[930px] space-y-6 text-[clamp(1rem,1.2vw,1.5rem)] leading-[1.7] text-[#676761] [font-family:DM_Sans,Manrope,sans-serif] md:mt-10 md:space-y-10">
                 <p>
                   {product.description?.[0]}
                 </p>
@@ -271,21 +271,21 @@ export function ProductPage({ product, relatedProducts, allProducts }: ProductPa
             </div>
 
             <aside id="specs" className="border border-[#e8e3db]">
-              <div className="flex items-center justify-between border-b border-[#e8e3db] px-8 py-12 text-[clamp(0.85rem,0.8vw,1rem)] uppercase tracking-[2px] text-[#7b7b76] [font-family:Jaldi,'JetBrains_Mono',monospace]">
+              <div className="flex flex-col gap-2 border-b border-[#e8e3db] px-5 py-7 text-[clamp(0.85rem,0.8vw,1rem)] uppercase tracking-[2px] text-[#7b7b76] [font-family:Jaldi,'JetBrains_Mono',monospace] sm:flex-row sm:items-center sm:justify-between md:px-8 md:py-12">
                 <span>Характеристики</span>
                 <span className="text-[#111]">{product.brandLabel}</span>
               </div>
               {specs.map(([label, value]) => (
-                <div key={label} className="flex items-center justify-between border-b border-[#e8e3db] px-6 py-6">
-                  <span className="text-[clamp(0.85rem,0.8vw,1rem)] uppercase tracking-[2px] text-[#6f6f69] [font-family:Jaldi,'JetBrains_Mono',monospace]">{label}</span>
+                <div key={label} className="flex flex-col gap-1 border-b border-[#e8e3db] px-5 py-5 sm:flex-row sm:items-center sm:justify-between md:px-6 md:py-6">
+                  <span className="text-[clamp(0.78rem,0.8vw,1rem)] uppercase tracking-[2px] text-[#6f6f69] [font-family:Jaldi,'JetBrains_Mono',monospace]">{label}</span>
                   <span className="text-[clamp(0.95rem,1vw,1.15rem)] [font-family:'Cormorant_Garamond',serif]">{value}</span>
                 </div>
               ))}
-              <div className="border-b border-[#e8e3db] px-6 py-6">
+              <div className="border-b border-[#e8e3db] px-5 py-5 md:px-6 md:py-6">
                 <span className="text-[clamp(0.85rem,0.8vw,1rem)] uppercase tracking-[2px] text-[#6f6f69] [font-family:Jaldi,'JetBrains_Mono',monospace]">Артикул</span>
                 <p className="mt-2 text-[clamp(0.95rem,1vw,1.15rem)] [font-family:'Cormorant_Garamond',serif]">{product.article}</p>
               </div>
-              <div className="px-6 py-6">
+              <div className="px-5 py-5 md:px-6 md:py-6">
                 <span className="text-[clamp(0.85rem,0.8vw,1rem)] uppercase tracking-[2px] text-[#6f6f69] [font-family:Jaldi,'JetBrains_Mono',monospace]">Отзывы</span>
                 <div className="mt-4 space-y-4">
                   {reviews.map(([name, stars]) => (
@@ -329,12 +329,12 @@ export function ProductPage({ product, relatedProducts, allProducts }: ProductPa
             ))}
           </div>
 
-          <div className="mt-16 flex justify-center">
+          <div className="mt-12 flex justify-center md:mt-16">
             <button
               type="button"
               onClick={() => setVisibleCount((current) => Math.min(combinedRelated.length, current + 4))}
               disabled={!canLoadMore}
-              className="inline-flex h-16 items-center justify-center bg-[#111] px-14 text-[clamp(0.95rem,0.9vw,1.15rem)] uppercase tracking-[3px] text-white transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-40 [font-family:Jaldi,'JetBrains_Mono',monospace]"
+              className="inline-flex h-14 w-full max-w-[340px] items-center justify-center bg-[#111] px-10 text-[clamp(0.95rem,0.9vw,1.15rem)] uppercase tracking-[2.4px] text-white transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-40 [font-family:Jaldi,'JetBrains_Mono',monospace] md:h-16 md:w-auto md:px-14 md:tracking-[3px]"
             >
               загрузить еще
             </button>

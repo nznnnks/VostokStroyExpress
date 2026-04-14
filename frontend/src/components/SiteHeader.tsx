@@ -84,7 +84,7 @@ export function SiteHeader({ light = true }: SiteHeaderProps) {
   return (
     <header
       ref={searchRef}
-      className={`relative z-40 border-b px-4 py-4 md:px-10 ${
+      className={`relative z-[120] isolate border-b px-4 py-4 md:px-10 ${
         light ? "border-[#ece8e1] bg-white" : "border-white/10 bg-transparent"
       }`}
     >
@@ -144,7 +144,9 @@ export function SiteHeader({ light = true }: SiteHeaderProps) {
             aria-label="Открыть меню"
             aria-expanded={isOpen}
             onClick={() => setIsOpen(true)}
-            className={`inline-flex h-11 w-11 items-center justify-center border lg:hidden ${light ? "border-[#e6e0d7]" : "border-white/20 text-white"}`}
+            className={`relative z-[130] inline-flex h-11 w-11 items-center justify-center border transition-opacity lg:hidden ${
+              isOpen ? "pointer-events-none opacity-0" : "pointer-events-auto opacity-100"
+            } ${light ? "border-[#e6e0d7]" : "border-white/20 text-white"}`}
           >
             <span className="relative h-[12px] w-[20px]">
               <span className={`absolute left-0 top-0 h-[2px] w-full ${light ? "bg-[#111]" : "bg-white"}`} />
@@ -236,7 +238,7 @@ export function SiteHeader({ light = true }: SiteHeaderProps) {
         </div>
       ) : null}
       {isOpen ? (
-        <div className="fixed inset-0 z-50 md:hidden">
+        <div className="fixed inset-0 z-[200] md:hidden">
           <button
             type="button"
             aria-label="Закрыть меню"

@@ -124,29 +124,29 @@ export function StayseLandingTailwind() {
         <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(4,4,5,0.98)_0%,rgba(4,4,5,0.92)_24%,rgba(4,4,5,0.62)_46%,rgba(4,4,5,0.18)_72%)]" />
         <div className="mx-auto flex min-h-[100svh] max-w-[1480px] flex-col justify-between px-5 pb-4 pt-6 sm:px-5 md:min-h-screen md:px-10 md:pb-12 md:pt-24 2xl:max-w-[1680px]">
           <div className="max-w-[700px]">
-            <h1 className="max-w-[760px] text-[clamp(42px,11vw,156px)] leading-[0.9] tracking-[-0.05em] [font-family:'Cormorant_Garamond',serif]">
+            <h1 className="max-w-[760px] text-[clamp(34px,10vw,156px)] leading-[0.92] tracking-[-0.04em] [font-family:'Cormorant_Garamond',serif] md:leading-[0.9] md:tracking-[-0.05em]">
               Атмосферное
               <br />
               Совершенство
             </h1>
-            <p className="mt-3 max-w-[720px] text-[clamp(16px,3.8vw,34px)] font-[300] leading-[1.45] text-[#f4f4f1] md:mt-6 md:leading-[1.55]">
+            <p className="mt-3 max-w-[720px] text-[clamp(14px,3.9vw,34px)] font-[300] leading-[1.42] text-[#f4f4f1] md:mt-6 md:leading-[1.55]">
               Прецизионный климат-контроль Dantex для элитных резиденций и промышленных объектов высшего класса.
               Когда тишина становится ощутимой.
             </p>
-            <div className="mt-6 flex flex-wrap items-center gap-3 text-[clamp(12px,0.5vw+10px,15px)] uppercase tracking-[1.2px] [font-family:'JetBrains_Mono',monospace] md:mt-8 md:gap-6">
-              <a href="/services" className="inline-flex h-11 min-w-[152px] items-center justify-center bg-[#1a1a1a] px-5 text-white">
+            <div className="mt-5 flex flex-wrap items-center gap-2 text-[clamp(11px,0.5vw+10px,15px)] uppercase tracking-[1.1px] [font-family:'JetBrains_Mono',monospace] md:mt-8 md:gap-6 md:tracking-[1.2px]">
+              <a href="/services" className="inline-flex h-10 min-w-[136px] items-center justify-center bg-[#1a1a1a] px-4 text-white md:h-11 md:min-w-[152px] md:px-5">
                 услуги
               </a>
-              <a href="/catalog" className="inline-flex h-11 min-w-[152px] items-center justify-center border border-white/25 bg-black/20 px-5 text-white/92">
+              <a href="/catalog" className="inline-flex h-10 min-w-[136px] items-center justify-center border border-white/25 bg-black/20 px-4 text-white/92 md:h-11 md:min-w-[152px] md:px-5">
                 каталог
               </a>
             </div>
           </div>
 
-          <ul className="mt-7 grid gap-4 border-t border-white/10 pt-4 text-[clamp(12px,0.45vw+9px,14px)] uppercase tracking-[1px] text-[#f4f4f1d6] sm:grid-cols-3 sm:tracking-[1.7px] [font-family:'JetBrains_Mono',monospace]">
+          <ul className="mt-7 grid gap-3 border-t border-white/10 pt-4 text-[clamp(11px,0.45vw+9px,14px)] uppercase tracking-[0.9px] text-[#f4f4f1d6] sm:grid-cols-3 sm:gap-4 sm:tracking-[1.7px] [font-family:'JetBrains_Mono',monospace]">
             {stats.map(([value, label]) => (
               <li key={label} className="flex flex-col gap-1.5">
-                <strong className="text-[clamp(18px,0.8vw+12px,24px)] font-normal leading-none tracking-[0.12em] text-white sm:tracking-[0.18em]">{value}</strong>
+                <strong className="text-[clamp(16px,0.8vw+12px,24px)] font-normal leading-none tracking-[0.11em] text-white sm:tracking-[0.18em]">{value}</strong>
                 <span className="max-w-[420px] leading-[1.45] sm:leading-5">{label}</span>
               </li>
             ))}

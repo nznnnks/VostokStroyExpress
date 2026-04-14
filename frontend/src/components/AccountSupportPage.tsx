@@ -96,7 +96,7 @@ export function AccountSupportPage() {
       <SiteHeader />
 
       <section className="grid xl:grid-cols-[360px_1fr]">
-        <aside className="border-r border-[#ece8e1] bg-[#fcfbf8] px-5 py-16 md:px-8">
+        <aside className="order-2 border-t border-[#ece8e1] bg-[#fcfbf8] px-4 py-8 md:px-8 xl:order-1 xl:border-r xl:border-t-0 xl:py-16">
           <div className="border border-[#ece8e1] bg-white p-8">
             <h2 className="text-[26px] [font-family:'Cormorant_Garamond',serif]">Личный кабинет</h2>
             <p className="mt-4 text-[14px] uppercase tracking-[4px] text-[#8b8b86] [font-family:Jaldi,'JetBrains_Mono',monospace]">
@@ -114,13 +114,13 @@ export function AccountSupportPage() {
           </nav>
         </aside>
 
-        <div className="px-4 py-12 md:px-10 xl:px-16 xl:py-20">
+        <div className="order-1 px-4 py-8 md:px-10 md:py-12 xl:order-2 xl:px-16 xl:py-20">
           <div className="mx-auto max-w-[1240px] 2xl:max-w-[1480px]">
             <div className="flex items-center gap-5">
               <div className="flex h-16 w-16 items-center justify-center rounded-full border border-[#e6e0d7] bg-[#faf8f4]">
                 <img src="/account/support.svg" alt="" aria-hidden="true" width="32" height="32" className="h-8 w-8 object-contain opacity-70" />
               </div>
-              <h1 className="text-[52px] leading-none md:text-[80px] [font-family:'Cormorant_Garamond',serif]">Поддержка</h1>
+              <h1 className="text-[clamp(2rem,7vw,5rem)] leading-none [font-family:'Cormorant_Garamond',serif]">Поддержка</h1>
             </div>
 
             {loading ? <StateMessage title="Загрузка" description="Загружаю данные пользователя." /> : null}
@@ -133,16 +133,16 @@ export function AccountSupportPage() {
 
             {!loading && !error ? (
               <>
-                <p className="mt-8 max-w-[780px] text-[19px] leading-[1.6] text-[#6f6f69]">
+                <p className="mt-6 max-w-[780px] text-[clamp(1rem,1.8vw,1.2rem)] leading-[1.6] text-[#6f6f69]">
                   Поможем со статусом заказа, документами, изменением адреса доставки и сервисными вопросами. Выберите удобный канал, и мы быстро подключимся.
                 </p>
 
-                <div className="mt-12 grid gap-6 lg:grid-cols-3">
+                <div className="mt-10 grid gap-6 lg:mt-12 lg:grid-cols-3">
                   {supportChannels.map((channel) => (
-                    <article key={channel.title} className="border border-[#ece8e1] bg-white p-8">
+                    <article key={channel.title} className="border border-[#ece8e1] bg-white p-6 md:p-8">
                       <p className="text-[15px] uppercase tracking-[2px] text-[#8b8b86] [font-family:Jaldi,'JetBrains_Mono',monospace]">{channel.label}</p>
-                      <h2 className="mt-6 text-[34px] leading-[1.05] [font-family:'Cormorant_Garamond',serif]">{channel.title}</h2>
-                      <p className="mt-8 text-[26px] leading-[1.2] text-[#111] [font-family:'Cormorant_Garamond',serif]">{channel.value}</p>
+                      <h2 className="mt-5 text-[clamp(1.7rem,3.5vw,2.2rem)] leading-[1.05] [font-family:'Cormorant_Garamond',serif]">{channel.title}</h2>
+                      <p className="mt-6 break-all text-[clamp(1.2rem,3vw,1.7rem)] leading-[1.2] text-[#111] [font-family:'Cormorant_Garamond',serif]">{channel.value}</p>
                       <a
                         href={channel.href}
                         target={channel.href.startsWith("https://") ? "_blank" : undefined}
@@ -155,20 +155,20 @@ export function AccountSupportPage() {
                   ))}
                 </div>
 
-                <div className="mt-12 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-                  <section className="border border-[#ece8e1] bg-[#fcfbf8] p-10">
+                <div className="mt-10 grid gap-6 lg:mt-12 lg:grid-cols-[1.1fr_0.9fr]">
+                  <section className="border border-[#ece8e1] bg-[#fcfbf8] p-6 md:p-10">
                     <p className="text-[15px] uppercase tracking-[2px] text-[#8b8b86] [font-family:Jaldi,'JetBrains_Mono',monospace]">Чаще всего помогаем с этим</p>
                     <ul className="mt-8 grid gap-4">
                       {supportTopics.map((topic) => (
                         <li key={topic} className="flex items-start gap-4 border-b border-[#ece8e1] pb-4 last:border-b-0 last:pb-0">
                           <span className="mt-2 h-2.5 w-2.5 rounded-full bg-[#111]" />
-                          <span className="text-[24px] leading-[1.3] [font-family:'Cormorant_Garamond',serif]">{topic}</span>
+                          <span className="text-[clamp(1.2rem,2.6vw,1.5rem)] leading-[1.3] [font-family:'Cormorant_Garamond',serif]">{topic}</span>
                         </li>
                       ))}
                     </ul>
                   </section>
 
-                  <aside className="border border-[#ece8e1] bg-white p-10">
+                  <aside className="border border-[#ece8e1] bg-white p-6 md:p-10">
                     <p className="text-[15px] uppercase tracking-[2px] text-[#8b8b86] [font-family:Jaldi,'JetBrains_Mono',monospace]">Регламент</p>
                     <div className="mt-8 space-y-5 text-[17px] text-[#6f6f69]">
                       <p><span className="text-[#8b8b86]">Часы работы:</span> пн-пт, 09:00-19:00</p>

@@ -79,9 +79,9 @@ export function AccountPage() {
     <main className="bg-white text-[#111] [font-family:DM_Sans,Manrope,'Liberation_Sans',sans-serif]">
       <SiteHeader />
 
-      <section className="min-h-[calc(100vh-92px)]">
+      <section className="min-h-[calc(100svh-92px)]">
         <div className="grid xl:grid-cols-[360px_1fr]">
-          <aside className="border-r border-[#ece8e1] bg-[#fcfbf8] px-5 py-16 md:px-8">
+          <aside className="order-2 border-t border-[#ece8e1] bg-[#fcfbf8] px-4 py-8 md:px-8 xl:order-1 xl:border-r xl:border-t-0 xl:py-16">
             <div className="border border-[#ece8e1] bg-white p-8">
               <h2 className="text-[26px] [font-family:'Cormorant_Garamond',serif]">Личный кабинет</h2>
               <p className="mt-4 text-[14px] uppercase tracking-[4px] text-[#8b8b86] [font-family:Jaldi,'JetBrains_Mono',monospace]">
@@ -105,9 +105,9 @@ export function AccountPage() {
             </nav>
           </aside>
 
-          <div className="px-4 py-12 md:px-10 xl:px-16 xl:py-20">
+          <div className="order-1 px-4 py-8 md:px-10 md:py-12 xl:order-2 xl:px-16 xl:py-20">
             <div className="mx-auto max-w-[1200px] 2xl:max-w-[1480px]">
-              <h1 className="text-[52px] leading-none md:text-[80px] [font-family:'Cormorant_Garamond',serif]">
+              <h1 className="text-[clamp(2rem,7vw,5rem)] leading-none [font-family:'Cormorant_Garamond',serif]">
                 Личные данные клиента
               </h1>
 
@@ -121,7 +121,7 @@ export function AccountPage() {
 
               {!loading && !error && profile ? (
                 <>
-                  <div className="mt-14 flex flex-col gap-8 md:flex-row md:items-center">
+                  <div className="mt-10 flex flex-col gap-6 md:mt-14 md:gap-8 md:flex-row md:items-center">
                     <img
                       src="/account/user-avatar-large.png"
                       alt="Профиль клиента"
@@ -132,32 +132,32 @@ export function AccountPage() {
                       className="h-[170px] w-[170px] object-contain"
                     />
                     <div className="flex items-center gap-6">
-                      <h2 className="text-[56px] uppercase tracking-[1px] text-[#74746f] [font-family:Jaldi,'JetBrains_Mono',monospace]">{profile.name}</h2>
+                      <h2 className="break-words text-[clamp(1.8rem,7vw,3.5rem)] uppercase tracking-[1px] text-[#74746f] [font-family:Jaldi,'JetBrains_Mono',monospace]">{profile.name}</h2>
                     </div>
                   </div>
 
-                  <div className="mt-14 max-w-[620px]">
+                  <div className="mt-10 max-w-[620px] md:mt-14">
                     <p className="text-[16px] uppercase tracking-[2px] text-[#8b8b86] [font-family:Jaldi,'JetBrains_Mono',monospace]">Email</p>
-                    <div className="mt-3 flex min-h-[74px] items-center rounded-[8px] bg-[#f3f1ed] px-7 text-[22px] uppercase tracking-[1px] text-[#6f6f69] [font-family:Jaldi,'JetBrains_Mono',monospace]">
+                    <div className="mt-3 flex min-h-[64px] items-center rounded-[8px] bg-[#f3f1ed] px-5 text-[clamp(1rem,3.4vw,1.35rem)] uppercase tracking-[1px] text-[#6f6f69] [font-family:Jaldi,'JetBrains_Mono',monospace] md:min-h-[74px] md:px-7">
                       {profile.email}
                     </div>
                   </div>
 
-                  <div className="mt-12 grid gap-6 xl:grid-cols-3">
+                  <div className="mt-10 grid gap-5 md:mt-12 md:gap-6 xl:grid-cols-3">
                     {stats.map(([label, value, accent]) => (
-                      <article key={label} className="border border-[#ece8e1] bg-white p-10">
+                      <article key={label} className="border border-[#ece8e1] bg-white p-6 md:p-10">
                         <p className="text-[16px] uppercase tracking-[2px] text-[#8b8b86] [font-family:Jaldi,'JetBrains_Mono',monospace]">{label}</p>
-                        <p className="mt-8 text-[58px] leading-none [font-family:'Cormorant_Garamond',serif]">{value}</p>
-                        <div className={`mt-12 h-px w-full ${accent ? "bg-[#d3b46a]" : "bg-[#ece8e1]"}`} />
+                        <p className="mt-6 break-words text-[clamp(2rem,8vw,3.6rem)] leading-none [font-family:'Cormorant_Garamond',serif]">{value}</p>
+                        <div className={`mt-8 h-px w-full md:mt-12 ${accent ? "bg-[#d3b46a]" : "bg-[#ece8e1]"}`} />
                       </article>
                     ))}
                   </div>
 
-                  <div className="mt-16">
-                    <h2 className="text-[52px] leading-none md:text-[78px] [font-family:'Cormorant_Garamond',serif]">Активные заказы</h2>
+                  <div className="mt-12 md:mt-16">
+                    <h2 className="text-[clamp(2rem,7vw,4.8rem)] leading-none [font-family:'Cormorant_Garamond',serif]">Активные заказы</h2>
 
-                    <section className="mt-10 overflow-hidden border border-[#ece8e1] bg-white">
-                      <div className="flex items-center justify-between border-b border-[#ece8e1] px-8 py-8">
+                    <section className="mt-8 overflow-hidden border border-[#ece8e1] bg-white md:mt-10">
+                      <div className="flex items-center justify-between border-b border-[#ece8e1] px-5 py-6 md:px-8 md:py-8">
                         <h3 className="text-[18px] uppercase tracking-[1px] [font-family:'Cormorant_Garamond',serif]">Список заказов</h3>
                       </div>
 
@@ -169,7 +169,7 @@ export function AccountPage() {
                       </div>
 
                       {visibleOrders.map((order) => (
-                        <div key={order.id} className="grid gap-4 border-b border-[#ece8e1] px-8 py-8 md:grid-cols-[1.2fr_1fr_1.2fr_1fr] md:items-center">
+                        <div key={order.id} className="grid gap-4 border-b border-[#ece8e1] px-5 py-6 md:grid-cols-[1.2fr_1fr_1.2fr_1fr] md:items-center md:px-8 md:py-8">
                           <div>
                             <p className="text-[14px] uppercase tracking-[2px] text-[#8b8b86] md:hidden [font-family:Jaldi,'JetBrains_Mono',monospace]">Заказ №</p>
                             <a href={`/account/orders/${order.id}`} className="text-[22px] [font-family:'Cormorant_Garamond',serif] hover:underline">

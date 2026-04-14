@@ -152,19 +152,19 @@ export function CheckoutPage() {
               <span className="mx-2 text-[#b5b2ab]">/</span>
               <span>Оформление</span>
             </p>
-            <h1 className="mt-8 text-[clamp(2.4rem,4.8vw,5rem)] leading-none [font-family:'Cormorant_Garamond',serif]">
+            <h1 className="mt-6 text-[clamp(2.1rem,4.8vw,5rem)] leading-none [font-family:'Cormorant_Garamond',serif] md:mt-8">
               Оформление заказа
             </h1>
-            <p className="mt-6 max-w-[520px] text-[clamp(1rem,1.1vw,1.15rem)] leading-[1.45] text-[#75756f]">
+            <p className="mt-4 max-w-[520px] text-[clamp(0.98rem,1.1vw,1.15rem)] leading-[1.45] text-[#75756f] md:mt-6">
               Пожалуйста, заполните данные для доставки и оплаты вашей системы ВостокСтройЭксперт.
             </p>
 
-            <form className="mt-20" onSubmit={handleSubmit}>
+            <form className="mt-10 md:mt-20" onSubmit={handleSubmit}>
               <div className="flex items-center gap-5 text-[#111]">
                 <span className="text-[clamp(0.8rem,0.7vw,1rem)] uppercase tracking-[1.5px] text-[#7b7b75] [font-family:Jaldi,'JetBrains_Mono',monospace]">01</span>
                 <h2 className="text-[clamp(1.4rem,2vw,2rem)] uppercase tracking-[2px] [font-family:'Cormorant_Garamond',serif]">Контактные данные</h2>
               </div>
-              <div className="mt-14 grid gap-12 md:grid-cols-2">
+              <div className="mt-8 grid gap-8 md:mt-14 md:gap-12 md:grid-cols-2">
                 <label className="block">
                   <span className="text-[clamp(0.8rem,0.7vw,1rem)] uppercase tracking-[1.4px] text-[#7b7b75] [font-family:Jaldi,'JetBrains_Mono',monospace]">Имя</span>
                   <input name="first_name" autoComplete="given-name" className="mt-3 h-14 w-full border-b border-[#e8e3db] bg-transparent outline-none" />
@@ -174,18 +174,18 @@ export function CheckoutPage() {
                   <input name="last_name" autoComplete="family-name" className="mt-3 h-14 w-full border-b border-[#e8e3db] bg-transparent outline-none" />
                 </label>
               </div>
-              <label className="mt-12 block">
+              <label className="mt-8 block md:mt-12">
                 <span className="text-[clamp(0.8rem,0.7vw,1rem)] uppercase tracking-[1.4px] text-[#7b7b75] [font-family:Jaldi,'JetBrains_Mono',monospace]">Телефон</span>
                 <input name="phone" autoComplete="tel" className="mt-3 h-14 w-full border-b border-[#e8e3db] bg-transparent outline-none" />
               </label>
             
 
-            <div className="mt-20">
+            <div className="mt-10 md:mt-20">
               <div className="flex items-center gap-5 text-[#111]">
                 <span className="text-[clamp(0.8rem,0.7vw,1rem)] uppercase tracking-[1.5px] text-[#7b7b75] [font-family:Jaldi,'JetBrains_Mono',monospace]">02</span>
                 <h2 className="text-[clamp(1.4rem,2vw,2rem)] uppercase tracking-[2px] [font-family:'Cormorant_Garamond',serif]">Адрес доставки</h2>
               </div>
-              <div className="mt-14 grid gap-12 md:grid-cols-[1fr_220px]">
+              <div className="mt-8 grid gap-8 md:mt-14 md:gap-12 md:grid-cols-[1fr_220px]">
                 <label className="block">
                   <span className="text-[clamp(0.8rem,0.7vw,1rem)] uppercase tracking-[1.4px] text-[#7b7b75] [font-family:Jaldi,'JetBrains_Mono',monospace]">Город</span>
                   <input name="city" autoComplete="address-level2" className="mt-3 h-14 w-full border-b border-[#e8e3db] bg-transparent outline-none" />
@@ -195,7 +195,7 @@ export function CheckoutPage() {
                   <input name="postal_code" autoComplete="postal-code" className="mt-3 h-14 w-full border-b border-[#e8e3db] bg-transparent outline-none" />
                 </label>
               </div>
-              <label className="mt-12 block">
+              <label className="mt-8 block md:mt-12">
                 <span className="text-[clamp(0.8rem,0.7vw,1rem)] uppercase tracking-[1.4px] text-[#7b7b75] [font-family:Jaldi,'JetBrains_Mono',monospace]">
                   Улица, дом, квартира
                 </span>
@@ -203,12 +203,12 @@ export function CheckoutPage() {
               </label>
             </div>
 
-            <div className="mt-20">
+            <div className="mt-10 md:mt-20">
               <div className="flex items-center gap-5 text-[#111]">
                 <span className="text-[clamp(0.8rem,0.7vw,1rem)] uppercase tracking-[1.5px] text-[#7b7b75] [font-family:Jaldi,'JetBrains_Mono',monospace]">03</span>
                 <h2 className="text-[clamp(1.4rem,2vw,2rem)] uppercase tracking-[2px] [font-family:'Cormorant_Garamond',serif]">Способ оплаты</h2>
               </div>
-              <div className="mt-12 space-y-5">
+              <div className="mt-8 space-y-4 md:mt-12 md:space-y-5">
                 {paymentOptions.map(([id, title, note, icon], index) => (
                   <label
                     key={title as string}
@@ -257,7 +257,7 @@ export function CheckoutPage() {
               </div>
             </div>
 
-            <div className="mt-20 max-w-[860px]">
+            <div className="mt-10 max-w-[860px] md:mt-20">
               {submitError ? (
                 <p className="mb-6 text-[clamp(0.75rem,0.6vw,0.9rem)] uppercase tracking-[2px] text-[#b24a3a] [font-family:Jaldi,'JetBrains_Mono',monospace]">
                   {submitError}
@@ -275,7 +275,7 @@ export function CheckoutPage() {
               >
                 подтвердить заказ
               </button>
-              <p className="mt-10 text-center text-[clamp(0.68rem,0.5vw,0.85rem)] uppercase tracking-[3px] text-[#8c8c86] [font-family:Jaldi,'JetBrains_Mono',monospace]">
+              <p className="mt-8 text-center text-[clamp(0.68rem,0.5vw,0.85rem)] uppercase tracking-[3px] text-[#8c8c86] [font-family:Jaldi,'JetBrains_Mono',monospace] md:mt-10">
                 нажимая кнопку, вы соглашаетесь с условиями оферты
               </p>
             </div>

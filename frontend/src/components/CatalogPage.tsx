@@ -296,14 +296,14 @@ export function CatalogPage({ products }: CatalogPageProps) {
             <span>оборудование и климатические системы</span>
           </div>
 
-          <h1 className="mt-10 text-[54px] leading-[0.95] tracking-[-0.04em] md:text-[92px] 2xl:text-[112px] 2xl:leading-[0.92] [font-family:'Cormorant_Garamond',serif]">
+          <h1 className="mt-6 text-[clamp(2.2rem,9vw,7rem)] leading-[0.96] tracking-[-0.03em] md:mt-10 md:tracking-[-0.04em] 2xl:leading-[0.92] [font-family:'Cormorant_Garamond',serif]">
             Каталог оборудования
           </h1>
-          <p className="mt-8 text-[20px] uppercase tracking-[1.6px] text-[#7a7a75] 2xl:text-[24px] [font-family:Jaldi,'JetBrains_Mono',monospace]">
+          <p className="mt-4 text-[clamp(0.9rem,3.8vw,1.5rem)] uppercase tracking-[1.3px] text-[#7a7a75] md:mt-8 md:tracking-[1.6px] 2xl:text-[24px] [font-family:Jaldi,'JetBrains_Mono',monospace]">
             Найдено: {filteredProducts.length} товаров
           </p>
 
-          <div className="mt-12 flex flex-col gap-10 xl:flex-row 2xl:gap-14">
+          <div className="mt-8 flex flex-col gap-8 md:mt-12 md:gap-10 xl:flex-row 2xl:gap-14">
             <aside className="hidden w-full xl:block xl:max-w-[360px] 2xl:max-w-[420px]">{renderFilters("desktop")}</aside>
 
             <div className={`fixed inset-0 z-50 xl:hidden ${filtersOpen ? "pointer-events-auto" : "pointer-events-none"}`} aria-hidden={!filtersOpen}>
@@ -314,7 +314,7 @@ export function CatalogPage({ products }: CatalogPageProps) {
                 className={`absolute inset-0 bg-black/35 transition-opacity duration-300 ${filtersOpen ? "opacity-100" : "opacity-0"}`}
               />
               <aside
-                className={`absolute left-0 top-0 h-full w-[min(88vw,420px)] overflow-y-auto bg-white px-5 py-6 shadow-2xl transition-transform duration-300 ease-out ${
+                className={`absolute left-0 top-0 h-full w-[min(92vw,420px)] overflow-y-auto bg-white px-5 py-6 shadow-2xl transition-transform duration-300 ease-out ${
                   filtersOpen ? "translate-x-0" : "-translate-x-full"
                 }`}
               >
@@ -328,7 +328,7 @@ export function CatalogPage({ products }: CatalogPageProps) {
                 <button
                   type="button"
                   onClick={() => setFiltersOpen(false)}
-                  className="mt-10 h-14 w-full bg-[#111] text-[16px] uppercase tracking-[2px] text-white [font-family:Jaldi,'JetBrains_Mono',monospace]"
+                  className="mt-8 h-12 w-full bg-[#111] text-[14px] uppercase tracking-[1.5px] text-white md:mt-10 md:h-14 md:text-[16px] md:tracking-[2px] [font-family:Jaldi,'JetBrains_Mono',monospace]"
                 >
                   Показать товары
                 </button>
@@ -340,20 +340,20 @@ export function CatalogPage({ products }: CatalogPageProps) {
                 <button
                   type="button"
                   onClick={() => setFiltersOpen(true)}
-                  className="flex h-16 items-center justify-center border border-[#e7e1d9] px-5 text-[16px] uppercase tracking-[1.6px] transition-colors hover:border-[#d3b46a] xl:hidden 2xl:h-[72px] 2xl:text-[18px] [font-family:Jaldi,'JetBrains_Mono',monospace]"
+                  className="flex h-12 items-center justify-center border border-[#e7e1d9] px-4 text-[13px] uppercase tracking-[1.2px] transition-colors hover:border-[#d3b46a] md:h-16 md:px-5 md:text-[16px] md:tracking-[1.6px] xl:hidden 2xl:h-[72px] 2xl:text-[18px] [font-family:Jaldi,'JetBrains_Mono',monospace]"
                 >
                   фильтры
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowAdvanced((prev) => !prev)}
-                  className="flex h-16 w-16 items-center justify-center border border-[#e7e1d9] transition-colors hover:border-[#d3b46a] 2xl:h-[72px] 2xl:w-[72px]"
+                  className="flex h-12 w-12 items-center justify-center border border-[#e7e1d9] transition-colors hover:border-[#d3b46a] md:h-16 md:w-16 2xl:h-[72px] 2xl:w-[72px]"
                   aria-pressed={showAdvanced}
                   aria-label="Показать расширенные фильтры и сортировку"
                 >
-                  <img src="/catalog/list-icon.png" alt="" aria-hidden="true" width="28" height="28" className="h-7 w-7 object-contain" />
+                  <img src="/catalog/list-icon.png" alt="" aria-hidden="true" width="28" height="28" className="h-5 w-5 object-contain md:h-7 md:w-7" />
                 </button>
-                <div className="flex h-16 flex-1 items-center justify-between border border-[#e7e1d9] px-5 2xl:h-[72px] 2xl:px-6">
+                <div className="flex h-12 flex-1 items-center justify-between border border-[#e7e1d9] px-3 md:h-16 md:px-5 2xl:h-[72px] 2xl:px-6">
                   <input
                     type="text"
                     value={query}
@@ -362,7 +362,7 @@ export function CatalogPage({ products }: CatalogPageProps) {
                       setPage(1);
                     }}
                     placeholder="Поиск по каталогу"
-                    className="w-full border-0 bg-transparent text-[26px] text-[#3c3c38] placeholder:text-[#c2c2bf] focus:outline-none 2xl:text-[30px] [font-family:DM_Sans,Manrope,sans-serif]"
+                    className="w-full border-0 bg-transparent text-[16px] text-[#3c3c38] placeholder:text-[#c2c2bf] focus:outline-none md:text-[26px] 2xl:text-[30px] [font-family:DM_Sans,Manrope,sans-serif]"
                   />
                   {query ? (
                     <button
@@ -380,7 +380,7 @@ export function CatalogPage({ products }: CatalogPageProps) {
                       </svg>
                     </button>
                   ) : (
-                    <img src="/catalog/search-arrow.png" alt="" aria-hidden="true" width="32" height="32" className="h-8 w-8 object-contain 2xl:h-9 2xl:w-9" />
+                    <img src="/catalog/search-arrow.png" alt="" aria-hidden="true" width="32" height="32" className="h-6 w-6 object-contain md:h-8 md:w-8 2xl:h-9 2xl:w-9" />
                   )}
                 </div>
               </div>
@@ -484,38 +484,48 @@ export function CatalogPage({ products }: CatalogPageProps) {
                 </div>
               ) : null}
 
-              <div className="mt-14 flex flex-col gap-6 border-t border-[#ebe5de] pt-10 text-[18px] uppercase tracking-[2px] [font-family:Jaldi,'JetBrains_Mono',monospace] md:flex-row md:items-center md:justify-between 2xl:text-[20px]">
-                <button
-                  type="button"
-                  onClick={() => setPage((current) => Math.max(1, current - 1))}
-                  disabled={safePage === 1}
-                  className="flex items-center gap-4 text-[#555] disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <img src="/catalog/arrow-left.svg" alt="" aria-hidden="true" width="20" height="20" className="h-5 w-5" />
-                  <span>назад</span>
-                </button>
-                <div className="flex items-center gap-8 text-[#8a8a85]">
-                  {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => (
+              {totalPages > 1 ? (
+                <div className="mt-10 border-t border-[#ebe5de] pt-7 md:mt-14 md:pt-10">
+                  <div className="mx-auto grid max-w-[420px] grid-cols-[1fr_auto_1fr] items-center gap-3 text-[14px] uppercase tracking-[1.2px] [font-family:Jaldi,'JetBrains_Mono',monospace] md:mx-0 md:max-w-none md:text-[18px] md:tracking-[2px]">
                     <button
-                      key={pageNumber}
                       type="button"
-                      onClick={() => setPage(pageNumber)}
-                      className={pageNumber === safePage ? "border-b-2 border-[#111] pb-1 text-[#111]" : ""}
+                      onClick={() => setPage((current) => Math.max(1, current - 1))}
+                      disabled={safePage === 1}
+                      className="flex min-h-[44px] items-center justify-start gap-2 text-[#555] disabled:cursor-not-allowed disabled:opacity-35 md:gap-4"
                     >
-                      {String(pageNumber).padStart(2, "0")}
+                      <img src="/catalog/arrow-left.svg" alt="" aria-hidden="true" width="20" height="20" className="h-5 w-5" />
+                      <span>назад</span>
                     </button>
-                  ))}
+                    <div className="flex items-center justify-center gap-4 text-[#8a8a85] md:gap-6">
+                      {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => (
+                        <button
+                          key={pageNumber}
+                          type="button"
+                          onClick={() => setPage(pageNumber)}
+                          className={`min-h-[36px] min-w-[32px] ${
+                            pageNumber === safePage ? "rounded-[6px] bg-[#111] px-2 text-white" : ""
+                          }`}
+                        >
+                          {String(pageNumber).padStart(2, "0")}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+                      disabled={safePage === totalPages}
+                      className="flex min-h-[44px] items-center justify-end gap-2 text-[#111] disabled:cursor-not-allowed disabled:opacity-35 md:gap-4"
+                    >
+                      <span>далее</span>
+                      <img src="/catalog/arrow-right.svg" alt="" aria-hidden="true" width="20" height="20" className="h-5 w-5" />
+                    </button>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
-                  disabled={safePage === totalPages}
-                  className="flex items-center gap-4 text-[#111] disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <span>далее</span>
-                  <img src="/catalog/arrow-right.svg" alt="" aria-hidden="true" width="20" height="20" className="h-5 w-5" />
-                </button>
-              </div>
+              ) : (
+                <div className="mt-8 border-t border-[#ebe5de] pt-6 text-center text-[14px] uppercase tracking-[1.2px] text-[#8a8a85] [font-family:Jaldi,'JetBrains_Mono',monospace] md:mt-10">
+                  Страница 01
+                </div>
+              )}
             </div>
           </div>
           </div>

@@ -66,7 +66,7 @@ export function AccountOrdersPage() {
     <main className="bg-white text-[#111] [font-family:DM_Sans,Manrope,'Liberation_Sans',sans-serif]">
       <SiteHeader />
       <section className="grid xl:grid-cols-[360px_1fr]">
-        <aside className="border-r border-[#ece8e1] bg-[#fcfbf8] px-5 py-16 md:px-8">
+        <aside className="order-2 border-t border-[#ece8e1] bg-[#fcfbf8] px-4 py-8 md:px-8 xl:order-1 xl:border-r xl:border-t-0 xl:py-16">
           <div className="border border-[#ece8e1] bg-white p-8">
             <h2 className="text-[26px] [font-family:'Cormorant_Garamond',serif]">Личный кабинет</h2>
             <p className="mt-4 text-[14px] uppercase tracking-[4px] text-[#8b8b86] [font-family:Jaldi,'JetBrains_Mono',monospace]">ВостокСтройЭксперт business</p>
@@ -80,16 +80,16 @@ export function AccountOrdersPage() {
             ))}
           </nav>
         </aside>
-        <div className="px-4 py-12 md:px-10 xl:px-16 xl:py-20">
+        <div className="order-1 px-4 py-8 md:px-10 md:py-12 xl:order-2 xl:px-16 xl:py-20">
           <div className="mx-auto max-w-[1200px] 2xl:max-w-[1480px]">
-            <h1 className="text-[52px] leading-none md:text-[80px] [font-family:'Cormorant_Garamond',serif]">Заказы</h1>
+            <h1 className="text-[clamp(2rem,7vw,5rem)] leading-none [font-family:'Cormorant_Garamond',serif]">Заказы</h1>
 
             {loading ? <StateMessage title="Загрузка" description="Загружаю список заказов пользователя." /> : null}
             {!loading && authRequired ? <StateMessage title="Нужен вход" description="Для просмотра заказов войдите под пользовательской учетной записью." /> : null}
             {!loading && error && !authRequired ? <StateMessage title="Ошибка загрузки" description={error.message || "Не удалось загрузить заказы."} /> : null}
 
             {!loading && !error ? (
-              <div className="mt-10 overflow-hidden border border-[#ece8e1] bg-white">
+              <div className="mt-8 overflow-hidden border border-[#ece8e1] bg-white md:mt-10">
                 <div className="hidden grid-cols-[1fr_1fr_1fr_1fr_1fr] border-b border-[#ece8e1] bg-[#faf9f6] px-8 py-6 text-[15px] uppercase tracking-[2px] text-[#8b8b86] md:grid [font-family:Jaldi,'JetBrains_Mono',monospace]">
                   <span>Заказ №</span>
                   <span>Дата</span>
@@ -98,12 +98,27 @@ export function AccountOrdersPage() {
                   <span className="text-right">Итого</span>
                 </div>
                 {orders.map((order) => (
-                  <div key={order.id} className="grid gap-4 border-b border-[#ece8e1] px-8 py-8 md:grid-cols-[1fr_1fr_1fr_1fr_1fr] md:items-center">
-                    <a href={`/account/orders/${order.id}`} className="text-[22px] [font-family:'Cormorant_Garamond',serif] hover:underline">{order.orderNumber}</a>
-                    <p className="text-[18px] text-[#8b8b86]">{order.date}</p>
-                    <div className="flex items-center gap-4"><span className="h-3 w-3" style={{ backgroundColor: order.statusColor }} /><span className="text-[18px] [font-family:'Cormorant_Garamond',serif]">{order.status}</span></div>
-                    <p className="text-[18px] text-[#8b8b86]">{order.delivery}</p>
-                    <p className="text-[20px] md:text-right [font-family:'Cormorant_Garamond',serif]">{order.total}</p>
+                  <div key={order.id} className="grid gap-4 border-b border-[#ece8e1] px-5 py-6 md:grid-cols-[1fr_1fr_1fr_1fr_1fr] md:items-center md:px-8 md:py-8">
+                    <div>
+                      <p className="text-[14px] uppercase tracking-[2px] text-[#8b8b86] md:hidden [font-family:Jaldi,'JetBrains_Mono',monospace]">Заказ №</p>
+                      <a href={`/account/orders/${order.id}`} className="text-[22px] [font-family:'Cormorant_Garamond',serif] hover:underline">{order.orderNumber}</a>
+                    </div>
+                    <div>
+                      <p className="text-[14px] uppercase tracking-[2px] text-[#8b8b86] md:hidden [font-family:Jaldi,'JetBrains_Mono',monospace]">Дата</p>
+                      <p className="text-[18px] text-[#8b8b86]">{order.date}</p>
+                    </div>
+                    <div>
+                      <p className="text-[14px] uppercase tracking-[2px] text-[#8b8b86] md:hidden [font-family:Jaldi,'JetBrains_Mono',monospace]">Статус</p>
+                      <div className="flex items-center gap-4"><span className="h-3 w-3" style={{ backgroundColor: order.statusColor }} /><span className="text-[18px] [font-family:'Cormorant_Garamond',serif]">{order.status}</span></div>
+                    </div>
+                    <div>
+                      <p className="text-[14px] uppercase tracking-[2px] text-[#8b8b86] md:hidden [font-family:Jaldi,'JetBrains_Mono',monospace]">Доставка</p>
+                      <p className="text-[18px] text-[#8b8b86]">{order.delivery}</p>
+                    </div>
+                    <div>
+                      <p className="text-[14px] uppercase tracking-[2px] text-[#8b8b86] md:hidden [font-family:Jaldi,'JetBrains_Mono',monospace]">Итого</p>
+                      <p className="text-[20px] md:text-right [font-family:'Cormorant_Garamond',serif]">{order.total}</p>
+                    </div>
                   </div>
                 ))}
                 {orders.length === 0 ? <div className="px-8 py-10 text-[18px] text-[#6f6f69]">Заказов пока нет.</div> : null}
