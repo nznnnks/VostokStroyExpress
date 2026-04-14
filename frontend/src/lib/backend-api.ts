@@ -72,6 +72,7 @@ type ApiNews = {
   excerpt?: string | null;
   category?: string | null;
   coverImageUrl?: string | null;
+  images?: string[];
   contentBlocks?: string[];
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
   publishedAt?: string | null;
@@ -265,6 +266,7 @@ export type NewsPostView = {
   title: string;
   excerpt: string;
   image: string;
+  images: string[];
   category: string;
   content: string[];
   dateLabel: string;
@@ -562,12 +564,16 @@ function mapApiProduct(product: ApiProduct): Product {
 }
 
 function mapApiNews(item: ApiNews): NewsPostView {
+  const images = Array.isArray(item.images) ? item.images : [];
+  const coverImage = images[0] ?? item.coverImageUrl ?? "";
+
   return {
     id: item.id,
     slug: item.slug,
     title: item.title,
     excerpt: item.excerpt ?? "",
-    image: item.coverImageUrl ?? "",
+    image: coverImage,
+    images,
     category: item.category ?? "Новости",
     content: item.contentBlocks?.length ? item.contentBlocks : [],
     dateLabel: formatDate(item.publishedAt ?? item.createdAt),
@@ -1719,6 +1725,7 @@ export async function createAdminNews(payload: {
   slug: string;
   excerpt?: string;
   category?: string;
+  images?: string[];
   status?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
   metaTitle?: string;
   metaDescription?: string;
@@ -1744,6 +1751,7 @@ export async function updateAdminNews(
     slug?: string;
     excerpt?: string;
     category?: string;
+    images?: string[];
     status?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
     metaTitle?: string;
     metaDescription?: string;
@@ -1785,6 +1793,23 @@ export async function loadAdminNewsById(id: string) {
 
   return apiRequest<ApiNews>(`/api/news/${id}`.replace(/\/+/g, "/"), {
     authToken,
+  });
+}
+
+export async function uploadAdminNewsImage(file: File) {
+  const authToken = getStoredAccessToken("admin");
+
+  if (!authToken) {
+    throw new ApiError("РўСЂРµР±СѓРµС‚СЃСЏ Р°РІС‚РѕСЂРёР·Р°С†РёСЏ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР°.", 401);
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return apiRequest<{ url: string; path: string; name: string; size: number; mimeType: string }>("/api/news/upload-image", {
+    method: "POST",
+    authToken,
+    body: formData,
   });
 }
 

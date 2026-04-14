@@ -28,7 +28,7 @@ export function NewsPage({ posts = [] }: NewsPageProps) {
               {posts.map((post) => (
                 <article key={post.slug} className="border border-[#e8e3db] bg-white">
                   <a href={`/news/${post.slug}`} className="flex h-full flex-col">
-                    <img src={post.image} alt="" aria-hidden="true" width="1200" height="760" className="aspect-[16/10] w-full object-cover" />
+                    {post.image ? <img src={post.image} alt="" aria-hidden="true" width="1200" height="760" className="aspect-[16/10] w-full object-cover" /> : null}
                     <div className="flex flex-1 flex-col p-6">
                       <p className="text-[clamp(0.68rem,0.5vw,0.85rem)] uppercase tracking-[1.5px] text-[#7a7a75] [font-family:Jaldi,'JetBrains_Mono',monospace]">{post.category}</p>
                       <h2 className="mt-3 text-[clamp(1.8rem,2.6vw,2.5rem)] leading-[1.02] [font-family:'Cormorant_Garamond',serif]">{post.title}</h2>

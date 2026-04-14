@@ -29,6 +29,12 @@ export class CreateNewsDto {
   coverImageUrl?: string;
 
   @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsString({ each: true })
+  images?: string[];
+
+  @IsOptional()
   @IsString()
   metaTitle?: string;
 

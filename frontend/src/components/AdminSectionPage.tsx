@@ -47,6 +47,7 @@ import {
   updateAdminUser,
   updateAdminPayment,
   updateUser,
+  uploadAdminNewsImage,
   uploadAdminProductImage,
 } from "../lib/backend-api";
 
@@ -287,9 +288,13 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
     slug: "",
     category: "",
     excerpt: "",
+    images: "",
     status: "DRAFT",
     ...emptySeoFields,
   });
+  const newsImageInputRef = useRef<HTMLInputElement | null>(null);
+  const [newsImageDragOver, setNewsImageDragOver] = useState(false);
+  const [newsImageUrlDraft, setNewsImageUrlDraft] = useState("");
   const [catalogForm, setCatalogForm] = useState({
     id: "",
     name: "",
@@ -374,7 +379,20 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
   const [orderEntityQuery, setOrderEntityQuery] = useState("");
   const [catalogDraggedIndex, setCatalogDraggedIndex] = useState<number | null>(null);
   const [catalogDragOverIndex, setCatalogDragOverIndex] = useState<number | null>(null);
+  const [newsDraggedIndex, setNewsDraggedIndex] = useState<number | null>(null);
+  const [newsDragOverIndex, setNewsDragOverIndex] = useState<number | null>(null);
+  const newsImageList = useMemo(() => parseCatalogImages(newsForm.images), [newsForm.images]);
   const catalogImageList = useMemo(() => parseCatalogImages(catalogForm.images), [catalogForm.images]);
+
+  function setNewsImages(nextImages: string[]) {
+    setNewsForm((prev) => ({ ...prev, images: stringifyCatalogImages(nextImages) }));
+  }
+
+  function resetNewsImageUiState() {
+    setNewsImageUrlDraft("");
+    setNewsDraggedIndex(null);
+    setNewsDragOverIndex(null);
+  }
 
   function setCatalogImages(nextImages: string[]) {
     setCatalogForm((prev) => ({ ...prev, images: stringifyCatalogImages(nextImages) }));
@@ -384,6 +402,34 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
     setCatalogImageUrlDraft("");
     setCatalogDraggedIndex(null);
     setCatalogDragOverIndex(null);
+  }
+
+  async function appendNewsImageFiles(fileList: FileList | File[]) {
+    const files = Array.from(fileList);
+    const imageFiles = files.filter((file) => file.type.startsWith("image/"));
+
+    if (imageFiles.length === 0) {
+      setActionError("Р’С‹Р±РµСЂРёС‚Рµ С„Р°Р№Р»С‹ РёР·РѕР±СЂР°Р¶РµРЅРёР№ (png/jpg/webp/svg).");
+      return;
+    }
+
+    setActionLoading(true);
+    setActionError(null);
+
+    try {
+      const uploaded = await Promise.all(
+        imageFiles.map(async (file) => {
+          const result = await uploadAdminNewsImage(file);
+          return result.url;
+        }),
+      );
+      const merged = [...newsImageList, ...uploaded];
+      setNewsImages(merged);
+    } catch (nextError) {
+      setActionError(nextError instanceof Error ? nextError.message : "РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РёР·РѕР±СЂР°Р¶РµРЅРёСЏ.");
+    } finally {
+      setActionLoading(false);
+    }
   }
 
   async function appendCatalogImageFiles(fileList: FileList | File[]) {
@@ -423,6 +469,15 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
     event.target.value = "";
   }
 
+  async function handleNewsImageInputChange(event: ChangeEvent<HTMLInputElement>) {
+    if (!event.target.files || event.target.files.length === 0) {
+      return;
+    }
+
+    await appendNewsImageFiles(event.target.files);
+    event.target.value = "";
+  }
+
   async function handleCatalogImageDrop(event: DragEvent<HTMLDivElement>) {
     event.preventDefault();
     setCatalogImageDragOver(false);
@@ -434,6 +489,17 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
     await appendCatalogImageFiles(event.dataTransfer.files);
   }
 
+  async function handleNewsImageDrop(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    setNewsImageDragOver(false);
+
+    if (!event.dataTransfer.files || event.dataTransfer.files.length === 0) {
+      return;
+    }
+
+    await appendNewsImageFiles(event.dataTransfer.files);
+  }
+
   function handleAddCatalogImageUrl() {
     const nextUrl = catalogImageUrlDraft.trim();
 
@@ -443,6 +509,17 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
 
     setCatalogImages([...catalogImageList, nextUrl]);
     resetCatalogImageUiState();
+  }
+
+  function handleAddNewsImageUrl() {
+    const nextUrl = newsImageUrlDraft.trim();
+
+    if (!nextUrl) {
+      return;
+    }
+
+    setNewsImages([...newsImageList, nextUrl]);
+    resetNewsImageUiState();
   }
 
   function handleMoveCatalogImage(index: number, direction: "up" | "down") {
@@ -457,9 +534,26 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
     setCatalogImages(nextImages);
   }
 
+  function handleMoveNewsImage(index: number, direction: "up" | "down") {
+    const nextIndex = direction === "up" ? index - 1 : index + 1;
+
+    if (nextIndex < 0 || nextIndex >= newsImageList.length) {
+      return;
+    }
+
+    const nextImages = [...newsImageList];
+    [nextImages[index], nextImages[nextIndex]] = [nextImages[nextIndex], nextImages[index]];
+    setNewsImages(nextImages);
+  }
+
   function handleDeleteCatalogImage(index: number) {
     const nextImages = catalogImageList.filter((_, currentIndex) => currentIndex !== index);
     setCatalogImages(nextImages);
+  }
+
+  function handleDeleteNewsImage(index: number) {
+    const nextImages = newsImageList.filter((_, currentIndex) => currentIndex !== index);
+    setNewsImages(nextImages);
   }
 
   function handleCatalogImageDragStart(index: number) {
@@ -467,10 +561,22 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
     setCatalogDragOverIndex(index);
   }
 
+  function handleNewsImageDragStart(index: number) {
+    setNewsDraggedIndex(index);
+    setNewsDragOverIndex(index);
+  }
+
   function handleCatalogImageDragOver(event: DragEvent<HTMLDivElement>, index: number) {
     event.preventDefault();
     if (catalogDragOverIndex !== index) {
       setCatalogDragOverIndex(index);
+    }
+  }
+
+  function handleNewsImageDragOver(event: DragEvent<HTMLDivElement>, index: number) {
+    event.preventDefault();
+    if (newsDragOverIndex !== index) {
+      setNewsDragOverIndex(index);
     }
   }
 
@@ -489,9 +595,29 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
     setCatalogDragOverIndex(null);
   }
 
+  function handleNewsImageDropOnCard(index: number) {
+    if (newsDraggedIndex === null || newsDraggedIndex === index) {
+      setNewsDraggedIndex(null);
+      setNewsDragOverIndex(null);
+      return;
+    }
+
+    const nextImages = [...newsImageList];
+    const [draggedImage] = nextImages.splice(newsDraggedIndex, 1);
+    nextImages.splice(index, 0, draggedImage);
+    setNewsImages(nextImages);
+    setNewsDraggedIndex(null);
+    setNewsDragOverIndex(null);
+  }
+
   function handleCatalogImageDragEnd() {
     setCatalogDraggedIndex(null);
     setCatalogDragOverIndex(null);
+  }
+
+  function handleNewsImageDragEnd() {
+    setNewsDraggedIndex(null);
+    setNewsDragOverIndex(null);
   }
 
   async function refreshAdminData() {
@@ -559,6 +685,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
   async function handleNewsSubmit() {
     const titleValue = newsForm.title.trim();
     const resolvedSlug = newsForm.slug.trim() || slugify(titleValue);
+    const imagesValue = parseCatalogImages(newsForm.images);
 
     if (!titleValue || !resolvedSlug) {
       setActionError("Заполните название и slug для новости.");
@@ -575,6 +702,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
           slug: resolvedSlug,
           excerpt: newsForm.excerpt.trim() || undefined,
           category: newsForm.category.trim() || undefined,
+          images: imagesValue,
           status: newsForm.status as "DRAFT" | "PUBLISHED" | "ARCHIVED",
           metaTitle: newsForm.metaTitle.trim() || undefined,
           metaDescription: newsForm.metaDescription.trim() || undefined,
@@ -586,6 +714,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
           slug: resolvedSlug,
           excerpt: newsForm.excerpt.trim() || undefined,
           category: newsForm.category.trim() || undefined,
+          images: imagesValue,
           status: newsForm.status as "DRAFT" | "PUBLISHED" | "ARCHIVED",
           metaTitle: newsForm.metaTitle.trim() || undefined,
           metaDescription: newsForm.metaDescription.trim() || undefined,
@@ -594,7 +723,8 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
       }
 
       await refreshAdminData();
-      setNewsForm({ id: "", title: "", slug: "", category: "", excerpt: "", status: "DRAFT", ...emptySeoFields });
+      setNewsForm({ id: "", title: "", slug: "", category: "", excerpt: "", images: "", status: "DRAFT", ...emptySeoFields });
+      resetNewsImageUiState();
     } catch (nextError) {
       setActionError(nextError instanceof Error ? nextError.message : "Не удалось сохранить новость.");
     } finally {
@@ -613,7 +743,8 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
     try {
       await deleteAdminNews(newsForm.id);
       await refreshAdminData();
-      setNewsForm({ id: "", title: "", slug: "", category: "", excerpt: "", status: "DRAFT", ...emptySeoFields });
+      setNewsForm({ id: "", title: "", slug: "", category: "", excerpt: "", images: "", status: "DRAFT", ...emptySeoFields });
+      resetNewsImageUiState();
     } catch (nextError) {
       setActionError(nextError instanceof Error ? nextError.message : "Не удалось удалить новость.");
     } finally {
@@ -760,17 +891,20 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
 
     try {
       const item = await loadAdminNewsById(id);
+      const images = item.images?.length ? item.images : item.coverImageUrl ? [item.coverImageUrl] : [];
       setNewsForm({
         id: item.id,
         title: item.title,
         slug: item.slug,
         category: item.category ?? "",
         excerpt: item.excerpt ?? "",
+        images: stringifyCatalogImages(images),
         status: item.status ?? "DRAFT",
         metaTitle: item.metaTitle ?? "",
         metaDescription: item.metaDescription ?? "",
         metaKeywords: item.metaKeywords ?? "",
       });
+      resetNewsImageUiState();
     } catch (nextError) {
       setActionError(nextError instanceof Error ? nextError.message : "Не удалось загрузить новость.");
     } finally {
@@ -2322,6 +2456,114 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
                         placeholder="Короткий анонс новости"
                       />
                     </label>
+                    <div className="mt-4">
+                      <div className="admin-toolbar__label">
+                        <p>Фотографии новости</p>
+                        <input
+                          ref={newsImageInputRef}
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          className="hidden"
+                          onChange={handleNewsImageInputChange}
+                        />
+                        <div
+                          className={`mt-2 rounded-md border-2 border-dashed p-5 transition-colors ${newsImageDragOver ? "border-[#111] bg-[#f6f3ee]" : "border-[#d8d1c7] bg-[#fbf9f5]"}`}
+                          onDragOver={(event) => {
+                            event.preventDefault();
+                            setNewsImageDragOver(true);
+                          }}
+                          onDragLeave={() => setNewsImageDragOver(false)}
+                          onDrop={handleNewsImageDrop}
+                        >
+                          <p className="text-[14px] text-[#6f6a62]">Перетащите изображения сюда или выберите файлы с устройства.</p>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <button type="button" className="admin-action-btn" onClick={() => newsImageInputRef.current?.click()} disabled={actionLoading}>
+                              Выбрать файлы
+                            </button>
+                          </div>
+                        </div>
+                        <div className="mt-3 flex gap-2">
+                          <input
+                            className="admin-input"
+                            value={newsImageUrlDraft}
+                            onChange={(event) => setNewsImageUrlDraft(event.target.value)}
+                            placeholder="https://.../img.jpg"
+                          />
+                          <button type="button" className="admin-action-btn admin-action-btn--ghost" onClick={handleAddNewsImageUrl}>
+                            Добавить URL
+                          </button>
+                        </div>
+                        <div className="mt-4">
+                          <p className="text-[12px] uppercase tracking-[2px] text-[#9b958b]">Галерея: зажмите карточку и перетащите для смены порядка</p>
+                          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+                            {newsImageList.map((image, index) => (
+                              <div
+                                key={`${image.slice(0, 24)}-${index}`}
+                                draggable
+                                onDragStart={() => handleNewsImageDragStart(index)}
+                                onDragOver={(event) => handleNewsImageDragOver(event, index)}
+                                onDrop={() => handleNewsImageDropOnCard(index)}
+                                onDragEnd={handleNewsImageDragEnd}
+                                className={`group relative overflow-hidden rounded-md border bg-[#fff] p-2 shadow-sm transition-all ${
+                                  newsDragOverIndex === index ? "border-[#111] ring-2 ring-[#e7e2d8]" : "border-[#e8e3db]"
+                                }`}
+                              >
+                                <div className="absolute left-2 top-2 z-10 flex items-center gap-1 rounded bg-[#111]/80 px-2 py-1 text-[11px] uppercase tracking-[1px] text-white">
+                                  <span className="cursor-grab">⋮⋮</span>
+                                  <span>{index + 1}</span>
+                                </div>
+                                <div className="absolute right-2 top-2 z-10 flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    className="h-8 w-8 rounded bg-white/95 text-[16px] text-[#111] shadow-sm transition hover:bg-white disabled:opacity-35"
+                                    onClick={() => handleMoveNewsImage(index, "up")}
+                                    disabled={index === 0}
+                                    title="Сдвинуть влево/вверх"
+                                  >
+                                    ←
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="h-8 w-8 rounded bg-white/95 text-[16px] text-[#111] shadow-sm transition hover:bg-white disabled:opacity-35"
+                                    onClick={() => handleMoveNewsImage(index, "down")}
+                                    disabled={index === newsImageList.length - 1}
+                                    title="Сдвинуть вправо/вниз"
+                                  >
+                                    →
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="h-8 rounded bg-[#111]/90 px-2 text-[11px] uppercase tracking-[1px] text-white transition hover:bg-[#111]"
+                                    onClick={() => handleDeleteNewsImage(index)}
+                                    title="Удалить изображение"
+                                  >
+                                    Удалить
+                                  </button>
+                                </div>
+                                <img
+                                  src={image}
+                                  alt={`Фото ${index + 1}`}
+                                  className="aspect-[4/3] h-auto w-full rounded object-cover"
+                                  loading="lazy"
+                                  decoding="async"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                          {newsImageList.length === 0 ? <p className="mt-2 text-[13px] text-[#8c877f]">Изображения еще не добавлены.</p> : null}
+                        </div>
+                        <details className="mt-4">
+                          <summary className="cursor-pointer text-[12px] uppercase tracking-[2px] text-[#9b958b]">Служебное поле (список URL)</summary>
+                          <textarea
+                            className="admin-input admin-textarea mt-2"
+                            value={newsForm.images}
+                            onChange={(event) => setNewsForm((prev) => ({ ...prev, images: event.target.value }))}
+                            placeholder="Одно изображение на строку"
+                          />
+                        </details>
+                      </div>
+                    </div>
                     <SeoFields
                       value={newsForm}
                       onChange={(field, nextValue) => setNewsForm((prev) => ({ ...prev, [field]: nextValue }))}
@@ -2334,7 +2576,10 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
                       <button
                         className="admin-action-btn admin-action-btn--ghost"
                         type="button"
-                        onClick={() => setNewsForm({ id: "", title: "", slug: "", category: "", excerpt: "", status: "DRAFT", ...emptySeoFields })}
+                        onClick={() => {
+                          setNewsForm({ id: "", title: "", slug: "", category: "", excerpt: "", images: "", status: "DRAFT", ...emptySeoFields });
+                          resetNewsImageUiState();
+                        }}
                         disabled={actionLoading}
                       >
                         Очистить

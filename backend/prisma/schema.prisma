@@ -334,6 +334,7 @@ model News {
   excerpt       String?
   category      String?
   coverImageUrl String?
+  images        String[]    @default([])
   metaTitle     String?
   metaDescription String?
   metaKeywords  String?

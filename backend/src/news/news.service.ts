@@ -70,6 +70,7 @@ export class NewsService {
     return this.prisma.news.create({
       data: {
         ...dto,
+        coverImageUrl: dto.coverImageUrl ?? dto.images?.[0],
         authorId: dto.authorId ?? authorId,
         publishedAt: dto.publishedAt ? new Date(dto.publishedAt) : undefined,
       },
@@ -96,6 +97,7 @@ export class NewsService {
       where: { id },
       data: {
         ...dto,
+        coverImageUrl: dto.coverImageUrl ?? dto.images?.[0],
         publishedAt: dto.publishedAt ? new Date(dto.publishedAt) : undefined,
       },
       include: {

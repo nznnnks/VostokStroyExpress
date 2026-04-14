@@ -40,7 +40,14 @@ const post = await loadNewsPostBySlug(slug);
           <h1 class="mt-8 max-w-[900px] text-[56px] leading-[0.92] md:text-[92px] [font-family:'Cormorant_Garamond',serif]">{post?.title ?? "Материал не найден"}</h1>
           {post ? (
             <>
-              <img src={post.image} alt="" aria-hidden="true" width="1200" height="760" class="mt-10 aspect-[16/9] w-full object-cover" />
+              {post.image ? <img src={post.image} alt="" aria-hidden="true" width="1200" height="760" class="mt-10 aspect-[16/9] w-full object-cover" /> : null}
+              {post.images?.length > 1 ? (
+                <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {post.images.slice(1).map((image) => (
+                    <img src={image} alt="" aria-hidden="true" width="800" height="520" class="aspect-[4/3] w-full object-cover" loading="lazy" decoding="async" />
+                  ))}
+                </div>
+              ) : null}
               <div class="mt-10 space-y-8 text-[20px] leading-[1.8] text-[#5d5d58] md:text-[24px]">
                 {post.content.map((paragraph) => (
                   <p>{paragraph}</p>
