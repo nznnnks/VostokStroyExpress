@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent 
 
 import { adminNav } from "../data/admin";
 import { ApiError } from "../lib/api-client";
-import { getStoredAuthSession } from "../lib/auth";
+import { clearStoredAuthSession, getStoredAuthSession } from "../lib/auth";
 import {
   createAdminNews,
   createAdminProduct,
@@ -383,6 +383,11 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
   const [newsDragOverIndex, setNewsDragOverIndex] = useState<number | null>(null);
   const newsImageList = useMemo(() => parseCatalogImages(newsForm.images), [newsForm.images]);
   const catalogImageList = useMemo(() => parseCatalogImages(catalogForm.images), [catalogForm.images]);
+
+  function handleAdminLogout() {
+    clearStoredAuthSession();
+    window.location.assign("/login");
+  }
 
   function setNewsImages(nextImages: string[]) {
     setNewsForm((prev) => ({ ...prev, images: stringifyCatalogImages(nextImages) }));
@@ -1818,7 +1823,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
       {navOpen ? (
         <div className="fixed inset-0 z-50 xl:hidden">
           <button type="button" aria-label="Закрыть меню" className="absolute inset-0 bg-black/40" onClick={() => setNavOpen(false)} />
-          <aside className="absolute left-0 top-0 h-full w-[85vw] max-w-[340px] bg-[#211d1a] text-white">
+          <aside className="absolute left-0 top-0 flex h-full w-[85vw] max-w-[340px] flex-col bg-[#211d1a] text-white">
             <div className="border-b border-white/10 px-6 py-8">
               <div className="flex items-center justify-between">
                 <p className="max-w-full text-[20px] italic uppercase leading-none tracking-[-0.04em] text-white [font-family:'Cormorant_Garamond',serif]">
@@ -1832,7 +1837,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
                 панель администратора
               </p>
             </div>
-            <nav className="pt-4">
+            <nav className="flex-1 overflow-auto pt-4">
               {adminNav.map((item) => {
                 const active = item.key === activeKey;
                 return (
@@ -1853,6 +1858,18 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
                 );
               })}
             </nav>
+            <div className="border-t border-white/10 p-5">
+              <button
+                type="button"
+                className="flex w-full items-center justify-center rounded-md border border-white/20 px-4 py-3 text-[14px] uppercase tracking-[2px] text-white/90 [font-family:Jaldi,'JetBrains_Mono',monospace] hover:bg-white/5"
+                onClick={() => {
+                  setNavOpen(false);
+                  handleAdminLogout();
+                }}
+              >
+                Выйти
+              </button>
+            </div>
           </aside>
         </div>
       ) : null}
@@ -1867,7 +1884,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
             </p>
           </div>
 
-          <nav className="pt-6">
+          <nav className="flex-1 overflow-auto pt-6">
             {adminNav.map((item) => {
               const active = item.key === activeKey;
               return (
@@ -1883,6 +1900,15 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
               );
             })}
           </nav>
+          <div className="border-t border-white/10 px-8 py-6">
+            <button
+              type="button"
+              className="flex w-full items-center justify-center rounded-md border border-white/20 px-4 py-3 text-[14px] uppercase tracking-[2px] text-white/90 [font-family:Jaldi,'JetBrains_Mono',monospace] hover:bg-white/5"
+              onClick={handleAdminLogout}
+            >
+              Выйти
+            </button>
+          </div>
         </aside>
 
         <div className="min-w-0">
