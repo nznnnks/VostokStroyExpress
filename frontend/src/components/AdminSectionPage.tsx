@@ -185,6 +185,11 @@ function stringifyCatalogImages(images: string[]) {
   return images.join("\n");
 }
 
+function parseSpentAmount(value?: string | null) {
+  const digits = String(value ?? "").replace(/[^\d]/g, "");
+  return digits ? Number(digits) : 0;
+}
+
 const emptySeoFields = {
   metaTitle: "",
   metaDescription: "",
@@ -282,6 +287,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
   const [actionLoading, setActionLoading] = useState(false);
   const [query, setQuery] = useState("");
   const [secondaryFilter, setSecondaryFilter] = useState("all");
+  const [clientsSort, setClientsSort] = useState<"default" | "spent_desc">("spent_desc");
   const [newsForm, setNewsForm] = useState({
     id: "",
     title: "",
@@ -387,6 +393,28 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
   function handleAdminLogout() {
     clearStoredAuthSession();
     window.location.assign("/login");
+  }
+
+  function fillUserFormFromUserId(userId?: string) {
+    if (!userId) {
+      setUserForm({ id: "", email: "", phone: "", passwordHash: "", status: "ACTIVE" });
+      return;
+    }
+
+    const user = users.find((item) => item.id === userId);
+
+    if (!user) {
+      setUserForm({ id: "", email: "", phone: "", passwordHash: "", status: "ACTIVE" });
+      return;
+    }
+
+    setUserForm({
+      id: user.id,
+      email: user.email,
+      phone: user.phone ?? "",
+      passwordHash: "",
+      status: user.status,
+    });
   }
 
   function setNewsImages(nextImages: string[]) {
@@ -1635,11 +1663,14 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
   }
 
   function fillClientForm(item: AdminClientView) {
+    const inferredFirstName = item.firstName?.trim() || item.name.split(" ")[0] || item.name;
+    const inferredLastName = item.lastName?.trim() || item.name.split(" ").slice(1).join(" ");
+
     setClientForm({
       id: item.id,
       userId: item.userId ?? "",
-      firstName: item.firstName ?? item.name.split(" ")[0] ?? item.name,
-      lastName: item.lastName ?? item.name.split(" ").slice(1).join(" "),
+      firstName: inferredFirstName,
+      lastName: inferredLastName,
       companyName: item.companyName ?? "",
       inn: item.inn ?? "",
       contactPhone: formatRussianPhone(item.contactPhone ?? ""),
@@ -1650,6 +1681,11 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
       personalDiscountPercent: item.personalDiscountPercent ?? "",
       totalSpent: item.totalSpent ?? "0 ₽",
     });
+  }
+
+  function handleSelectClient(item: AdminClientView) {
+    fillClientForm(item);
+    fillUserFormFromUserId(item.userId);
   }
 
   function fillOrderForm(item: AdminOrderView) {
@@ -1752,11 +1788,18 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
 
 
   const filteredClients = useMemo(() => {
-    return clients.filter((item) => {
-      const haystack = `${item.name} ${item.segment} ${item.manager}`.toLowerCase();
-      return !query || haystack.includes(query.toLowerCase());
+    const q = query.trim().toLowerCase();
+    const filtered = clients.filter((item) => {
+      const haystack = `${item.name} ${item.firstName ?? ""} ${item.lastName ?? ""} ${item.email ?? ""} ${item.segment} ${item.manager}`.toLowerCase();
+      return !q || haystack.includes(q);
     });
-  }, [clients, query]);
+
+    if (clientsSort === "spent_desc") {
+      return [...filtered].sort((a, b) => parseSpentAmount(b.totalSpent) - parseSpentAmount(a.totalSpent));
+    }
+
+    return filtered;
+  }, [clients, query, clientsSort]);
 
   const filteredOrders = useMemo(() => {
     return orders.filter((item) => {
@@ -1945,6 +1988,15 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
                     Поиск
                     <input value={query} onChange={(event) => setQuery(event.target.value)} className="admin-input mt-2 w-full" placeholder="Поиск по разделу" />
                   </label>
+                  {activeKey === "clients" ? (
+                    <label className="text-[14px] text-[#7a7a75]">
+                      Сортировка
+                      <select className="admin-input mt-2" value={clientsSort} onChange={(event) => setClientsSort(event.target.value as typeof clientsSort)}>
+                        <option value="spent_desc">Сумма выкупа: по убыванию</option>
+                        <option value="default">По умолчанию</option>
+                      </select>
+                    </label>
+                  ) : null}
                   {activeKey === "news" ? (
                     <div className="flex gap-2">
                       {["all", "Опубликовано", "Черновик", "Архив"].map((item) => (
@@ -2038,34 +2090,6 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
                           Удалить
                         </button>
                       ) : null}
-                    </div>
-
-                    <div className="mt-6 flex flex-wrap gap-2">
-                      {users.map((item) => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          className="admin-action-btn admin-action-btn--ghost"
-                          onClick={() => {
-                            setUserForm({
-                              id: item.id,
-                              email: item.email,
-                              phone: formatRussianPhone(item.phone ?? ""),
-                              passwordHash: "",
-                              status: item.status,
-                            });
-
-                            const profile = clients.find((client) => client.userId === item.id);
-                            if (profile) {
-                              fillClientForm(profile);
-                            } else {
-                              setClientForm({ ...emptyClientForm, userId: item.id });
-                            }
-                          }}
-                        >
-                          {item.email}
-                        </button>
-                      ))}
                     </div>
                   </div>
 
@@ -2206,7 +2230,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
                           key={item.id}
                           type="button"
                           className="text-left underline-offset-4 hover:underline"
-                          onClick={() => fillClientForm(item)}
+                          onClick={() => handleSelectClient(item)}
                         >
                           {item.name}
                         </button>,

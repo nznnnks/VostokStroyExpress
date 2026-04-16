@@ -386,6 +386,7 @@ export type AdminClientView = {
   id: string;
   userId?: string;
   name: string;
+  email?: string;
   firstName?: string;
   lastName?: string;
   companyName?: string;
@@ -965,6 +966,7 @@ export async function loadAdminSectionData() {
         id: item.id,
         userId: item.userId,
         name: profileName(item, item.user?.email ?? null),
+        email: item.user?.email ?? "",
       firstName: item.firstName,
       lastName: item.lastName ?? "",
       companyName: item.companyName ?? "",
@@ -1016,6 +1018,7 @@ export async function loadAdminSectionData() {
     clients: clients.map((item) => ({
       id: item.id,
       name: profileName(item, item.user?.email ?? null),
+      email: item.user?.email ?? "",
       segment: item.companyName ?? "Частный клиент",
       manager: "—",
       orders: "—",
