@@ -213,11 +213,10 @@ export function AdminPage({ activeKey = "dashboard" }: AdminPageProps) {
                 );
               })}
             </nav>
-            <div className="mt-auto border-t border-white/10 px-6 py-6">
-              <a href="/login" className="flex items-center gap-3 text-[16px] text-white/70">
-                <img src="/admin/logout.svg" alt="" aria-hidden="true" width="18" height="18" className="h-5 w-5 object-contain" />
-                Выход
-              </a>
+            <div className="mt-auto border-t border-white/10 p-5">
+              <LogoutLink className="flex w-full items-center justify-center rounded-md border border-white/20 px-4 py-3 text-[14px] uppercase tracking-[2px] text-white/90 [font-family:Jaldi,'JetBrains_Mono',monospace] hover:bg-white/5">
+                Выйти
+              </LogoutLink>
             </div>
           </aside>
         </div>
@@ -265,19 +264,9 @@ export function AdminPage({ activeKey = "dashboard" }: AdminPageProps) {
             })}
           </nav>
 
-          <div className="mt-auto border-t border-white/10 px-8 py-8">
-            <LogoutLink className="flex items-center gap-4 text-[18px] text-white/70">
-              <img
-                src="/admin/logout.svg"
-                alt=""
-                aria-hidden="true"
-                width="20"
-                height="20"
-                loading="lazy"
-                decoding="async"
-                className="h-5 w-5 object-contain"
-              />
-              Выход
+          <div className="mt-auto border-t border-white/10 px-8 py-6">
+            <LogoutLink className="flex w-full items-center justify-center rounded-md border border-white/20 px-4 py-3 text-[14px] uppercase tracking-[2px] text-white/90 [font-family:Jaldi,'JetBrains_Mono',monospace] hover:bg-white/5">
+              Выйти
             </LogoutLink>
           </div>
         </aside>
