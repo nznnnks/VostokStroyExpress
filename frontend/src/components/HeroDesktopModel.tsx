@@ -134,7 +134,15 @@ export function HeroDesktopModel() {
         dpr={[1, 1.25]}
         camera={layout.camera}
         frameloop="demand"
-        gl={{ alpha: true, antialias: true, powerPreference: "low-power" }}
+        gl={{
+          alpha: true,
+          antialias: true,
+          premultipliedAlpha: false,
+          powerPreference: "low-power",
+        }}
+        onCreated={({ gl }) => {
+          gl.setClearColor(0x000000, 0);
+        }}
       >
         <Suspense fallback={null}>
           <ambientLight intensity={1.5} />
