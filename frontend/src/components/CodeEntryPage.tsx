@@ -25,7 +25,7 @@ export function CodeEntryPage() {
             </div>
 
             <div className="px-5 py-7 sm:px-6 sm:py-8 md:px-10 md:py-12 lg:px-18 lg:py-16">
-              <p className="text-[clamp(0.68rem,0.5vw,0.85rem)] uppercase tracking-[1.5px] text-[#7a7a75] [font-family:Jaldi,'JetBrains_Mono',monospace]">
+              <p className="breadcrumb-nav uppercase tracking-[1.5px] text-[#7a7a75] [font-family:Jaldi,'JetBrains_Mono',monospace]">
                 <a href="/" className="hover:text-[#111]">Главная</a>
                 <span className="mx-2 text-[#b5b2ab]">/</span>
                 <span>Ввод кода</span>

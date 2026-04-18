@@ -288,7 +288,7 @@ export function CatalogPage({ products }: CatalogPageProps) {
 
         <section className="px-4 py-10 md:px-10 md:py-14">
           <div className="mx-auto max-w-[1480px] 2xl:max-w-[1860px]">
-          <div className="text-[13px] uppercase tracking-[1.5px] text-[#7a7a75] [font-family:Jaldi,'JetBrains_Mono',monospace]">
+          <div className="breadcrumb-nav uppercase tracking-[1.5px] text-[#7a7a75] [font-family:Jaldi,'JetBrains_Mono',monospace]">
             <a href="/" className="hover:text-[#111]">Главная</a>
             <span className="mx-2 text-[#b5b2ab]">/</span>
             <a href="/catalog" className="hover:text-[#111]">Каталог</a>

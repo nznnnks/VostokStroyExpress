@@ -3,6 +3,8 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Center, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 
+const HERO_BASE_ROTATION_Y = -Math.PI / 2;
+
 type HeroModelLayout = {
   groupPosition: [number, number, number];
   scale: number;
@@ -24,21 +26,21 @@ const HERO_MODEL_LAYOUTS = {
     },
   },
   tablet: {
-    groupPosition: [0.35, -1.48, 0] as [number, number, number],
-    scale: 1.5,
+    groupPosition: [0.45, -1.54, 0] as [number, number, number],
+    scale: 1.72,
     wrapperClassName: "hero-model-edgefade hero-model-edgefade--tablet hero-model-frame pointer-events-none",
     camera: {
-      position: [0, 1.08, 10.1] as [number, number, number],
-      fov: 29,
+      position: [0, 1.1, 9.55] as [number, number, number],
+      fov: 28.25,
     },
   },
   compact: {
     groupPosition: [0.55, -1.56, 0] as [number, number, number],
-    scale: 1.68,
+    scale: 1.86,
     wrapperClassName: "hero-model-edgefade hero-model-edgefade--compact hero-model-frame pointer-events-none",
     camera: {
-      position: [0, 1.1, 9.8] as [number, number, number],
-      fov: 28,
+      position: [0, 1.12, 9.15] as [number, number, number],
+      fov: 27.25,
     },
   },
   medium: {
@@ -102,7 +104,7 @@ function HeroModel({
     if (!groupRef.current) return;
 
     const targetRotationX = -0.12 - mouse.current.y * 0.18;
-    const targetRotationY = -0.55 + mouse.current.x * 0.3;
+    const targetRotationY = HERO_BASE_ROTATION_Y + (-0.55 + mouse.current.x * 0.3);
     const targetPositionY = layout.groupPosition[1];
 
     groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, targetRotationX, 0.045);

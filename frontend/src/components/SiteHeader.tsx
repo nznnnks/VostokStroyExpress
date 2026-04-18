@@ -201,12 +201,13 @@ export function SiteHeader({ light = true }: SiteHeaderProps) {
                 : "border-b border-white/10 bg-transparent"
           }`}
         >
-          <a
-            href="/"
-            className={`block min-w-0 truncate text-[clamp(15px,4.6vw,24px)] italic tracking-[-0.03em] transition duration-300 ease-out hover:opacity-75 sm:text-[clamp(17px,5vw,28px)] md:text-[clamp(18px,3.6vw,40px)] [font-family:'Cormorant_Garamond',serif] ${
-              light ? "text-[#050505]" : "text-white"
-            }`}
-          >
+	          <a
+	            href="/"
+	            onClick={(event) => handleNavLinkClick(event, "/")}
+	            className={`block min-w-0 whitespace-nowrap pr-1 text-[clamp(15px,4.6vw,24px)] italic leading-[1.06] tracking-[-0.03em] transition duration-300 ease-out hover:opacity-75 sm:text-[clamp(17px,5vw,28px)] md:text-[clamp(18px,3.6vw,40px)] [font-family:'Cormorant_Garamond',serif] ${
+	              light ? "text-[#050505]" : "text-white"
+	            }`}
+	          >
             ВостокСтройЭксперт
           </a>
           <nav
@@ -279,7 +280,7 @@ export function SiteHeader({ light = true }: SiteHeaderProps) {
                 <circle cx="16.5" cy="19.5" r="1.4" fill="currentColor" />
               </svg>
             </a>
-            <div className="flex items-center gap-1 md:hidden">
+            <div className="flex items-center gap-1 sm:hidden">
               <a
                 href="https://t.me/vostok_support"
                 target="_blank"

@@ -112,7 +112,7 @@ export function ProductPage({ product, relatedProducts, allProducts }: ProductPa
 
         <section className="px-4 py-6 md:px-10 md:py-12">
           <div className="mx-auto max-w-[1480px]">
-          <div className="flex items-center gap-4 overflow-x-auto whitespace-nowrap pb-2 text-[clamp(0.68rem,0.5vw,0.85rem)] uppercase tracking-[1.6px] text-[#787872] [font-family:Jaldi,'JetBrains_Mono',monospace]">
+          <div className="breadcrumb-nav flex items-center gap-4 overflow-x-auto whitespace-nowrap pb-2 uppercase tracking-[1.6px] text-[#787872] [font-family:Jaldi,'JetBrains_Mono',monospace]">
             <a href="/catalog" className="inline-flex h-10 items-center justify-center bg-[#111] px-5 text-white">назад</a>
             <a href="/" className="hover:text-[#111]">Главная</a>
             <span className="text-[#b5b2ab]">/</span>

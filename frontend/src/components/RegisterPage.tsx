@@ -48,7 +48,7 @@ export function RegisterPage() {
 
           <div className="flex items-start px-5 py-7 sm:px-8 md:px-12 md:py-9 xl:items-center xl:px-16 xl:py-8">
             <div className="mx-auto w-full max-w-[560px]">
-              <p className="text-[clamp(0.68rem,0.5vw,0.85rem)] uppercase tracking-[1.5px] text-[#7a7a75] [font-family:Jaldi,'JetBrains_Mono',monospace]">
+              <p className="breadcrumb-nav uppercase tracking-[1.5px] text-[#7a7a75] [font-family:Jaldi,'JetBrains_Mono',monospace]">
                 <a href="/" className="hover:text-[#111]">Главная</a>
                 <span className="mx-2 text-[#b5b2ab]">/</span>
                 <span>Регистрация</span>

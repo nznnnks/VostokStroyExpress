@@ -126,7 +126,7 @@ export function CartPage() {
       <section className="px-4 py-10 md:px-10 md:py-16">
         <div className="mx-auto grid max-w-[1480px] gap-10 xl:grid-cols-[1fr_500px]">
           <div>
-            <p className="text-[clamp(0.68rem,0.5vw,0.85rem)] uppercase tracking-[1.5px] text-[#7a7a75] [font-family:Jaldi,'JetBrains_Mono',monospace]">
+            <p className="breadcrumb-nav uppercase tracking-[1.5px] text-[#7a7a75] [font-family:Jaldi,'JetBrains_Mono',monospace]">
               <a href="/" className="hover:text-[#111]">Главная</a>
               <span className="mx-2 text-[#b5b2ab]">/</span>
               <span>Корзина</span>
@@ -192,7 +192,7 @@ export function CartPage() {
                       </div>
                       <div className="flex items-center justify-between md:block">
                         <span className="text-[clamp(0.65rem,0.5vw,0.8rem)] uppercase tracking-[1.4px] text-[#7a7a75] md:hidden [font-family:Jaldi,'JetBrains_Mono',monospace]">Цена</span>
-                        <p className="text-[clamp(1.3rem,1.7vw,1.75rem)] [font-family:'Cormorant_Garamond',serif]">{formatPrice(item.totalPrice)}</p>
+                        <p className="text-[clamp(1.3rem,1.7vw,1.75rem)] [font-family:DM_Sans,Manrope,sans-serif]">{formatPrice(item.totalPrice)}</p>
                       </div>
                       <div className="flex items-center justify-end md:justify-center">
                         <button type="button" disabled={actionLoading} onClick={() => removeItem(item.id)} className="flex items-center justify-center">
@@ -227,8 +227,8 @@ export function CartPage() {
 
             <div className="mt-12 border-t border-[#e8e3db] pt-12">
               <div className="flex items-end justify-between gap-6">
-                <span className="text-[clamp(1.2rem,1.6vw,1.6rem)] [font-family:'Cormorant_Garamond',serif]">К оплате</span>
-                <span className="text-[clamp(2rem,3.2vw,2.9rem)] leading-none [font-family:'Cormorant_Garamond',serif]">{formatPrice(total)}</span>
+                <span className="text-[clamp(1.2rem,1.6vw,1.6rem)] [font-family:DM_Sans,Manrope,sans-serif]">К оплате</span>
+                <span className="text-[clamp(2rem,3.2vw,2.9rem)] leading-none [font-family:DM_Sans,Manrope,sans-serif]">{formatPrice(total)}</span>
               </div>
 
               <a
