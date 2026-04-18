@@ -154,7 +154,7 @@ export function SiteHeader({ light = true }: SiteHeaderProps) {
     <header ref={searchRef} className="sticky top-0 z-[140] isolate">
       {light ? (
         <div
-          className={`hidden overflow-hidden border-b border-white/8 bg-[#060606] text-white transition-[grid-template-rows,opacity,transform,border-color] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] md:grid ${
+          className={`grid overflow-hidden border-b border-white/8 bg-[#060606] text-white transition-[grid-template-rows,opacity,transform,border-color] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${
             isScrolled
               ? "grid-rows-[0fr] -translate-y-1 opacity-0 border-white/0"
               : "grid-rows-[1fr] translate-y-0 opacity-100"
@@ -191,7 +191,7 @@ export function SiteHeader({ light = true }: SiteHeaderProps) {
       ) : null}
       <div className="px-2 pt-0 md:px-4">
         <div
-          className={`mx-auto mt-0 grid max-w-[1480px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-3 transition-[max-width,margin-top,border-radius,background-color,border-color,box-shadow,backdrop-filter,transform] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] md:grid-cols-[auto_1fr_auto] md:gap-4 md:px-10 md:py-4 xl:gap-6 xl:px-12 2xl:max-w-[1860px] 2xl:px-16 ${
+          className={`mx-auto mt-0 grid max-w-[1480px] grid-cols-[minmax(0,1fr)_auto] items-center gap-1.5 px-2.5 py-2.5 transition-[max-width,margin-top,border-radius,background-color,border-color,box-shadow,backdrop-filter,transform] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] md:grid-cols-[auto_1fr_auto] md:gap-4 md:px-10 md:py-4 xl:gap-6 xl:px-12 2xl:max-w-[1860px] 2xl:px-16 ${
             isScrolled
               ? light
                 ? "md:mt-3 max-w-[1420px] translate-y-0 rounded-[22px] md:rounded-[28px] border border-[#1b1b1b]/24 bg-white/90 shadow-[0_10px_28px_rgba(0,0,0,0.14),0_0_0_1px_rgba(17,17,17,0.06)] backdrop-blur-md 2xl:max-w-[1760px]"
@@ -203,7 +203,7 @@ export function SiteHeader({ light = true }: SiteHeaderProps) {
         >
           <a
             href="/"
-            className={`block min-w-0 truncate text-[clamp(17px,5vw,28px)] italic tracking-[-0.03em] transition duration-300 ease-out hover:opacity-75 md:text-[clamp(18px,3.6vw,40px)] [font-family:'Cormorant_Garamond',serif] ${
+            className={`block min-w-0 truncate text-[clamp(15px,4.6vw,24px)] italic tracking-[-0.03em] transition duration-300 ease-out hover:opacity-75 sm:text-[clamp(17px,5vw,28px)] md:text-[clamp(18px,3.6vw,40px)] [font-family:'Cormorant_Garamond',serif] ${
               light ? "text-[#050505]" : "text-white"
             }`}
           >
@@ -285,12 +285,12 @@ export function SiteHeader({ light = true }: SiteHeaderProps) {
                 target="_blank"
                 rel="noreferrer"
                 aria-label="Telegram"
-                className="inline-flex h-8 w-8 items-center justify-center bg-[#050505] text-white transition duration-300 ease-out hover:-translate-y-0.5 hover:bg-[#1c1c1c] sm:h-9 sm:w-9"
+                className="inline-flex h-7 w-7 items-center justify-center bg-[#050505] text-white transition duration-300 ease-out hover:-translate-y-0.5 hover:bg-[#1c1c1c] sm:h-8 sm:w-8"
               >
                 <svg
                   viewBox="0 0 24 24"
-                  width="15"
-                  height="15"
+                  width="13"
+                  height="13"
                   aria-hidden="true"
                   fill="currentColor"
                 >
@@ -302,12 +302,12 @@ export function SiteHeader({ light = true }: SiteHeaderProps) {
                 target="_blank"
                 rel="noreferrer"
                 aria-label="Telegram"
-                className="inline-flex h-8 w-8 items-center justify-center bg-[#050505] text-white transition duration-300 ease-out hover:-translate-y-0.5 hover:bg-[#1c1c1c] sm:h-9 sm:w-9"
+                className="inline-flex h-7 w-7 items-center justify-center bg-[#050505] text-white transition duration-300 ease-out hover:-translate-y-0.5 hover:bg-[#1c1c1c] sm:h-8 sm:w-8"
               >
                 <svg
                   viewBox="0 0 24 24"
-                  width="15"
-                  height="15"
+                  width="13"
+                  height="13"
                   aria-hidden="true"
                   fill="currentColor"
                 >
@@ -317,7 +317,7 @@ export function SiteHeader({ light = true }: SiteHeaderProps) {
               <a
                 href="/#contact"
                 onClick={handleRequestClick}
-                className="inline-flex h-8 items-center justify-center bg-[#050505] px-2 text-[10px] uppercase tracking-[0.7px] text-white transition duration-300 ease-out hover:-translate-y-0.5 hover:bg-[#1c1c1c] sm:h-9 sm:px-3 sm:text-[12px] sm:tracking-[1px] [font-family:Jaldi,'JetBrains_Mono',monospace]"
+                className="hidden h-8 items-center justify-center bg-[#050505] px-2 text-[10px] uppercase tracking-[0.7px] text-white transition duration-300 ease-out hover:-translate-y-0.5 hover:bg-[#1c1c1c] min-[390px]:inline-flex sm:h-8 sm:px-3 sm:text-[12px] sm:tracking-[1px] [font-family:Jaldi,'JetBrains_Mono',monospace]"
               >
                 Заявка
               </a>
@@ -334,13 +334,13 @@ export function SiteHeader({ light = true }: SiteHeaderProps) {
               aria-label="Открыть меню"
               aria-expanded={isOpen}
               onClick={openMobileMenu}
-              className={`relative z-[130] inline-flex h-9 w-9 shrink-0 items-center justify-center border transition-opacity sm:h-10 sm:w-10 md:h-11 md:w-11 lg:hidden ${
+              className={`relative z-[130] inline-flex h-8 w-8 shrink-0 items-center justify-center border transition-opacity sm:h-9 sm:w-9 md:h-11 md:w-11 lg:hidden ${
                 isOpen
                   ? "pointer-events-none opacity-0"
                   : "pointer-events-auto opacity-100"
               } ${light ? "border-[#e6e0d7]" : "border-white/20 text-white"}`}
             >
-              <span className="relative h-[12px] w-[20px]">
+              <span className="relative h-[10px] w-[17px] sm:h-[12px] sm:w-[20px]">
                 <span
                   className={`absolute left-0 top-0 h-[2px] w-full ${light ? "bg-[#111]" : "bg-white"}`}
                 />

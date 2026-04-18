@@ -4,6 +4,12 @@ html,
 body {
   margin: 0;
   min-height: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+html {
+  background: #e1ddd6;
 }
 
 body {
@@ -218,7 +224,7 @@ body {
 }
 
 .hero {
-  --hero-header-offset: 58px;
+  --hero-header-offset: 76px;
   --hero-section-bg: #e1ddd6;
   --hero-bg-opacity: 1;
   --hero-media-opacity: 1;
