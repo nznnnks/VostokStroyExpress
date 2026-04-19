@@ -4,6 +4,64 @@ import { Center, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 
 const HERO_BASE_ROTATION_Y = -Math.PI / 2;
+const HERO_FIT_MARGIN = 0.995;
+const HERO_FILL_RATIO_MIN = 0.98;
+const HERO_FILL_RATIO_MAX = 1.12;
+
+function getHeroViewportScaleFactor(viewportWidth: number) {
+  if (viewportWidth <= 1536) return 1;
+  if (viewportWidth >= 1920) return 0.78;
+
+  const progress = (viewportWidth - 1536) / (1920 - 1536);
+  return THREE.MathUtils.lerp(1, 0.78, progress);
+}
+
+function getHeroFillRatio(width: number, height: number) {
+  if (width <= 0 || height <= 0) return HERO_FILL_RATIO_MIN;
+
+  const widthProgress = THREE.MathUtils.clamp((width - 420) / 520, 0, 1);
+  const heightProgress = THREE.MathUtils.clamp((height - 320) / 420, 0, 1);
+  const combinedProgress = widthProgress * 0.7 + heightProgress * 0.3;
+
+  return THREE.MathUtils.lerp(HERO_FILL_RATIO_MIN, HERO_FILL_RATIO_MAX, combinedProgress);
+}
+
+function getRenderableBoundingSphere(root: THREE.Object3D): THREE.Sphere | null {
+  root.updateMatrixWorld(true);
+
+  const box = new THREE.Box3();
+  const tmpBox = new THREE.Box3();
+  let hasMesh = false;
+
+  root.traverse((obj) => {
+    const mesh = obj as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    if (mesh.visible === false) return;
+    if (!mesh.geometry) return;
+
+    const geometry = mesh.geometry as THREE.BufferGeometry;
+    if (!geometry.boundingBox) geometry.computeBoundingBox();
+    if (!geometry.boundingBox) return;
+
+    tmpBox.copy(geometry.boundingBox).applyMatrix4(mesh.matrixWorld);
+    if (tmpBox.isEmpty()) return;
+
+    if (!hasMesh) {
+      box.copy(tmpBox);
+      hasMesh = true;
+      return;
+    }
+
+    box.union(tmpBox);
+  });
+
+  if (!hasMesh || box.isEmpty()) return null;
+
+  const sphere = new THREE.Sphere();
+  box.getBoundingSphere(sphere);
+  if (!Number.isFinite(sphere.radius) || sphere.radius <= 0) return null;
+  return sphere;
+}
 
 type HeroModelLayout = {
   groupPosition: [number, number, number];
@@ -54,7 +112,7 @@ const HERO_MODEL_LAYOUTS = {
   },
   wide: {
     groupPosition: [0.25, -1.45, 0] as [number, number, number],
-    scale: 2.3,
+    scale: 2.18,
     wrapperClassName: "hero-model-edgefade hero-model-edgefade--wide hero-model-frame pointer-events-none",
     camera: {
       position: [0, 1.15, 9] as [number, number, number],
@@ -63,9 +121,8 @@ const HERO_MODEL_LAYOUTS = {
   },
   ultraWide: {
     groupPosition: [0.2, -1.28, 0] as [number, number, number],
-    scale: 2.16,
-    wrapperClassName:
-      "pointer-events-none absolute inset-y-0 right-0 z-10 hidden w-[58%] md:block xl:w-[56%] min-[1680px]:w-[53%] 2xl:w-[51%]",
+    scale: 2.45,
+    wrapperClassName: "hero-model-edgefade hero-model-edgefade--wide hero-model-frame pointer-events-none",
     camera: {
       position: [0, 1.18, 9.15] as [number, number, number],
       fov: 24.8,
@@ -74,6 +131,19 @@ const HERO_MODEL_LAYOUTS = {
 } satisfies Record<string, HeroModelLayout>;
 
 type HeroModelLayoutKey = keyof typeof HERO_MODEL_LAYOUTS;
+type HeroModelLayoutStop = {
+  minWidth: number;
+  key: HeroModelLayoutKey;
+};
+
+const HERO_MODEL_LAYOUT_STOPS: HeroModelLayoutStop[] = [
+  { minWidth: 0, key: "mobile" },
+  { minWidth: 768, key: "tablet" },
+  { minWidth: 1024, key: "compact" },
+  { minWidth: 1280, key: "medium" },
+  { minWidth: 1536, key: "wide" },
+  { minWidth: 1680, key: "ultraWide" },
+];
 
 function getHeroModelLayoutKey(width: number): HeroModelLayoutKey {
   if (width < 768) return "mobile";
@@ -84,19 +154,106 @@ function getHeroModelLayoutKey(width: number): HeroModelLayoutKey {
   return "ultraWide";
 }
 
+function interpolateVector(
+  from: [number, number, number],
+  to: [number, number, number],
+  progress: number,
+): [number, number, number] {
+  return [
+    THREE.MathUtils.lerp(from[0], to[0], progress),
+    THREE.MathUtils.lerp(from[1], to[1], progress),
+    THREE.MathUtils.lerp(from[2], to[2], progress),
+  ];
+}
+
+function getInterpolatedHeroLayout(width: number): HeroModelLayout {
+  if (width <= HERO_MODEL_LAYOUT_STOPS[0].minWidth) {
+    return HERO_MODEL_LAYOUTS[HERO_MODEL_LAYOUT_STOPS[0].key];
+  }
+
+  for (let index = 0; index < HERO_MODEL_LAYOUT_STOPS.length - 1; index += 1) {
+    const currentStop = HERO_MODEL_LAYOUT_STOPS[index];
+    const nextStop = HERO_MODEL_LAYOUT_STOPS[index + 1];
+
+    if (width < nextStop.minWidth) {
+      const progress = THREE.MathUtils.clamp(
+        (width - currentStop.minWidth) / (nextStop.minWidth - currentStop.minWidth),
+        0,
+        1,
+      );
+      const currentLayout = HERO_MODEL_LAYOUTS[currentStop.key];
+      const nextLayout = HERO_MODEL_LAYOUTS[nextStop.key];
+
+      return {
+        wrapperClassName: currentLayout.wrapperClassName,
+        groupPosition: interpolateVector(currentLayout.groupPosition, nextLayout.groupPosition, progress),
+        scale: THREE.MathUtils.lerp(currentLayout.scale, nextLayout.scale, progress),
+        camera: {
+          position: interpolateVector(currentLayout.camera.position, nextLayout.camera.position, progress),
+          fov: THREE.MathUtils.lerp(currentLayout.camera.fov, nextLayout.camera.fov, progress),
+        },
+      };
+    }
+  }
+
+  return HERO_MODEL_LAYOUTS[HERO_MODEL_LAYOUT_STOPS[HERO_MODEL_LAYOUT_STOPS.length - 1].key];
+}
+
 function HeroModel({
   mouse,
   layout,
   reducedMotion,
+  viewportWidth,
 }: {
   mouse: React.MutableRefObject<{ x: number; y: number }>;
   layout: HeroModelLayout;
   reducedMotion: boolean;
+  viewportWidth: number;
 }) {
   const groupRef = useRef<THREE.Group | null>(null);
   const invalidate = useThree((state) => state.invalidate);
+  const size = useThree((state) => state.size);
   const { scene } = useGLTF("/models/hero-dantex.glb");
   const clonedScene = useMemo(() => scene.clone(), [scene]);
+  const fittedScale = useMemo(() => {
+    const sphere = getRenderableBoundingSphere(clonedScene) ?? (() => {
+      const box = new THREE.Box3().setFromObject(clonedScene);
+      const fallbackSphere = new THREE.Sphere();
+      box.getBoundingSphere(fallbackSphere);
+      return fallbackSphere;
+    })();
+
+    if (!Number.isFinite(sphere.radius) || sphere.radius <= 0) return layout.scale;
+
+    const aspect = size.width > 0 && size.height > 0 ? size.width / size.height : 1;
+    const fov = THREE.MathUtils.degToRad(layout.camera.fov);
+    const cameraPos = new THREE.Vector3(...layout.camera.position);
+    const targetPos = new THREE.Vector3(...layout.groupPosition);
+    const distance = cameraPos.distanceTo(targetPos);
+
+    // Fit the bounding sphere into the current camera frustum with a small margin
+    // to prevent hard clipping by the canvas edge.
+    const halfHeight = Math.tan(fov / 2) * distance;
+    const halfWidth = halfHeight * aspect;
+    const maxRadius = Math.min(halfHeight, halfWidth) * HERO_FIT_MARGIN;
+    const capScale = maxRadius / sphere.radius;
+    const fillRatio = getHeroFillRatio(size.width, size.height);
+    const targetScale = capScale * fillRatio;
+    const minScale = layout.scale * 0.92;
+    const maxScale = layout.scale * 1.14;
+    const viewportScaleFactor = getHeroViewportScaleFactor(viewportWidth);
+
+    return THREE.MathUtils.clamp(targetScale, minScale, maxScale) * viewportScaleFactor;
+  }, [
+    clonedScene,
+    layout.camera.fov,
+    layout.camera.position,
+    layout.groupPosition,
+    layout.scale,
+    size.height,
+    size.width,
+    viewportWidth,
+  ]);
 
   useEffect(() => {
     if (reducedMotion) return;
@@ -133,7 +290,7 @@ function HeroModel({
   });
 
   return (
-    <group ref={groupRef} position={layout.groupPosition} scale={layout.scale}>
+    <group ref={groupRef} position={layout.groupPosition} scale={fittedScale}>
       <Center>
         <primitive object={clonedScene} />
       </Center>
@@ -145,15 +302,13 @@ export function HeroDesktopModel() {
   const mouseRef = useRef({ x: 0, y: 0 });
   const reducedMotion =
     typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const [layoutKey, setLayoutKey] = useState<HeroModelLayoutKey>(() =>
-    typeof window === "undefined" ? "mobile" : getHeroModelLayoutKey(window.innerWidth),
-  );
-  const layout = HERO_MODEL_LAYOUTS[layoutKey];
+  const [viewportWidth, setViewportWidth] = useState(() => (typeof window === "undefined" ? 1280 : window.innerWidth));
+  const wrapperClassName = HERO_MODEL_LAYOUTS[getHeroModelLayoutKey(viewportWidth)].wrapperClassName;
+  const layout = useMemo(() => getInterpolatedHeroLayout(viewportWidth), [viewportWidth]);
 
   useEffect(() => {
     const handleResize = () => {
-      const nextLayoutKey = getHeroModelLayoutKey(window.innerWidth);
-      setLayoutKey((current) => (current === nextLayoutKey ? current : nextLayoutKey));
+      setViewportWidth(window.innerWidth);
     };
 
     handleResize();
@@ -162,7 +317,7 @@ export function HeroDesktopModel() {
   }, []);
 
   return (
-    <div className={layout.wrapperClassName}>
+    <div className={wrapperClassName}>
       <Canvas
         className="hero-model-edgefade__canvas"
         dpr={[1, 1.25]}
@@ -186,7 +341,7 @@ export function HeroDesktopModel() {
           <directionalLight position={[-5, 3, 1]} intensity={1.2} color="#7aa2ff" />
           <spotLight position={[2, 8, 10]} angle={0.28} penumbra={0.9} intensity={34} color="#ffffff" />
           <spotLight position={[7, 2, 3]} angle={0.42} penumbra={1} intensity={14} color="#a7c2ff" />
-          <HeroModel mouse={mouseRef} layout={layout} reducedMotion={reducedMotion} />
+          <HeroModel mouse={mouseRef} layout={layout} reducedMotion={reducedMotion} viewportWidth={viewportWidth} />
         </Suspense>
       </Canvas>
     </div>
