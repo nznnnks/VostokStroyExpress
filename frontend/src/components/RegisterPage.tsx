@@ -1,7 +1,6 @@
 import { useState, type FormEvent } from "react";
 
 import SiteHeader from "./SiteHeader";
-import SiteFooter from "./SiteFooter";
 import { registerUser } from "../lib/auth";
 
 export function RegisterPage() {
@@ -27,13 +26,13 @@ export function RegisterPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col bg-white text-[#111] [font-family:DM_Sans,Manrope,'Liberation_Sans',sans-serif]">
+    <main className="flex h-[100svh] flex-col overflow-hidden bg-white text-[#111] [font-family:DM_Sans,Manrope,'Liberation_Sans',sans-serif]">
       <div className="flex-1">
         <SiteHeader />
 
         <section className="border-b border-[#ece8e1]">
           <div className="grid min-h-[calc(100svh-90px)] overflow-hidden xl:min-h-[calc(100svh-112px)] xl:grid-cols-[1.4fr_1fr]">
-          <div className="hidden items-center justify-center border-r border-[#ece8e1] bg-[#efefec] p-6 xl:flex">
+          <div className="hidden items-center justify-center border-r border-[#ece8e1] bg-white p-6 xl:flex">
             <img
               src="/register/register-photo.png"
               alt="Геометрическая композиция"
@@ -46,8 +45,8 @@ export function RegisterPage() {
             />
           </div>
 
-          <div className="flex items-start px-5 py-7 sm:px-8 md:px-12 md:py-9 xl:items-center xl:px-16 xl:py-8">
-            <div className="mx-auto w-full max-w-[560px]">
+          <div className="flex items-start px-5 py-7 sm:px-8 md:px-12 md:py-9 xl:items-center xl:pl-10 xl:pr-16 xl:py-8">
+            <div className="w-full max-w-[560px] xl:mr-auto">
               <p className="breadcrumb-nav uppercase tracking-[1.5px] text-[#7a7a75] [font-family:Jaldi,'JetBrains_Mono',monospace]">
                 <a href="/" className="hover:text-[#111]">Главная</a>
                 <span className="mx-2 text-[#b5b2ab]">/</span>
@@ -133,8 +132,6 @@ export function RegisterPage() {
           </div>
         </section>
       </div>
-
-      <SiteFooter />
     </main>
   );
 }

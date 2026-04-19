@@ -168,7 +168,10 @@ const reviews = [
 export function StayseLandingTailwind() {
   const [animatedStats, setAnimatedStats] = useState([0, 1]);
   const [heroStatsVisible, setHeroStatsVisible] = useState(false);
-  const [showHeroModel, setShowHeroModel] = useState(false);
+  const [showHeroModel, setShowHeroModel] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia("(min-width: 768px)").matches;
+  });
 
   useEffect(() => {
     if (typeof window === "undefined") return;

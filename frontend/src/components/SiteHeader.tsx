@@ -21,6 +21,7 @@ export function SiteHeader({ light = true }: SiteHeaderProps) {
   const searchRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const maxHeaderHeightRef = useRef(0);
+  const scrollLockUntilRef = useRef(0);
 
   const openMobileMenu = () => {
     setIsOpen(true);
@@ -72,19 +73,41 @@ export function SiteHeader({ light = true }: SiteHeaderProps) {
   }, [isSearchOpen]);
 
   useEffect(() => {
-    const handleScroll = () => {
-      const nextScrollY = window.scrollY;
-      setIsScrolled((prev) => {
-        if (prev) {
-          return nextScrollY > 10;
-        }
-        return nextScrollY > 32;
-      });
+    let rafId: number | null = null;
+    let lastScrollY = 0;
+    let lastIsScrolled = false;
+
+    const computeNext = (scrollY: number) => {
+      const nextScrollY = Math.max(0, scrollY);
+      // Hysteresis to avoid rapid toggles near the top.
+      if (lastIsScrolled) return nextScrollY > 10;
+      return nextScrollY > 32;
     };
 
-    handleScroll();
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    const commit = () => {
+      rafId = null;
+      const next = computeNext(lastScrollY);
+      if (next === lastIsScrolled) return;
+      const now = window.performance?.now?.() ?? Date.now();
+      if (now < scrollLockUntilRef.current) return;
+      lastIsScrolled = next;
+      setIsScrolled(next);
+      // Protect from scroll anchoring/layout shifts when header height changes.
+      scrollLockUntilRef.current = now + 300;
+    };
+
+    const onScroll = () => {
+      lastScrollY = window.scrollY || 0;
+      if (rafId !== null) return;
+      rafId = window.requestAnimationFrame(commit);
+    };
+
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      if (rafId !== null) window.cancelAnimationFrame(rafId);
+      window.removeEventListener("scroll", onScroll);
+    };
   }, []);
 
   useEffect(() => {
@@ -178,17 +201,20 @@ export function SiteHeader({ light = true }: SiteHeaderProps) {
   };
 
   return (
-    <header ref={searchRef} className="sticky top-0 z-[140] isolate">
+    <header
+      ref={searchRef}
+      className="sticky top-0 z-[140] isolate [overflow-anchor:none]"
+    >
       {light ? (
         <div
-          className={`grid overflow-hidden border-b border-white/8 bg-[#060606] text-white transition-[grid-template-rows,opacity,transform,border-color] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+          className={`grid overflow-hidden border-b border-white/8 bg-[#060606] text-white transition-[grid-template-rows,opacity,transform,border-color] duration-600 ease-[cubic-bezier(0.22,1,0.36,1)] transform-gpu will-change-transform ${
             isScrolled
-              ? "grid-rows-[0fr] -translate-y-1 opacity-0 border-white/0"
+              ? "grid-rows-[0fr] -translate-y-4 opacity-0 border-white/0"
               : "grid-rows-[1fr] translate-y-0 opacity-100"
           }`}
         >
           <div className="min-h-0">
-            <div className="mx-auto flex max-w-[1480px] min-h-[40px] items-center justify-between gap-4 px-4 py-2.5 text-[clamp(13px,0.35vw+11.5px,15px)] font-medium uppercase tracking-[0.7px] text-white/84 md:min-h-[40px] md:px-10 md:py-2.5 md:tracking-[1px] xl:px-12 2xl:max-w-[1860px] 2xl:px-16 [font-family:Jaldi,'JetBrains_Mono',monospace]">
+            <div className="mx-auto flex max-w-[1480px] min-h-[52px] items-center justify-between gap-4 px-4 py-3 text-[clamp(13px,0.35vw+11.5px,15px)] font-medium uppercase tracking-[0.7px] text-white/84 md:min-h-[40px] md:px-10 md:py-2.5 md:tracking-[1px] xl:px-12 2xl:max-w-[1860px] 2xl:px-16 [font-family:Jaldi,'JetBrains_Mono',monospace]">
               <div className="min-w-0 flex-1 md:flex-none">
                 <a
                   href="mailto:vostok.stroy.expert@mail.ru"
@@ -218,13 +244,13 @@ export function SiteHeader({ light = true }: SiteHeaderProps) {
       ) : null}
       <div className="px-2 pt-0 md:px-4">
         <div
-          className={`mx-auto mt-0 grid max-w-[1480px] grid-cols-[minmax(0,1fr)_auto] items-center gap-1.5 px-2.5 py-2.5 transition-[max-width,margin-top,border-radius,background-color,border-color,box-shadow,backdrop-filter,transform] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] md:grid-cols-[auto_1fr_auto] md:gap-4 md:px-10 md:py-4 xl:gap-6 xl:px-12 2xl:max-w-[1860px] 2xl:px-16 ${
+          className={`mx-auto mt-0 grid max-w-[1480px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3.5 py-3.5 transition-[max-width,margin-top,border-radius,background-color,border-color,box-shadow,backdrop-filter,transform] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] transform-gpu will-change-transform md:grid-cols-[auto_1fr_auto] md:gap-4 md:px-10 md:py-4 xl:gap-6 xl:px-12 2xl:max-w-[1860px] 2xl:px-16 ${
             isScrolled
               ? light
-                ? "md:mt-3 max-w-[1420px] translate-y-0 rounded-[22px] md:rounded-[28px] border border-[#1b1b1b]/24 bg-white/90 shadow-[0_10px_28px_rgba(0,0,0,0.14),0_0_0_1px_rgba(17,17,17,0.06)] backdrop-blur-md 2xl:max-w-[1760px]"
-                : "max-w-[1420px] rounded-[28px] border border-white/14 bg-black/45 shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-md 2xl:max-w-[1760px]"
+                ? "md:mt-3 max-w-[1420px] translate-y-0 rounded-[22px] md:rounded-[28px] border border-[#1b1b1b]/24 bg-[#e1ddd6] shadow-[0_10px_28px_rgba(0,0,0,0.14),0_0_0_1px_rgba(17,17,17,0.06)] md:backdrop-blur-md 2xl:max-w-[1760px]"
+                : "max-w-[1420px] rounded-[28px] border border-white/14 bg-black/55 shadow-[0_12px_34px_rgba(0,0,0,0.24)] md:backdrop-blur-md 2xl:max-w-[1760px]"
               : light
-                ? "max-w-[1480px] rounded-none border-b border-[#ece8e1] bg-white shadow-[0_0_0_rgba(0,0,0,0)] 2xl:max-w-[1860px]"
+                ? "max-w-[1480px] rounded-none border-b border-[#ece8e1] bg-[#e1ddd6] shadow-[0_0_0_rgba(0,0,0,0)] 2xl:max-w-[1860px]"
                 : "border-b border-white/10 bg-transparent"
           }`}
         >
@@ -313,12 +339,12 @@ export function SiteHeader({ light = true }: SiteHeaderProps) {
                 target="_blank"
                 rel="noreferrer"
                 aria-label="Telegram"
-                className="inline-flex h-7 w-7 items-center justify-center bg-[#050505] text-white transition duration-300 ease-out hover:-translate-y-0.5 hover:bg-[#1c1c1c] sm:h-8 sm:w-8"
+                className="inline-flex h-9 w-9 items-center justify-center bg-[#050505] text-white transition duration-300 ease-out hover:-translate-y-0.5 hover:bg-[#1c1c1c] sm:h-9 sm:w-9"
               >
                 <svg
                   viewBox="0 0 24 24"
-                  width="13"
-                  height="13"
+                  width="15"
+                  height="15"
                   aria-hidden="true"
                   fill="currentColor"
                 >
@@ -330,12 +356,12 @@ export function SiteHeader({ light = true }: SiteHeaderProps) {
                 target="_blank"
                 rel="noreferrer"
                 aria-label="Telegram"
-                className="inline-flex h-7 w-7 items-center justify-center bg-[#050505] text-white transition duration-300 ease-out hover:-translate-y-0.5 hover:bg-[#1c1c1c] sm:h-8 sm:w-8"
+                className="inline-flex h-9 w-9 items-center justify-center bg-[#050505] text-white transition duration-300 ease-out hover:-translate-y-0.5 hover:bg-[#1c1c1c] sm:h-9 sm:w-9"
               >
                 <svg
                   viewBox="0 0 24 24"
-                  width="13"
-                  height="13"
+                  width="15"
+                  height="15"
                   aria-hidden="true"
                   fill="currentColor"
                 >
@@ -345,7 +371,7 @@ export function SiteHeader({ light = true }: SiteHeaderProps) {
               <a
                 href="/#contact"
                 onClick={handleRequestClick}
-                className="hidden h-8 items-center justify-center bg-[#050505] px-2 text-[10px] uppercase tracking-[0.7px] text-white transition duration-300 ease-out hover:-translate-y-0.5 hover:bg-[#1c1c1c] min-[390px]:inline-flex sm:h-8 sm:px-3 sm:text-[12px] sm:tracking-[1px] [font-family:Jaldi,'JetBrains_Mono',monospace]"
+                className="hidden h-9 items-center justify-center bg-[#050505] px-3 text-[11px] uppercase tracking-[0.8px] text-white transition duration-300 ease-out hover:-translate-y-0.5 hover:bg-[#1c1c1c] min-[390px]:inline-flex sm:h-9 sm:px-3 sm:text-[12px] sm:tracking-[1px] [font-family:Jaldi,'JetBrains_Mono',monospace]"
               >
                 Заявка
               </a>
@@ -362,13 +388,13 @@ export function SiteHeader({ light = true }: SiteHeaderProps) {
               aria-label="Открыть меню"
               aria-expanded={isOpen}
               onClick={openMobileMenu}
-              className={`relative z-[130] inline-flex h-8 w-8 shrink-0 items-center justify-center border transition-opacity sm:h-9 sm:w-9 md:h-11 md:w-11 lg:hidden ${
+              className={`relative z-[130] inline-flex h-10 w-10 shrink-0 items-center justify-center border transition-opacity sm:h-10 sm:w-10 md:h-11 md:w-11 lg:hidden ${
                 isOpen
                   ? "pointer-events-none opacity-0"
                   : "pointer-events-auto opacity-100"
               } ${light ? "border-[#e6e0d7]" : "border-white/20 text-white"}`}
             >
-              <span className="relative h-[10px] w-[17px] sm:h-[12px] sm:w-[20px]">
+              <span className="relative h-[12px] w-[20px] sm:h-[12px] sm:w-[20px]">
                 <span
                   className={`absolute left-0 top-0 h-[2px] w-full ${light ? "bg-[#111]" : "bg-white"}`}
                 />
