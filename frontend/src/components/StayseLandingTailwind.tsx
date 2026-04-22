@@ -1,8 +1,45 @@
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import SiteHeader from "./SiteHeader";
 import SiteFooter from "./SiteFooter";
+import ServiceOrderModal from "./ServiceOrderModal";
 
 const LazyHeroDesktopModel = lazy(() => import("./HeroDesktopModel"));
+const PRELOADER_TEXT = "подготавливаем каталог и инженерные решения";
+
+function HomePagePreloader({ visible }: { visible: boolean }) {
+  return (
+    <div
+      className={`fixed inset-0 z-[260] flex items-center justify-center overflow-hidden bg-[#e1ddd6] transition-[opacity,visibility] duration-700 ease-out ${
+        visible ? "visible opacity-100" : "pointer-events-none invisible opacity-0"
+      }`}
+      aria-hidden={!visible}
+    >
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_38%,rgba(255,255,255,0.55)_0%,rgba(225,221,214,0.82)_34%,rgba(225,221,214,1)_100%)]" />
+      <div className="absolute inset-x-0 top-0 h-px bg-black/10" />
+      <div className="absolute inset-x-0 bottom-0 h-px bg-black/8" />
+      <div className="relative flex w-full max-w-[920px] flex-col items-center justify-center gap-8 px-6 text-center md:gap-10">
+        <img
+          src="/logo.png"
+          alt="Climatrade"
+          width="320"
+          height="86"
+          className="h-auto w-[min(64vw,320px)] object-contain opacity-90"
+        />
+        <div className="flex flex-wrap items-center justify-center gap-y-2 text-[11px] uppercase tracking-[0.28em] text-[#6f685d] md:text-[13px] [font-family:'JetBrains_Mono',monospace]">
+          {PRELOADER_TEXT.split("").map((char, index) => (
+            <span
+              key={`${char}-${index}`}
+              className="inline-block animate-[preloaderLetterIn_1.8s_ease-in-out_infinite]"
+              style={{ animationDelay: `${index * 55}ms` }}
+            >
+              {char === " " ? "\u00A0" : char}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const formatPhone = (raw: string) => {
   const digits = raw.replace(/\D/g, "");
@@ -35,7 +72,7 @@ const stats = [
   },
   {
     value: "проверено",
-    mobileLines: ["премиальные", "объекты"],
+    mobileLines: ["на объектах", "высокого класса"],
     desktopLabel: "на объектах высокого класса и в коммерческих пространствах",
   },
 ] as const;
@@ -60,12 +97,12 @@ const trustHighlights = [
 ] as const;
 
 const trustLogos = [
-  { path: "/image/clear_logo/artest.png", alt: "Artest" },
-  { path: "/image/clear_logo/white-rabbit.png", alt: "White Rabbit" },
-  { path: "/image/clear_logo/regent.png", alt: "Regent" },
-  { path: "/image/clear_logo/co-co-chalet.png", alt: "Co-Co Chalet" },
-  { path: "/image/clear_logo/ugolek.png", alt: "Ugolek" },
-  { path: "/image/clear_logo/restaurant-central-house-of-writers.png", alt: "Central House of Writers" },
+  { path: "/image/clear_logo/burger-king.png", alt: "Burger King" },
+  { path: "/image/clear_logo/KFC.png", alt: "KFC" },
+  { path: "/image/clear_logo/papa-johns.png", alt: "Papa Johns" },
+  { path: "/image/clear_logo/vanwok.png", alt: "Vanwok" },
+  { path: "/image/clear_logo/kabuki.png", alt: "Kabuki" },
+  { path: "/image/clear_logo/bowl-room.png", alt: "Bowl Room" },
   { path: "/image/clear_logo/tehnikum.png", alt: "Tehnikum" },
 ] as const;
 
@@ -219,9 +256,16 @@ export function StayseLandingTailwind() {
   const [animatedStats, setAnimatedStats] = useState([0, 1]);
   const [heroStatsVisible, setHeroStatsVisible] = useState(false);
   const reviewsTrackRef = useRef<HTMLDivElement | null>(null);
+  const mobileReviewsFirstEnteringRef = useRef<HTMLElement | null>(null);
+  const heroSectionRef = useRef<HTMLElement | null>(null);
   const [mobileReviewsVisible, setMobileReviewsVisible] = useState(3);
+  const [mobileReviewsEnteringFrom, setMobileReviewsEnteringFrom] = useState<number | null>(null);
   const [showHeroModel, setShowHeroModel] = useState(false);
+  const [heroModelReady, setHeroModelReady] = useState(false);
+  const [preloaderVisible, setPreloaderVisible] = useState(true);
+  const [consultationModalOpen, setConsultationModalOpen] = useState(false);
   const [nowTimestamp, setNowTimestamp] = useState<number | null>(null);
+  const preloaderDismissedRef = useRef(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -276,20 +320,155 @@ export function StayseLandingTailwind() {
   }, []);
 
   useEffect(() => {
+    if (!preloaderVisible) return;
+
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [preloaderVisible]);
+
+  useEffect(() => {
+    if (!consultationModalOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setConsultationModalOpen(false);
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [consultationModalOpen]);
+
+  useEffect(() => {
+    if (mobileReviewsEnteringFrom === null) return;
+
+    const scrollFrameId = window.requestAnimationFrame(() => {
+      mobileReviewsFirstEnteringRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      });
+    });
+    const timeoutId = window.setTimeout(() => {
+      setMobileReviewsEnteringFrom(null);
+    }, 650);
+
+    return () => {
+      window.cancelAnimationFrame(scrollFrameId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [mobileReviewsEnteringFrom]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      preloaderDismissedRef.current = true;
+      setPreloaderVisible(false);
+    }, 1800);
+
+    return () => window.clearTimeout(timeoutId);
+  }, []);
+
+  useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const mediaQueryList = window.matchMedia("(min-width: 768px)");
-    const update = () => setShowHeroModel(mediaQueryList.matches);
+    const mediaQueryList = window.matchMedia("(min-width: 1280px)");
+    const heroSection = heroSectionRef.current;
+    let idleId: number | null = null;
+    let timeoutId: number | null = null;
+    let intersectionObserver: IntersectionObserver | null = null;
+
+    const scheduleModelMount = () => {
+      if (!mediaQueryList.matches || !heroSection) {
+        setShowHeroModel(false);
+        setHeroModelReady(true);
+        return;
+      }
+
+      const mount = () => setShowHeroModel(true);
+      if ("requestIdleCallback" in window) {
+        idleId = window.requestIdleCallback(mount, { timeout: 1200 });
+        return;
+      }
+
+      timeoutId = window.setTimeout(mount, 180);
+    };
+
+    const cancelScheduledMount = () => {
+      if (idleId !== null && "cancelIdleCallback" in window) {
+        window.cancelIdleCallback(idleId);
+      }
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+      idleId = null;
+      timeoutId = null;
+    };
+
+    const update = () => {
+      cancelScheduledMount();
+
+      if (!mediaQueryList.matches || !heroSection) {
+        setShowHeroModel(false);
+        return;
+      }
+
+      if (intersectionObserver) {
+        intersectionObserver.disconnect();
+      }
+
+      intersectionObserver = new IntersectionObserver(
+        (entries) => {
+          const entry = entries[0];
+          if (!entry?.isIntersecting) {
+            setShowHeroModel(false);
+            return;
+          }
+
+          scheduleModelMount();
+        },
+        { rootMargin: "160px 0px" },
+      );
+
+      intersectionObserver.observe(heroSection);
+    };
+
     update();
 
     if ("addEventListener" in mediaQueryList) {
       mediaQueryList.addEventListener("change", update);
-      return () => mediaQueryList.removeEventListener("change", update);
+      return () => {
+        mediaQueryList.removeEventListener("change", update);
+        intersectionObserver?.disconnect();
+        cancelScheduledMount();
+      };
     }
 
     mediaQueryList.addListener(update);
-    return () => mediaQueryList.removeListener(update);
+    return () => {
+      mediaQueryList.removeListener(update);
+      intersectionObserver?.disconnect();
+      cancelScheduledMount();
+    };
   }, []);
+
+  useEffect(() => {
+    if (!heroModelReady) return;
+    if (preloaderDismissedRef.current) return;
+
+    const timeoutId = window.setTimeout(() => {
+      preloaderDismissedRef.current = true;
+      setPreloaderVisible(false);
+    }, 180);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [heroModelReady]);
 
   const scrollReviews = (direction: "prev" | "next") => {
     const track = reviewsTrackRef.current;
@@ -307,6 +486,20 @@ export function StayseLandingTailwind() {
   const mobileBlogLead = blog[0];
   const mobileBlogMiddle = blog.slice(1, 3);
   const mobileBlogTail = blog[3];
+  const handleConsultationSubmit = (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
+
+    const form = event.currentTarget;
+    if (!form.reportValidity()) {
+      return;
+    }
+
+    form.reset();
+    setConsultationModalOpen(true);
+  };
+
   const renderBlogCard = (article: (typeof blog)[number], isWide: boolean, imageClassName: string, contentClassName: string) => (
     <article
       key={article.title}
@@ -396,10 +589,61 @@ export function StayseLandingTailwind() {
 
   return (
     <main className="flex min-h-screen flex-col bg-white text-[#0f0f0e] [font-family:Manrope,'Liberation_Sans',sans-serif]">
+      <div
+        aria-hidden={!consultationModalOpen}
+        className={`fixed inset-0 z-[280] flex items-center justify-center px-4 transition-[opacity,visibility] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+          consultationModalOpen ? "visible opacity-100" : "pointer-events-none invisible opacity-0"
+        }`}
+      >
+        <button
+          type="button"
+          aria-label="Закрыть сообщение"
+          onClick={() => setConsultationModalOpen(false)}
+          className="absolute inset-0 bg-[rgba(16,15,13,0.38)] backdrop-blur-[10px]"
+        />
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="consultation-success-title"
+          className={`relative z-[1] w-full max-w-[560px] overflow-hidden rounded-[32px] border border-[#ddd1bf] bg-[linear-gradient(180deg,#fffdfa_0%,#f2ece4_100%)] px-7 py-8 text-center shadow-[0_36px_90px_rgba(0,0,0,0.2)] transition-[opacity,transform] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] md:px-10 md:py-10 ${
+            consultationModalOpen
+              ? "translate-y-0 scale-100 opacity-100"
+              : "translate-y-4 scale-[0.96] opacity-0"
+          }`}
+        >
+          <div className="pointer-events-none absolute inset-x-[16%] top-[-16%] h-44 rounded-full bg-[#d5ab5d]/18 blur-[75px]" />
+          <div className="pointer-events-none absolute bottom-[-18%] right-[-8%] h-40 w-40 rounded-full bg-white/70 blur-[90px]" />
+          <div className="relative mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-[#dcc8aa] bg-white/78 shadow-[0_12px_26px_rgba(145,122,81,0.12)] md:h-20 md:w-20">
+            <svg viewBox="0 0 24 24" className="h-8 w-8 text-[#8c6732] md:h-10 md:w-10" aria-hidden="true">
+              <path d="M5 12.5 9.2 16.7 19 7.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <p className="relative mt-6 text-[12px] uppercase tracking-[0.34em] text-[#8f887c] [font-family:'JetBrains_Mono',monospace]">
+            заявка отправлена
+          </p>
+          <h3
+            id="consultation-success-title"
+            className="relative mt-4 text-[clamp(32px,2.2vw,48px)] leading-[0.94] text-[#171511] [font-family:'Cormorant_Garamond',serif]"
+          >
+            Спасибо за отзыв
+          </h3>
+          <p className="relative mt-4 text-[clamp(16px,0.8vw+13px,22px)] leading-[1.55] text-[#4d473f]">
+            В ближайшее время свяжемся с вами и уточним детали заявки.
+          </p>
+          <button
+            type="button"
+            onClick={() => setConsultationModalOpen(false)}
+            className="relative mt-8 inline-flex h-14 min-w-[220px] items-center justify-center rounded-[18px] bg-[#111] px-8 text-[13px] uppercase tracking-[0.28em] text-white transition duration-300 ease-out hover:-translate-y-0.5 hover:bg-[#25211b] md:h-16 md:min-w-[240px]"
+          >
+            закрыть
+          </button>
+        </div>
+      </div>
+      <HomePagePreloader visible={preloaderVisible} />
       <div className="flex-1">
         <SiteHeader />
 
-        <section id="hero" className="hero">
+        <section id="hero" ref={heroSectionRef} className="hero">
           <div className="hero__background" aria-hidden="true">
             <img
               src="/image/hero-menu.png"
@@ -429,7 +673,7 @@ export function StayseLandingTailwind() {
               {showHeroModel ? (
                 <div className="hero__media" aria-hidden="true">
                   <Suspense fallback={null}>
-                    <LazyHeroDesktopModel />
+                    <LazyHeroDesktopModel onReady={() => setHeroModelReady(true)} />
                   </Suspense>
                 </div>
               ) : null}
@@ -573,7 +817,7 @@ export function StayseLandingTailwind() {
                 </div>
                 <a
                   href="/about"
-                  className="inline-flex min-h-[78px] w-full items-center justify-center self-start rounded-[20px] bg-white px-8 text-center text-[clamp(18px,1vw+14px,28px)] font-semibold leading-none tracking-[0.01em] text-[#12120f] shadow-[0_14px_34px_rgba(0,0,0,0.16),inset_0_1px_0_rgba(255,255,255,0.82)] transition duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_24px_40px_rgba(0,0,0,0.2)] sm:min-h-[92px] sm:w-[320px] sm:self-end"
+                  className="inline-flex min-h-[78px] w-full items-center justify-center self-start rounded-[24px] border border-[#e7ddd0] bg-[linear-gradient(180deg,#fffdfa_0%,#f3eee7_100%)] px-8 text-center text-[clamp(18px,1vw+14px,28px)] font-semibold leading-none tracking-[-0.01em] text-[#141310] shadow-[0_16px_36px_rgba(0,0,0,0.14),inset_0_1px_0_rgba(255,255,255,0.92)] transition duration-300 ease-out hover:-translate-y-1 hover:border-[#dbc9aa] hover:bg-[linear-gradient(180deg,#fffefc_0%,#f7f1e7_100%)] hover:shadow-[0_24px_44px_rgba(0,0,0,0.18)] sm:min-h-[92px] sm:w-[320px] sm:self-end"
                 >
                   О нас
                 </a>
@@ -596,13 +840,15 @@ export function StayseLandingTailwind() {
                           key={`${path}-${index}`}
                           className="flex h-[94px] w-[calc((100vw-8px)/2)] min-w-0 shrink-0 items-center justify-center rounded-[18px] border border-[#f1eee8] bg-white px-4 py-3"
                         >
-                          <img
-                            src={path}
-                            alt={alt}
-                            loading="lazy"
-                            decoding="async"
-                            className="max-h-[48px] w-full max-w-[150px] object-contain object-center"
-                          />
+                          <div className="flex h-[clamp(52px,9vw,74px)] w-full items-center justify-center">
+                            <img
+                              src={path}
+                              alt={alt}
+                              loading="lazy"
+                              decoding="async"
+                              className="h-full w-auto max-w-[clamp(150px,38vw,220px)] object-contain object-center"
+                            />
+                          </div>
                         </article>
                       ))}
                     </div>
@@ -612,13 +858,15 @@ export function StayseLandingTailwind() {
                           key={`${path}-${index}`}
                           className="flex h-[94px] w-[calc((100vw-8px)/2)] min-w-0 shrink-0 items-center justify-center rounded-[18px] border border-[#f1eee8] bg-white px-4 py-3"
                         >
-                          <img
-                            src={path}
-                            alt={alt}
-                            loading="lazy"
-                            decoding="async"
-                            className="max-h-[48px] w-full max-w-[150px] object-contain object-center"
-                          />
+                          <div className="flex h-[clamp(52px,9vw,74px)] w-full items-center justify-center">
+                            <img
+                              src={path}
+                              alt={alt}
+                              loading="lazy"
+                              decoding="async"
+                              className="h-full w-auto max-w-[clamp(150px,38vw,220px)] object-contain object-center"
+                            />
+                          </div>
                         </article>
                       ))}
                     </div>
@@ -633,13 +881,15 @@ export function StayseLandingTailwind() {
                           key={path}
                           className="group flex min-h-[112px] items-center justify-center rounded-[18px] border border-[#f1eee8] bg-white px-4 py-3 transition duration-300 ease-out hover:-translate-y-0.5 hover:border-[#e1d3bb] hover:shadow-[0_14px_28px_rgba(0,0,0,0.08)]"
                         >
-                          <img
-                            src={path}
-                            alt={alt}
-                            loading="lazy"
-                            decoding="async"
-                            className="max-h-[66px] w-full max-w-[172px] object-contain object-center transition duration-300 ease-out group-hover:scale-[1.06] group-hover:[filter:drop-shadow(0_8px_16px_rgba(0,0,0,0.08))_contrast(1.06)]"
-                          />
+                          <div className="flex h-[clamp(58px,6vw,82px)] w-full items-center justify-center">
+                            <img
+                              src={path}
+                              alt={alt}
+                              loading="lazy"
+                              decoding="async"
+                              className="h-full w-auto max-w-[clamp(172px,16vw,248px)] object-contain object-center transition duration-300 ease-out group-hover:scale-[1.06] group-hover:[filter:drop-shadow(0_8px_16px_rgba(0,0,0,0.08))_contrast(1.06)]"
+                            />
+                          </div>
                         </article>
                       ))}
                     </div>
@@ -650,13 +900,15 @@ export function StayseLandingTailwind() {
                           key={path}
                           className="group flex min-h-[112px] items-center justify-center rounded-[18px] border border-[#f1eee8] bg-white px-4 py-3 transition duration-300 ease-out hover:-translate-y-0.5 hover:border-[#e1d3bb] hover:shadow-[0_14px_28px_rgba(0,0,0,0.08)]"
                         >
-                          <img
-                            src={path}
-                            alt={alt}
-                            loading="lazy"
-                            decoding="async"
-                            className="max-h-[66px] w-full max-w-[172px] object-contain object-center transition duration-300 ease-out group-hover:scale-[1.06] group-hover:[filter:drop-shadow(0_8px_16px_rgba(0,0,0,0.08))_contrast(1.06)]"
-                          />
+                          <div className="flex h-[clamp(58px,6vw,82px)] w-full items-center justify-center">
+                            <img
+                              src={path}
+                              alt={alt}
+                              loading="lazy"
+                              decoding="async"
+                              className="h-full w-auto max-w-[clamp(172px,16vw,248px)] object-contain object-center transition duration-300 ease-out group-hover:scale-[1.06] group-hover:[filter:drop-shadow(0_8px_16px_rgba(0,0,0,0.08))_contrast(1.06)]"
+                            />
+                          </div>
                         </article>
                       ))}
                     </div>
@@ -671,13 +923,15 @@ export function StayseLandingTailwind() {
                         key={`${path}-${index}`}
                         className="group flex h-[112px] min-w-0 items-center justify-center rounded-[18px] border border-[#f1eee8] bg-white px-4 py-3 transition duration-300 ease-out hover:-translate-y-0.5 hover:border-[#e1d3bb] hover:shadow-[0_14px_28px_rgba(0,0,0,0.08)] 2xl:h-[118px] 2xl:px-5"
                       >
-                        <img
-                          src={path}
-                          alt={alt}
-                          loading="lazy"
-                          decoding="async"
-                          className="max-h-[66px] w-full max-w-[172px] object-contain object-center transition duration-300 ease-out group-hover:scale-[1.06] group-hover:[filter:drop-shadow(0_8px_16px_rgba(0,0,0,0.08))_contrast(1.06)] xl:max-h-[68px] 2xl:max-h-[70px] 2xl:max-w-[190px]"
-                        />
+                        <div className="flex h-[clamp(62px,4.6vw,90px)] w-full items-center justify-center">
+                          <img
+                            src={path}
+                            alt={alt}
+                            loading="lazy"
+                            decoding="async"
+                            className="h-full w-auto max-w-[clamp(180px,11vw,250px)] object-contain object-center transition duration-300 ease-out group-hover:scale-[1.06] group-hover:[filter:drop-shadow(0_8px_16px_rgba(0,0,0,0.08))_contrast(1.06)]"
+                          />
+                        </div>
                       </article>
                     ))}
                   </div>
@@ -688,13 +942,15 @@ export function StayseLandingTailwind() {
                         key={`${path}-${index}`}
                         className="group flex h-[112px] min-w-0 items-center justify-center rounded-[18px] border border-[#f1eee8] bg-white px-4 py-3 transition duration-300 ease-out hover:-translate-y-0.5 hover:border-[#e1d3bb] hover:shadow-[0_14px_28px_rgba(0,0,0,0.08)] 2xl:h-[118px] 2xl:px-5"
                       >
-                        <img
-                          src={path}
-                          alt={alt}
-                          loading="lazy"
-                          decoding="async"
-                          className="max-h-[66px] w-full max-w-[172px] object-contain object-center transition duration-300 ease-out group-hover:scale-[1.06] group-hover:[filter:drop-shadow(0_8px_16px_rgba(0,0,0,0.08))_contrast(1.06)] xl:max-h-[68px] 2xl:max-h-[70px] 2xl:max-w-[190px]"
-                        />
+                        <div className="flex h-[clamp(62px,4.6vw,90px)] w-full items-center justify-center">
+                          <img
+                            src={path}
+                            alt={alt}
+                            loading="lazy"
+                            decoding="async"
+                            className="h-full w-auto max-w-[clamp(180px,11vw,250px)] object-contain object-center transition duration-300 ease-out group-hover:scale-[1.06] group-hover:[filter:drop-shadow(0_8px_16px_rgba(0,0,0,0.08))_contrast(1.06)]"
+                          />
+                        </div>
                       </article>
                     ))}
                   </div>
@@ -705,9 +961,22 @@ export function StayseLandingTailwind() {
             <div className="mt-6 mb-8 px-3 sm:hidden">
               <a
                 href="/about"
-                className="inline-flex min-h-[74px] w-full items-center justify-center rounded-[20px] bg-white px-5 text-center text-[22px] font-semibold leading-none tracking-[0.01em] text-[#12120f] shadow-[0_18px_32px_rgba(0,0,0,0.14),inset_0_1px_0_rgba(255,255,255,0.86)]"
+                className="group relative flex min-h-[108px] w-full items-center justify-between overflow-hidden rounded-[18px] border border-[#e3dbcf] bg-[linear-gradient(180deg,#fbf8f3_0%,#f0e9e0_100%)] px-6 py-5 text-[#12120f] shadow-[0_18px_32px_rgba(0,0,0,0.14),inset_0_1px_0_rgba(255,255,255,0.9)]"
               >
-                <span className="whitespace-nowrap">Больше о нас</span>
+                <div className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-white/75 blur-[28px]" />
+                <div className="relative flex min-w-0 flex-col items-start text-left">
+                  <span className="text-[10px] uppercase tracking-[0.28em] text-[#8f8578] [font-family:'JetBrains_Mono',monospace]">
+                    о компании
+                  </span>
+                  <span className="mt-2 text-[clamp(30px,8vw,38px)] leading-[0.92] tracking-[-0.03em] [font-family:'Cormorant_Garamond',serif]">
+                    Больше о нас
+                  </span>
+                </div>
+                <span className="relative ml-4 inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-[14px] border border-[#d9cfbf] bg-white/80 shadow-[0_10px_22px_rgba(0,0,0,0.08)] transition duration-300 group-hover:translate-x-1">
+                  <svg viewBox="0 0 24 24" className="h-5 w-5 text-[#12120f]" aria-hidden="true">
+                    <path d="M6 12h12M13 7l5 5-5 5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
               </a>
             </div>
           </div>
@@ -785,7 +1054,11 @@ export function StayseLandingTailwind() {
                 </h3>
                 <p className="mt-6 hidden max-w-[340px] flex-1 text-[clamp(14px,0.6vw+12px,20px)] leading-[1.55] text-[#2f2f2c] md:block [font-family:'Cormorant_Garamond',serif]">{service.text}</p>
                 <div className="relative z-20 mt-5 flex items-center justify-center gap-8 px-4 text-[clamp(12px,0.45vw+10px,16px)] uppercase tracking-[1.2px] [font-family:'JetBrains_Mono',monospace] md:mt-auto md:justify-between md:gap-5 md:px-3 md:pt-8 xl:px-4 2xl:px-5">
-                  <a href="/checkout" className="inline-flex h-11 min-w-[132px] items-center justify-center bg-[#050505] px-5 text-white transition duration-300 ease-out hover:-translate-y-0.5 hover:bg-[#1f1f1f] xl:h-12 xl:min-w-[164px] xl:px-7">заказать</a>
+                  <ServiceOrderModal
+                    serviceTitle={service.title}
+                    triggerClassName="inline-flex h-11 min-w-[132px] items-center justify-center bg-[#050505] px-5 text-[clamp(12px,0.45vw+10px,16px)] uppercase tracking-[1.2px] text-white transition duration-300 ease-out hover:-translate-y-0.5 hover:bg-[#1f1f1f] [font-family:'JetBrains_Mono',monospace] xl:h-12 xl:min-w-[164px] xl:px-7"
+                    trigger={<span className="translate-y-[0.04em] leading-none">заказать</span>}
+                  />
                   <a href={serviceHrefByTitle[service.title] ?? "/services"} className="inline-flex items-center text-[#2d2d29] transition-colors duration-300 hover:text-[#8f6c38] xl:text-[17px] 2xl:text-[18px]">подробнее</a>
                 </div>
               </article>
@@ -888,42 +1161,81 @@ export function StayseLandingTailwind() {
         </div>
       </section>
 
-        <section className="bg-[#0d0d0b] px-3 py-12 sm:px-4 md:px-6 lg:px-8 md:py-16">
+        <section className="relative overflow-hidden bg-[#0d0d0b] px-3 py-12 sm:px-4 md:px-6 lg:px-8 md:py-16">
+          <div className="pointer-events-none absolute inset-0">
+            <div className="absolute left-[-8%] top-[14%] h-[280px] w-[280px] rounded-full bg-[#d4a24d]/10 blur-[120px]" />
+            <div className="absolute right-[-6%] bottom-[8%] h-[320px] w-[320px] rounded-full bg-white/6 blur-[140px]" />
+            <div className="absolute inset-x-0 top-0 h-px bg-white/8" />
+            <div className="absolute inset-x-0 bottom-0 h-px bg-white/8" />
+          </div>
           <div className="mx-auto max-w-[1480px] 2xl:max-w-[1860px]">
             <div className="flex items-end justify-between gap-4">
               <h2 className="text-[clamp(32px,3.2vw,68px)] leading-[0.95] text-[#e1ddd6] [font-family:'Cormorant_Garamond',serif]">Мнения клиентов</h2>
             </div>
 
             <div className="mt-8 space-y-5 md:hidden">
-              {reviews.slice(0, mobileReviewsVisible).map((review) => (
+              {reviews.slice(0, mobileReviewsVisible).map((review, index) => {
+                const isEntering =
+                  mobileReviewsEnteringFrom !== null && index >= mobileReviewsEnteringFrom;
+
+                return (
                 <article
                   key={`mobile-${review.company}`}
-                  className="rounded-[28px] border border-[#d9dfe8] bg-white px-5 py-5 shadow-[0_18px_42px_rgba(15,23,42,0.06)]"
+                  ref={(node) => {
+                    if (isEntering && index === mobileReviewsEnteringFrom) {
+                      mobileReviewsFirstEnteringRef.current = node;
+                    }
+                  }}
+                  className={`relative overflow-hidden rounded-[30px] border border-[#d7cec1] bg-[linear-gradient(180deg,#f8f4ee_0%,#efe9e0_100%)] px-5 py-5 shadow-[0_18px_36px_rgba(0,0,0,0.14)] transition-[opacity,transform] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                    isEntering ? "translate-y-4 opacity-0 animate-[mobileReviewReveal_560ms_cubic-bezier(0.22,1,0.36,1)_forwards]" : "translate-y-0 opacity-100"
+                  }`}
+                  style={
+                    isEntering
+                      ? { animationDelay: `${(index - mobileReviewsEnteringFrom) * 90}ms` }
+                      : undefined
+                  }
                 >
-                  <div className="flex gap-1 text-[22px] leading-none text-[#f39a10]">
-                    {Array.from({ length: review.rating }).map((_, index) => (
-                      <span key={`${review.company}-mobile-${index}`}>★</span>
-                    ))}
+                  <div className="pointer-events-none absolute right-[-16px] top-[-22px] text-[84px] leading-none text-[#b9ae9e]/20 [font-family:'Cormorant_Garamond',serif]">
+                    ”
                   </div>
-                  <p className="mt-6 text-[17px] leading-[1.48] text-[#4d5c77]">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="inline-flex items-center gap-1 rounded-full border border-[#d8c5aa] bg-white/72 px-3 py-2 shadow-[0_8px_20px_rgba(135,116,78,0.08)]">
+                      {Array.from({ length: review.rating }).map((_, index) => (
+                        <span key={`${review.company}-mobile-${index}`} className="text-[18px] leading-none text-[#f3b23a] drop-shadow-[0_0_10px_rgba(243,178,58,0.16)]">★</span>
+                      ))}
+                    </div>
+                    <span className="text-[11px] uppercase tracking-[0.24em] text-[#8a8175] [font-family:'JetBrains_Mono',monospace]">
+                      verified review
+                    </span>
+                  </div>
+                  <p className="mt-6 text-[17px] leading-[1.56] text-[#25231e]">
                     {review.text}
                   </p>
-                  <div className="mt-6 border-t border-[#dfe4ea] pt-5">
-                    <strong className="block text-[17px] font-semibold leading-[1.18] text-[#111827]">
+                  <div className="mt-6 border-t border-[#d8d0c4] pt-5">
+                    <strong className="block text-[20px] font-semibold leading-[1.08] text-[#171511] [font-family:'Cormorant_Garamond',serif]">
                       {review.company}
                     </strong>
-                    <span className="mt-1.5 block text-[13px] leading-[1.28] text-[#8d96a9]">
+                    <span className="mt-2 block text-[12px] uppercase tracking-[0.16em] leading-[1.45] text-[#7c7469] [font-family:'JetBrains_Mono',monospace]">
                       {review.meta}
                     </span>
                   </div>
                 </article>
-              ))}
+                );
+              })}
 
               {mobileReviewsVisible < reviews.length ? (
                 <button
                   type="button"
-                  onClick={() => setMobileReviewsVisible((current) => Math.min(current + 3, reviews.length))}
-                  className="flex h-14 w-full items-center justify-center rounded-[18px] border border-[#d9dfe8] bg-white text-[13px] uppercase tracking-[0.24em] text-[#111827] transition hover:bg-[#f7f7f5]"
+                  onClick={() =>
+                    setMobileReviewsVisible((current) => {
+                      const next = Math.min(current + 3, reviews.length);
+                      if (next > current) {
+                        setMobileReviewsEnteringFrom(current);
+                      }
+                      return next;
+                    })
+                  }
+                  className="flex h-14 w-full items-center justify-center rounded-[20px] border border-[#2d2a24] bg-[#161513] text-[12px] uppercase tracking-[0.28em] text-[#ece5db] transition hover:border-[#53483a] hover:bg-[#1d1b18]"
                 >
                   Загрузить ещё
                 </button>
@@ -932,27 +1244,36 @@ export function StayseLandingTailwind() {
 
             <div
               ref={reviewsTrackRef}
-              className="mt-8 hidden snap-x snap-mandatory gap-5 overflow-x-auto pb-3 [-ms-overflow-style:none] [scrollbar-width:none] md:ml-[calc(50%-50vw)] md:mr-[calc(50%-50vw)] md:flex [&::-webkit-scrollbar]:hidden md:mt-10 md:gap-6"
+              className="mt-8 hidden snap-x snap-mandatory gap-5 overflow-x-auto pt-2 pb-3 [-ms-overflow-style:none] [scrollbar-width:none] md:ml-[calc(50%-50vw)] md:mr-[calc(50%-50vw)] md:flex [&::-webkit-scrollbar]:hidden md:mt-10 md:gap-6"
             >
               {reviews.map((review) => (
                 <article
                   key={review.company}
                   data-review-card
-                  className="flex min-h-[272px] w-[min(82vw,520px)] shrink-0 snap-start flex-col rounded-[26px] border border-[#2d2c29] bg-[#141412] px-6 py-5 shadow-[0_10px_30px_rgba(0,0,0,0.18)] md:min-h-[288px] md:w-[min(37vw,520px)] md:px-7 md:py-6"
+                  className="group relative flex min-h-[292px] w-[min(82vw,520px)] shrink-0 snap-start flex-col overflow-hidden rounded-[30px] border border-[#d7cec1] bg-[linear-gradient(180deg,#f8f4ee_0%,#efe9e0_100%)] px-6 py-6 shadow-[0_20px_44px_rgba(0,0,0,0.14)] transition duration-500 ease-out hover:-translate-y-1 hover:border-[#cbb79b] hover:shadow-[0_28px_60px_rgba(0,0,0,0.18)] md:min-h-[312px] md:w-[min(37vw,520px)] md:px-7 md:py-7"
                 >
-                  <div className="flex gap-1 text-[24px] leading-none text-[#f39a10]">
-                    {Array.from({ length: review.rating }).map((_, index) => (
-                      <span key={`${review.company}-${index}`}>★</span>
-                    ))}
+                  <div className="pointer-events-none absolute inset-0">
+                    <div className="absolute left-[-10%] top-[-10%] h-32 w-32 rounded-full bg-[#d5a44e]/12 blur-[70px] transition duration-500 group-hover:bg-[#d5a44e]/18" />
+                    <div className="absolute right-[-8%] bottom-[-16%] h-40 w-40 rounded-full bg-white/55 blur-[90px]" />
+                    <div className="absolute right-6 top-3 text-[120px] leading-none text-[#b9ae9e]/22 [font-family:'Cormorant_Garamond',serif]">
+                      ”
+                    </div>
                   </div>
-                  <p className="mt-5 text-[clamp(19px,0.75vw+14px,27px)] leading-[1.45] text-[#e1ddd6]">
+                  <div className="relative z-[1] flex items-center gap-4">
+                    <div className="inline-flex items-center gap-1.5 rounded-full border border-[#d8c5aa] bg-white/72 px-3 py-2 shadow-[0_8px_20px_rgba(135,116,78,0.08)]">
+                      {Array.from({ length: review.rating }).map((_, index) => (
+                        <span key={`${review.company}-${index}`} className="text-[22px] leading-none text-[#f3b23a] drop-shadow-[0_0_12px_rgba(243,178,58,0.18)]">★</span>
+                      ))}
+                    </div>
+                  </div>
+                  <p className="relative z-[1] mt-6 text-[clamp(19px,0.75vw+14px,27px)] leading-[1.5] text-[#25231e]">
                     {review.text}
                   </p>
-                  <div className="mt-auto border-t border-[#2a2926] pt-5">
-                    <strong className="block text-[clamp(22px,0.75vw+16px,31px)] font-semibold leading-[1.08] text-[#e1ddd6]">
+                  <div className="relative z-[1] mt-auto border-t border-[#d8d0c4] pt-5">
+                    <strong className="block text-[clamp(24px,0.8vw+17px,34px)] font-semibold leading-[1.02] text-[#171511] [font-family:'Cormorant_Garamond',serif]">
                       {review.company}
                     </strong>
-                    <span className="mt-1.5 block text-[clamp(15px,0.45vw+12px,20px)] leading-[1.2] text-[#b4aea5]">
+                    <span className="mt-2 block text-[clamp(12px,0.28vw+11px,15px)] uppercase tracking-[0.18em] leading-[1.45] text-[#7c7469] [font-family:'JetBrains_Mono',monospace]">
                       {review.meta}
                     </span>
                   </div>
@@ -985,7 +1306,7 @@ export function StayseLandingTailwind() {
             </div>
           </div>
 
-          <form className="grid max-w-[820px] gap-5 2xl:max-w-none 2xl:grid-cols-2 xl:gap-x-6">
+          <form onSubmit={handleConsultationSubmit} className="grid max-w-[820px] gap-5 2xl:max-w-none 2xl:grid-cols-2 xl:gap-x-6">
             <label className="grid gap-2">
               <span className="text-[clamp(10px,0.38vw+9px,14px)] uppercase tracking-[1.4px] text-[#7a7a75] [font-family:'JetBrains_Mono',monospace]">Имя</span>
               <input

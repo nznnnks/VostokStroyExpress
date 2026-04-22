@@ -9,11 +9,41 @@ type SiteHeaderProps = {
   fullBleed?: boolean;
 };
 
+const PAGE_TRANSITION_STORAGE_KEY = "site-transition-pending";
+const PAGE_TRANSITION_HOLD_MS = 880;
+const PAGE_TRANSITION_TEXT = "открываем раздел climatrade";
+
+function PageTransitionOverlay({ visible }: { visible: boolean }) {
+  return (
+    <div
+      aria-hidden={!visible}
+      className={`pointer-events-none fixed inset-0 z-[220] flex items-center justify-center bg-[#e1ddd6] px-6 transition-[opacity,visibility] duration-650 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+        visible ? "visible opacity-100" : "invisible opacity-0"
+      }`}
+    >
+      <div className="relative flex flex-col items-center gap-8 text-center">
+        <div className="absolute left-1/2 top-1/2 h-[38vh] w-[38vh] max-w-[520px] max-h-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.72)_0%,rgba(255,255,255,0.2)_42%,rgba(225,221,214,0)_72%)]" />
+        <img
+          src="/logo.png"
+          alt="Climatrade"
+          loading="eager"
+          decoding="async"
+          className="relative h-auto w-[min(64vw,420px)] object-contain"
+        />
+        <p className="relative text-[clamp(13px,0.42vw+11px,18px)] uppercase tracking-[clamp(0.34em,0.7vw,0.7em)] text-[#8e877d] [font-family:Jaldi,'JetBrains_Mono',monospace]">
+          {PAGE_TRANSITION_TEXT}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function SiteHeader({ light = true, fullBleed = false }: SiteHeaderProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMobileMenuActive, setIsMobileMenuActive] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isTransitionVisible, setIsTransitionVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [catalogProducts, setCatalogProducts] = useState<Product[] | null>(
     null,
@@ -23,6 +53,19 @@ export function SiteHeader({ light = true, fullBleed = false }: SiteHeaderProps)
   const inputRef = useRef<HTMLInputElement | null>(null);
   const maxHeaderHeightRef = useRef(0);
   const scrollLockUntilRef = useRef(0);
+  const transitionTimeoutRef = useRef<number | null>(null);
+
+  const clearTransitionTimeout = () => {
+    if (transitionTimeoutRef.current === null) return;
+    window.clearTimeout(transitionTimeoutRef.current);
+    transitionTimeoutRef.current = null;
+  };
+
+  const startPageTransition = () => {
+    if (typeof window === "undefined") return;
+    window.sessionStorage.setItem(PAGE_TRANSITION_STORAGE_KEY, "1");
+    setIsTransitionVisible(true);
+  };
 
   const openMobileMenu = () => {
     setIsOpen(true);
@@ -155,6 +198,74 @@ export function SiteHeader({ light = true, fullBleed = false }: SiteHeaderProps)
     };
   }, [isSearchOpen]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const shouldResumeTransition =
+      window.sessionStorage.getItem(PAGE_TRANSITION_STORAGE_KEY) === "1";
+
+    if (!shouldResumeTransition) return;
+
+    setIsTransitionVisible(true);
+    window.sessionStorage.removeItem(PAGE_TRANSITION_STORAGE_KEY);
+    clearTransitionTimeout();
+    transitionTimeoutRef.current = window.setTimeout(() => {
+      setIsTransitionVisible(false);
+      transitionTimeoutRef.current = null;
+    }, PAGE_TRANSITION_HOLD_MS);
+
+    return () => clearTransitionTimeout();
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const onDocumentClick = (event: MouseEvent) => {
+      if (event.defaultPrevented) return;
+      if (event.button !== 0) return;
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+      const anchor = (event.target as Element | null)?.closest("a");
+      if (!(anchor instanceof HTMLAnchorElement)) return;
+      if (anchor.target === "_blank") return;
+      if (anchor.hasAttribute("download")) return;
+
+      const href = anchor.getAttribute("href");
+      if (!href) return;
+      if (
+        href.startsWith("#") ||
+        href.startsWith("mailto:") ||
+        href.startsWith("tel:") ||
+        href.startsWith("javascript:")
+      ) {
+        return;
+      }
+
+      const url = new URL(anchor.href, window.location.href);
+      if (url.origin !== window.location.origin) return;
+      if (url.pathname === window.location.pathname && url.hash) return;
+      if (
+        url.pathname === window.location.pathname &&
+        url.search === window.location.search &&
+        !url.hash
+      ) {
+        return;
+      }
+
+      startPageTransition();
+    };
+
+    document.addEventListener("click", onDocumentClick, true);
+    return () => document.removeEventListener("click", onDocumentClick, true);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (typeof window === "undefined") return;
+      clearTransitionTimeout();
+    };
+  }, []);
+
   const trimmedQuery = searchQuery.trim().toLowerCase();
   const searchSource = catalogProducts ?? [];
   const searchResults = trimmedQuery
@@ -183,6 +294,8 @@ export function SiteHeader({ light = true, fullBleed = false }: SiteHeaderProps)
         setIsOpen(false);
         setIsSearchOpen(false);
         window.scrollTo({ top: 0, behavior: "smooth" });
+        setIsTransitionVisible(false);
+        window.sessionStorage.removeItem(PAGE_TRANSITION_STORAGE_KEY);
       }
     }
   };
@@ -202,63 +315,65 @@ export function SiteHeader({ light = true, fullBleed = false }: SiteHeaderProps)
   };
 
   return (
-    <header
-      ref={searchRef}
-      className="sticky top-0 z-[140] isolate [overflow-anchor:none]"
-    >
-      {/* When `fullBleed` is enabled, keep the static header edge-to-edge. */}
-      {/**
-       * `isScrolled` uses the floating card style; we keep that contained layout.
-       */}
-      {light ? (
-        <div
-          className={`grid overflow-hidden border-b border-white/8 bg-[#060606] text-white transition-[grid-template-rows,opacity,transform,border-color] duration-600 ease-[cubic-bezier(0.22,1,0.36,1)] transform-gpu will-change-transform ${
-            isScrolled
-              ? "grid-rows-[0fr] -translate-y-4 opacity-0 border-white/0"
-              : "grid-rows-[1fr] translate-y-0 opacity-100"
-          }`}
-        >
-          <div className="min-h-0">
-            <div className="mx-auto flex max-w-[1480px] min-h-[52px] items-center justify-between gap-4 px-4 py-3 text-[clamp(13px,0.35vw+11.5px,15px)] font-medium uppercase tracking-[0.7px] text-white/84 md:min-h-[40px] md:px-10 md:py-2.5 md:tracking-[1px] xl:px-12 2xl:max-w-[1860px] 2xl:px-16 [font-family:Jaldi,'JetBrains_Mono',monospace]">
-              <div className="min-w-0 flex-1 md:flex-none">
-                <a
-                  href="mailto:vostok.stroy.expert@mail.ru"
-                  className="block truncate underline decoration-white/40 underline-offset-[4px] transition-colors duration-300 hover:text-white hover:decoration-white/72 md:underline-offset-[5px]"
-                >
-                  vostok.stroy.expert@mail.ru
-                </a>
-              </div>
-              <div className="shrink-0 flex flex-col items-end gap-1 md:flex-row md:items-center md:gap-2">
-                <a
-                  href="tel:+79252700229"
-                  className="text-white underline decoration-white/46 underline-offset-[4px] transition-colors duration-300 hover:text-white hover:decoration-white/78 md:underline-offset-[5px]"
-                >
-                  +7(925)270-02-29
-                </a>
-                <span className="hidden text-white/70 md:inline">/</span>
-                <a
-                  href="tel:+79266787379"
-                  className="text-white underline decoration-white/46 underline-offset-[4px] transition-colors duration-300 hover:text-white hover:decoration-white/78 md:underline-offset-[5px]"
-                >
-                  +7(926)678-73-79
-                </a>
+    <>
+      <PageTransitionOverlay visible={isTransitionVisible} />
+      <header
+        ref={searchRef}
+        className="sticky top-0 z-[140] isolate [overflow-anchor:none]"
+      >
+        {/* When `fullBleed` is enabled, keep the static header edge-to-edge. */}
+        {/**
+         * `isScrolled` uses the floating card style; we keep that contained layout.
+         */}
+        {light ? (
+          <div
+            className={`grid overflow-hidden border-b border-white/8 bg-[#060606] text-white transition-[grid-template-rows,opacity,transform,border-color] duration-600 ease-[cubic-bezier(0.22,1,0.36,1)] transform-gpu will-change-transform ${
+              isScrolled
+                ? "grid-rows-[0fr] -translate-y-4 opacity-0 border-white/0"
+                : "grid-rows-[1fr] translate-y-0 opacity-100"
+            }`}
+          >
+            <div className="min-h-0">
+              <div className="mx-auto flex max-w-[1480px] min-h-[52px] items-center justify-between gap-4 px-4 py-3 text-[clamp(13px,0.35vw+11.5px,15px)] font-medium uppercase tracking-[0.7px] text-white/84 md:min-h-[40px] md:px-10 md:py-2.5 md:tracking-[1px] xl:px-12 2xl:max-w-[1860px] 2xl:px-16 [font-family:Jaldi,'JetBrains_Mono',monospace]">
+                <div className="min-w-0 flex-1 md:flex-none">
+                  <a
+                    href="mailto:vostok.stroy.expert@mail.ru"
+                    className="block truncate underline decoration-white/40 underline-offset-[4px] transition-colors duration-300 hover:text-white hover:decoration-white/72 md:underline-offset-[5px]"
+                  >
+                    vostok.stroy.expert@mail.ru
+                  </a>
+                </div>
+                <div className="shrink-0 flex flex-col items-end gap-1 md:flex-row md:items-center md:gap-2">
+                  <a
+                    href="tel:+79252700229"
+                    className="text-white underline decoration-white/46 underline-offset-[4px] transition-colors duration-300 hover:text-white hover:decoration-white/78 md:underline-offset-[5px]"
+                  >
+                    +7(925)270-02-29
+                  </a>
+                  <span className="hidden text-white/70 md:inline">/</span>
+                  <a
+                    href="tel:+79266787379"
+                    className="text-white underline decoration-white/46 underline-offset-[4px] transition-colors duration-300 hover:text-white hover:decoration-white/78 md:underline-offset-[5px]"
+                  >
+                    +7(926)678-73-79
+                  </a>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      ) : null}
-      <div className={`${fullBleed && !isScrolled ? "px-0" : "px-2 md:px-4"} pt-0`}>
-        <div
-          className={`${fullBleed && !isScrolled ? "w-full max-w-none" : "mx-auto max-w-[1480px] 2xl:max-w-[1860px]"} mt-0 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3.5 py-3.5 transition-[max-width,margin-top,border-radius,background-color,border-color,box-shadow,backdrop-filter,transform] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] transform-gpu will-change-transform md:grid-cols-[auto_1fr_auto] md:gap-4 md:px-10 md:py-4 xl:gap-6 xl:px-12 2xl:px-16 ${
-            isScrolled
-              ? light
-                ? "md:mt-3 max-w-[1420px] translate-y-0 rounded-[22px] md:rounded-[28px] border border-[#1b1b1b]/24 bg-[#e1ddd6] shadow-[0_10px_28px_rgba(0,0,0,0.14),0_0_0_1px_rgba(17,17,17,0.06)] md:backdrop-blur-md 2xl:max-w-[1760px]"
-                : "max-w-[1420px] rounded-[28px] border border-white/14 bg-black/55 shadow-[0_12px_34px_rgba(0,0,0,0.24)] md:backdrop-blur-md 2xl:max-w-[1760px]"
-              : light
-                ? "rounded-none border-b border-[#ece8e1] bg-[#e1ddd6] shadow-[0_0_0_rgba(0,0,0,0)]"
-                : "border-b border-white/10 bg-transparent"
-          }`}
-        >
+        ) : null}
+        <div className={`${fullBleed && !isScrolled ? "px-0" : "px-2 md:px-4"} pt-0`}>
+          <div
+            className={`${fullBleed && !isScrolled ? "w-full max-w-none" : "mx-auto max-w-[1480px] 2xl:max-w-[1860px]"} mt-0 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3.5 py-3.5 transition-[max-width,margin-top,border-radius,background-color,border-color,box-shadow,backdrop-filter,transform] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] transform-gpu will-change-transform md:grid-cols-[auto_1fr_auto] md:gap-4 md:px-10 md:py-4 xl:gap-6 xl:px-12 2xl:px-16 ${
+              isScrolled
+                ? light
+                  ? "md:mt-3 max-w-[1420px] translate-y-0 rounded-[22px] md:rounded-[28px] border border-[#1b1b1b]/24 bg-[#e1ddd6] shadow-[0_10px_28px_rgba(0,0,0,0.14),0_0_0_1px_rgba(17,17,17,0.06)] md:backdrop-blur-md 2xl:max-w-[1760px]"
+                  : "max-w-[1420px] rounded-[28px] border border-white/14 bg-black/55 shadow-[0_12px_34px_rgba(0,0,0,0.24)] md:backdrop-blur-md 2xl:max-w-[1760px]"
+                : light
+                  ? "rounded-none border-b border-[#ece8e1] bg-[#e1ddd6] shadow-[0_0_0_rgba(0,0,0,0)]"
+                  : "border-b border-white/10 bg-transparent"
+            }`}
+          >
           <a
             href="/"
             onClick={(event) => handleNavLinkClick(event, "/")}
@@ -345,10 +460,10 @@ export function SiteHeader({ light = true, fullBleed = false }: SiteHeaderProps)
             </a>
             <div className="flex items-center gap-1 sm:hidden">
               <a
-                href="https://t.me/vostok_support"
+                href="https://wa.me/79252700229"
                 target="_blank"
                 rel="noreferrer"
-                aria-label="Telegram"
+                aria-label="WhatsApp"
                 className="inline-flex h-9 w-9 items-center justify-center bg-[#050505] text-white transition duration-300 ease-out hover:-translate-y-0.5 hover:bg-[#1c1c1c] sm:h-9 sm:w-9"
               >
                 <svg
@@ -358,7 +473,7 @@ export function SiteHeader({ light = true, fullBleed = false }: SiteHeaderProps)
                   aria-hidden="true"
                   fill="currentColor"
                 >
-                  <path d="M21.9 4.6c.2-.8-.7-1.5-1.5-1.1L2.7 10.6c-.9.4-.8 1.7.1 2l4.6 1.5 1.8 5.6c.3.9 1.5 1 2 .2l2.6-4.1 4.9 3.6c.8.6 1.9.1 2.1-.9l2.1-14.9zM8.6 13.4l9.8-6c.2-.1.5.1.3.3l-8 7.3-.3 3.9-1.7-5.3z" />
+                  <path d="M20.5 3.5A10.2 10.2 0 0 0 4 15.7L2.8 21.2l5.7-1.5a10.2 10.2 0 0 0 4.8 1.2h.1A10.2 10.2 0 0 0 20.5 3.5Zm-7.1 15.6h-.1a8.5 8.5 0 0 1-4.3-1.2l-.3-.2-3.4.9.9-3.3-.2-.3a8.5 8.5 0 1 1 7.4 4.1Zm4.7-6.3c-.3-.1-1.8-.9-2-.9-.3-.1-.4-.1-.6.1l-.9 1c-.2.2-.3.2-.6.1a6.9 6.9 0 0 1-2-1.2 7.8 7.8 0 0 1-1.5-1.9c-.2-.3 0-.4.1-.6l.4-.5.3-.4a.6.6 0 0 0 0-.6l-.9-2.2c-.2-.4-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3c-.2.3-1 1-.9 2.4 0 1.4 1 2.7 1.2 2.9.1.2 2 3.2 5 4.3 2.9 1.1 2.9.7 3.4.7.5 0 1.8-.7 2-1.4.3-.7.3-1.3.2-1.4-.1-.1-.3-.2-.6-.3Z" />
                 </svg>
               </a>
               <a
@@ -417,9 +532,9 @@ export function SiteHeader({ light = true, fullBleed = false }: SiteHeaderProps)
               </span>
             </button>
           </div>
+          </div>
         </div>
-      </div>
-      {isSearchOpen && !isOpen ? (
+        {isSearchOpen && !isOpen ? (
         <div className="absolute left-0 right-0 top-full">
           <div className="mx-auto max-w-[1480px] px-4 md:px-10 2xl:max-w-[1860px]">
             <div
@@ -735,7 +850,7 @@ export function SiteHeader({ light = true, fullBleed = false }: SiteHeaderProps)
                 alt="ВостокСтройЭксперт"
                 loading="eager"
                 decoding="async"
-                className="h-12 w-auto object-contain"
+                className="h-auto w-[clamp(180px,46vw,260px)] object-contain"
               />
             </div>
             <nav
@@ -768,10 +883,52 @@ export function SiteHeader({ light = true, fullBleed = false }: SiteHeaderProps)
                 оставить заявку
               </a>
             </div>
+            <div
+              className={`mt-8 grid gap-5 rounded-[24px] px-5 py-6 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] ${
+                light
+                  ? "border border-[#ebe3d7] bg-[linear-gradient(180deg,#f7f2eb_0%,#efe8de_100%)] text-[#26231e]"
+                  : "border border-white/10 bg-white/5 text-white/80"
+              }`}
+            >
+              <div className="grid gap-2">
+                <p className={`text-[10px] uppercase tracking-[0.28em] [font-family:Jaldi,'JetBrains_Mono',monospace] ${light ? "text-[#8b8479]" : "text-white/45"}`}>
+                  телефоны
+                </p>
+                <a
+                  href="tel:+79252700229"
+                  className={`text-[18px] leading-none transition duration-300 ease-out ${light ? "hover:text-[#111]" : "hover:text-white"}`}
+                >
+                  +7 (925) 270-02-29
+                </a>
+                <a
+                  href="tel:+79266787379"
+                  className={`text-[18px] leading-none transition duration-300 ease-out ${light ? "hover:text-[#111]" : "hover:text-white"}`}
+                >
+                  +7 (926) 678-73-79
+                </a>
+              </div>
+              <div className={`grid gap-2 border-t pt-4 ${light ? "border-[#ddd3c6]" : "border-white/10"}`}>
+                <p className={`text-[10px] uppercase tracking-[0.28em] [font-family:Jaldi,'JetBrains_Mono',monospace] ${light ? "text-[#8b8479]" : "text-white/45"}`}>
+                  адрес офиса
+                </p>
+                <p className="text-[16px] leading-[1.45]">
+                  г. Москва, Калужская, 12
+                </p>
+              </div>
+              <div className={`grid gap-2 border-t pt-4 ${light ? "border-[#ddd3c6]" : "border-white/10"}`}>
+                <p className={`text-[10px] uppercase tracking-[0.28em] [font-family:Jaldi,'JetBrains_Mono',monospace] ${light ? "text-[#8b8479]" : "text-white/45"}`}>
+                  часы работы
+                </p>
+                <p className="text-[16px] leading-[1.45]">
+                  Пн–Пт, с 10:00 до 19:00
+                </p>
+              </div>
+            </div>
           </aside>
         </div>
-      ) : null}
-    </header>
+        ) : null}
+      </header>
+    </>
   );
 }
 

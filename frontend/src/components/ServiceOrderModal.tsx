@@ -1,4 +1,5 @@
-import { useEffect, useId, useState, type FormEvent } from "react";
+import { useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 const contactOptions = ["Telegram", "MAX", "WhatsApp"] as const;
 
@@ -20,7 +21,19 @@ const formatPhone = (raw: string) => {
   return result;
 };
 
-export function ServiceOrderModal({ serviceTitle }: { serviceTitle: string }) {
+type ServiceOrderModalProps = {
+  serviceTitle: string;
+  triggerLabel?: string;
+  triggerClassName?: string;
+  trigger?: ReactNode;
+};
+
+export function ServiceOrderModal({
+  serviceTitle,
+  triggerLabel = "Заказать услугу",
+  triggerClassName,
+  trigger,
+}: ServiceOrderModalProps) {
   const titleId = useId();
   const [isOpen, setIsOpen] = useState(false);
   const [name, setName] = useState("");
@@ -28,6 +41,11 @@ export function ServiceOrderModal({ serviceTitle }: { serviceTitle: string }) {
   const [contacts, setContacts] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [sent, setSent] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -77,12 +95,15 @@ export function ServiceOrderModal({ serviceTitle }: { serviceTitle: string }) {
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="inline-flex h-12 items-center justify-center bg-[#111] px-6 text-[13px] uppercase tracking-[1.2px] text-white md:h-14 md:px-8 md:text-[14px] md:tracking-[1.5px] [font-family:Jaldi,'JetBrains_Mono',monospace]"
+        className={
+          triggerClassName ??
+          "inline-flex h-12 items-center justify-center bg-[#111] px-6 text-[13px] uppercase tracking-[1.2px] text-white md:h-14 md:px-8 md:text-[14px] md:tracking-[1.5px] [font-family:Jaldi,'JetBrains_Mono',monospace]"
+        }
       >
-        Заказать услугу
+        {trigger ?? triggerLabel}
       </button>
 
-      {isOpen ? (
+      {isOpen && mounted ? createPortal(
         <div
           className="fixed inset-0 z-[300] flex items-end justify-center bg-black/60 px-3 py-3 sm:items-center sm:px-5"
           role="dialog"
@@ -189,7 +210,7 @@ export function ServiceOrderModal({ serviceTitle }: { serviceTitle: string }) {
             </form>
           </div>
         </div>
-      ) : null}
+      , document.body) : null}
     </>
   );
 }

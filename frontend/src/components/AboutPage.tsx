@@ -338,13 +338,15 @@ export function AboutPage({ newsPosts: _newsPosts = [] }: AboutPageProps) {
                   key={path}
                   className="group flex min-h-[122px] items-center justify-center rounded-[18px] border border-[#efebe4] bg-white px-4 py-4 transition duration-300 ease-out hover:-translate-y-0.5 hover:border-[#dbc7a1] hover:shadow-[0_18px_30px_rgba(0,0,0,0.08)]"
                 >
-                  <img
-                    src={path}
-                    alt={alt}
-                    loading="lazy"
-                    decoding="async"
-                    className="max-h-[72px] w-full max-w-[150px] object-contain object-center transition duration-300 ease-out group-hover:scale-[1.05] group-hover:[filter:drop-shadow(0_8px_16px_rgba(0,0,0,0.08))_contrast(1.04)]"
-                  />
+                  <div className="flex h-[clamp(54px,5vw,72px)] w-full items-center justify-center overflow-hidden">
+                    <img
+                      src={path}
+                      alt={alt}
+                      loading="lazy"
+                      decoding="async"
+                      className="max-h-full w-auto max-w-[82%] object-contain object-center transition duration-300 ease-out group-hover:scale-[1.05] group-hover:[filter:drop-shadow(0_8px_16px_rgba(0,0,0,0.08))_contrast(1.04)]"
+                    />
+                  </div>
                 </article>
               ))}
             </div>

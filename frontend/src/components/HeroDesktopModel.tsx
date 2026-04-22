@@ -204,14 +204,17 @@ function HeroModel({
   layout,
   reducedMotion,
   viewportWidth,
+  onReady,
 }: {
   mouse: React.MutableRefObject<{ x: number; y: number }>;
   layout: HeroModelLayout;
   reducedMotion: boolean;
   viewportWidth: number;
+  onReady?: () => void;
 }) {
   const groupRef = useRef<THREE.Group | null>(null);
   const pointerRafRef = useRef<number | null>(null);
+  const readyRef = useRef(false);
   const invalidate = useThree((state) => state.invalidate);
   const size = useThree((state) => state.size);
   const { scene } = useGLTF("/models/hero-dantex.glb");
@@ -289,6 +292,17 @@ function HeroModel({
     };
   }, [invalidate, mouse, reducedMotion]);
 
+  useEffect(() => {
+    if (readyRef.current) return;
+    readyRef.current = true;
+
+    const frameId = window.requestAnimationFrame(() => {
+      onReady?.();
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [onReady]);
+
   useFrame(() => {
     if (!groupRef.current) return;
 
@@ -319,7 +333,7 @@ function HeroModel({
   );
 }
 
-export function HeroDesktopModel() {
+export function HeroDesktopModel({ onReady }: { onReady?: () => void }) {
   const mouseRef = useRef({ x: 0, y: 0 });
   const reducedMotion =
     typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -341,12 +355,12 @@ export function HeroDesktopModel() {
     <div className={wrapperClassName}>
       <Canvas
         className="hero-model-edgefade__canvas"
-        dpr={[1, 1.1]}
+        dpr={1}
         camera={layout.camera}
         frameloop="demand"
         gl={{
           alpha: true,
-          antialias: true,
+          antialias: false,
           premultipliedAlpha: true,
           powerPreference: "high-performance",
         }}
@@ -362,13 +376,17 @@ export function HeroDesktopModel() {
           <directionalLight position={[-5, 3, 1]} intensity={1.2} color="#7aa2ff" />
           <spotLight position={[2, 8, 10]} angle={0.28} penumbra={0.9} intensity={34} color="#ffffff" />
           <spotLight position={[7, 2, 3]} angle={0.42} penumbra={1} intensity={14} color="#a7c2ff" />
-          <HeroModel mouse={mouseRef} layout={layout} reducedMotion={reducedMotion} viewportWidth={viewportWidth} />
+          <HeroModel
+            mouse={mouseRef}
+            layout={layout}
+            reducedMotion={reducedMotion}
+            viewportWidth={viewportWidth}
+            onReady={onReady}
+          />
         </Suspense>
       </Canvas>
     </div>
   );
 }
-
-useGLTF.preload("/models/hero-dantex.glb");
 
 export default HeroDesktopModel;
