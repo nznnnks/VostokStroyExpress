@@ -44,7 +44,7 @@ export type SeedNews = {
   content: string[];
 };
 
-export const seedProducts: SeedProduct[] = [
+const legacySeedProducts: SeedProduct[] = [
   {
     slug: "omni-flow-x1",
     image: "/catalog/product-2.png",
@@ -149,6 +149,95 @@ export const seedProducts: SeedProduct[] = [
     ],
   },
 ];
+
+const seedCategoryNames = [
+  "Мобильные кондиционеры",
+  "Осушлители воздуха",
+  "Увлажнители и очистители воздуха",
+  "Бытовая приточная вентиляция",
+  "Дизайн-радиаторы",
+  "Сплит-системы",
+  "Радиаторы отопления",
+  "Водонагреватели",
+  "Тепловые пушки",
+  "Теплые полы электрические",
+  "Промышленные вентиляторы",
+  "Камины",
+  "Конвекторы",
+  "Умный дом",
+  "Тепловентиляторы",
+  "Вытяжные бытовые вентиляторы",
+  "Сушилки для рук",
+] as const;
+
+const productImagePool = [
+  "/catalog/product-1.png",
+  "/catalog/product-2.png",
+  "/catalog/product-3.png",
+  "/catalog/product-4.png",
+  "/catalog/product-5.png",
+  "/catalog/product-6.png",
+] as const;
+
+const brandPool = [
+  { brand: "Ballu", brandLabel: "BALLU" },
+  { brand: "Electrolux", brandLabel: "ELECTROLUX" },
+  { brand: "Royal Clima", brandLabel: "ROYAL CLIMA" },
+  { brand: "Shuft", brandLabel: "SHUFT" },
+  { brand: "Zanussi", brandLabel: "ZANUSSI" },
+] as const;
+
+const countryPool = ["Россия", "Китай", "Италия", "Турция", "Польша"] as const;
+
+function slugifySeedValue(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/ё/g, "е")
+    .replace(/[^a-zа-я0-9]+/gi, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function buildSeedProduct(category: string, categoryIndex: number, itemIndex: number): SeedProduct {
+  const brandMeta = brandPool[(categoryIndex + itemIndex) % brandPool.length];
+  const image = productImagePool[(categoryIndex + itemIndex) % productImagePool.length];
+  const country = countryPool[(categoryIndex + itemIndex) % countryPool.length];
+  const model = `${categoryIndex + 1}${String.fromCharCode(65 + itemIndex)}${itemIndex + 1}`;
+  const basePower = 1.8 + categoryIndex * 0.35 + itemIndex * 0.4;
+  const baseVolume = 18 + categoryIndex * 2 + itemIndex * 4;
+  const basePrice = 18990 + categoryIndex * 3200 + itemIndex * 5100;
+  const efficiencyClass = ["A", "A+", "A++"][itemIndex];
+  const title = `${category} ${brandMeta.brand} серия ${model}`;
+
+  return {
+    slug: `${slugifySeedValue(category)}-${itemIndex + 1}`,
+    image,
+    gallery: [image],
+    brand: brandMeta.brand,
+    brandLabel: brandMeta.brandLabel,
+    title,
+    article: `VSE-${String(categoryIndex + 1).padStart(2, "0")}-${String(itemIndex + 1).padStart(2, "0")}`,
+    category,
+    country,
+    type: category,
+    power: Number(basePower.toFixed(1)),
+    volume: baseVolume,
+    price: basePrice,
+    rating: `Мощность: ${basePower.toFixed(1)} кВт`,
+    efficiency: `Энергоэффективность: класс ${efficiencyClass}`,
+    efficiencyClass,
+    coverage: `До ${20 + categoryIndex * 3 + itemIndex * 8} м²`,
+    acoustics: `${28 + itemIndex * 3} дБ`,
+    filtration: itemIndex === 0 ? "Базовая фильтрация" : itemIndex === 1 ? "Угольный фильтр" : "HEPA фильтр",
+    description: [
+      `${title} подготовлен как демонстрационный товар для категории "${category}".`,
+      "Подходит для наполнения каталога и тестирования карточек, фильтров и переходов между разделами.",
+    ],
+  };
+}
+
+export const seedProducts: SeedProduct[] = seedCategoryNames.flatMap((category, categoryIndex) =>
+  Array.from({ length: 3 }, (_, itemIndex) => buildSeedProduct(category, categoryIndex, itemIndex)),
+);
 
 export const seedServices: SeedService[] = [
   {

@@ -6,9 +6,10 @@ import { loadCatalogProducts } from "../lib/backend-api";
 
 type SiteHeaderProps = {
   light?: boolean;
+  fullBleed?: boolean;
 };
 
-export function SiteHeader({ light = true }: SiteHeaderProps) {
+export function SiteHeader({ light = true, fullBleed = false }: SiteHeaderProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMobileMenuActive, setIsMobileMenuActive] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -205,6 +206,10 @@ export function SiteHeader({ light = true }: SiteHeaderProps) {
       ref={searchRef}
       className="sticky top-0 z-[140] isolate [overflow-anchor:none]"
     >
+      {/* When `fullBleed` is enabled, keep the static header edge-to-edge. */}
+      {/**
+       * `isScrolled` uses the floating card style; we keep that contained layout.
+       */}
       {light ? (
         <div
           className={`grid overflow-hidden border-b border-white/8 bg-[#060606] text-white transition-[grid-template-rows,opacity,transform,border-color] duration-600 ease-[cubic-bezier(0.22,1,0.36,1)] transform-gpu will-change-transform ${
@@ -242,15 +247,15 @@ export function SiteHeader({ light = true }: SiteHeaderProps) {
           </div>
         </div>
       ) : null}
-      <div className="px-2 pt-0 md:px-4">
+      <div className={`${fullBleed && !isScrolled ? "px-0" : "px-2 md:px-4"} pt-0`}>
         <div
-          className={`mx-auto mt-0 grid max-w-[1480px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3.5 py-3.5 transition-[max-width,margin-top,border-radius,background-color,border-color,box-shadow,backdrop-filter,transform] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] transform-gpu will-change-transform md:grid-cols-[auto_1fr_auto] md:gap-4 md:px-10 md:py-4 xl:gap-6 xl:px-12 2xl:max-w-[1860px] 2xl:px-16 ${
+          className={`${fullBleed && !isScrolled ? "w-full max-w-none" : "mx-auto max-w-[1480px] 2xl:max-w-[1860px]"} mt-0 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3.5 py-3.5 transition-[max-width,margin-top,border-radius,background-color,border-color,box-shadow,backdrop-filter,transform] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] transform-gpu will-change-transform md:grid-cols-[auto_1fr_auto] md:gap-4 md:px-10 md:py-4 xl:gap-6 xl:px-12 2xl:px-16 ${
             isScrolled
               ? light
                 ? "md:mt-3 max-w-[1420px] translate-y-0 rounded-[22px] md:rounded-[28px] border border-[#1b1b1b]/24 bg-[#e1ddd6] shadow-[0_10px_28px_rgba(0,0,0,0.14),0_0_0_1px_rgba(17,17,17,0.06)] md:backdrop-blur-md 2xl:max-w-[1760px]"
                 : "max-w-[1420px] rounded-[28px] border border-white/14 bg-black/55 shadow-[0_12px_34px_rgba(0,0,0,0.24)] md:backdrop-blur-md 2xl:max-w-[1760px]"
               : light
-                ? "max-w-[1480px] rounded-none border-b border-[#ece8e1] bg-[#e1ddd6] shadow-[0_0_0_rgba(0,0,0,0)] 2xl:max-w-[1860px]"
+                ? "rounded-none border-b border-[#ece8e1] bg-[#e1ddd6] shadow-[0_0_0_rgba(0,0,0,0)]"
                 : "border-b border-white/10 bg-transparent"
           }`}
         >

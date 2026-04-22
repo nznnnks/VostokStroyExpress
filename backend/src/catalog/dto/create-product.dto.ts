@@ -11,6 +11,8 @@ import {
   Min,
 } from 'class-validator';
 import { ProductStatus } from '@prisma/client';
+import { ValidateNested } from 'class-validator';
+import { ProductFilterValueDto } from './product-filter-value.dto';
 
 export class CreateProductDto {
   @IsUUID()
@@ -123,4 +125,10 @@ export class CreateProductDto {
   @IsOptional()
   @IsEnum(ProductStatus)
   status?: ProductStatus;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ProductFilterValueDto)
+  filterValues?: ProductFilterValueDto[];
 }

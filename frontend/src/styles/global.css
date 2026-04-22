@@ -925,8 +925,6 @@ body {
   right: calc(100% - var(--range-end));
   background: #111111;
   transition:
-    left 180ms ease,
-    right 180ms ease,
     background 180ms ease;
 }
 

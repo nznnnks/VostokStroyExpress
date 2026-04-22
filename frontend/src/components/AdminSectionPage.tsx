@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent } from "react";
+﻿import { useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent } from "react";
 
 import { adminNav } from "../data/admin";
 import { ApiError } from "../lib/api-client";
@@ -6,6 +6,8 @@ import { clearStoredAuthSession, getStoredAuthSession } from "../lib/auth";
 import {
   createAdminNews,
   createAdminProduct,
+  createAdminFilterGroup,
+  createAdminFilterParameter,
   createAdminCategory,
   createAdminClientProfile,
   createAdminOrder,
@@ -18,6 +20,8 @@ import {
   deleteAdminNews,
   deleteAdminOrder,
   deleteAdminProduct,
+  deleteAdminFilterGroup,
+  deleteAdminFilterParameter,
   deleteAdminDiscount,
   deleteAdminUser,
   deleteAdminPayment,
@@ -25,6 +29,7 @@ import {
   loadAdminCategoryById,
   loadAdminSectionData,
   loadAdminCategories,
+  loadAdminFilterGroups,
   loadAdminServices,
   loadAdminDiscounts,
   loadAdminUsers,
@@ -34,6 +39,7 @@ import {
   loadAdminProductById,
   type AdminCategoryView,
   type AdminCatalogView,
+  type AdminFilterGroupView,
   type AdminClientView,
   type AdminNewsView,
   type AdminOrderView,
@@ -41,6 +47,8 @@ import {
   updateAdminOrder,
   updateAdminOrderStatus,
   updateAdminProduct,
+  updateAdminFilterGroup,
+  updateAdminFilterParameter,
   updateAdminClientProfile,
   updateAdminCategory,
   updateAdminDiscount,
@@ -56,6 +64,8 @@ type AdminSectionPageProps = {
   title: string;
   subtitle?: string;
 };
+
+const CATALOG_PAGE_SIZE = 12;
 
 function AdminTable({
   columns,
@@ -230,6 +240,44 @@ const emptyOrderItemDraft = {
   quantity: "1",
 };
 
+const emptyFilterGroupForm = {
+  id: "",
+  name: "",
+  slug: "",
+  sortOrder: "0",
+};
+
+const emptyFilterParameterForm = {
+  id: "",
+  groupId: "",
+  name: "",
+  slug: "",
+  type: "NUMBER",
+  unit: "",
+  sortOrder: "0",
+  isActive: true,
+};
+
+type CatalogFilterFormItem = {
+  parameterId: string;
+  parameterName: string;
+  parameterType: "TEXT" | "NUMBER";
+  groupName: string;
+  unit: string;
+  value: string;
+};
+
+function toCatalogFilterFormItem(group: AdminFilterGroupView, parameter: AdminFilterGroupView["parameters"][number], value = ""): CatalogFilterFormItem {
+  return {
+    parameterId: parameter.id,
+    parameterName: parameter.name,
+    parameterType: parameter.type,
+    groupName: group.name,
+    unit: parameter.unit ?? "",
+    value,
+  };
+}
+
 function SeoFields({
   value,
   onChange,
@@ -275,6 +323,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
   const [news, setNews] = useState<AdminNewsView[]>([]);
   const [catalog, setCatalog] = useState<AdminCatalogView[]>([]);
   const [categories, setCategories] = useState<AdminCategoryView[]>([]);
+  const [filterGroups, setFilterGroups] = useState<AdminFilterGroupView[]>([]);
   const [services, setServices] = useState<Array<{ id: string; name: string; slug: string }>>([]);
   const [discounts, setDiscounts] = useState<Array<{ id: string; name: string; value: string }>>([]);
   const [adminUsers, setAdminUsers] = useState<Array<{ id: string; name: string; email: string }>>([]);
@@ -287,6 +336,8 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
   const [actionLoading, setActionLoading] = useState(false);
   const [query, setQuery] = useState("");
   const [secondaryFilter, setSecondaryFilter] = useState("all");
+  const [catalogCategoryFilterId, setCatalogCategoryFilterId] = useState("");
+  const [catalogPage, setCatalogPage] = useState(1);
   const [clientsSort, setClientsSort] = useState<"default" | "spent_desc">("spent_desc");
   const [newsForm, setNewsForm] = useState({
     id: "",
@@ -321,6 +372,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
     filtration: "",
     power: "",
     volume: "",
+    filterValues: [] as CatalogFilterFormItem[],
     images: "",
     stock: "",
     status: "DRAFT",
@@ -340,6 +392,9 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
   });
   const [clientForm, setClientForm] = useState(emptyClientForm);
   const [orderForm, setOrderForm] = useState(emptyOrderForm);
+  const [filterGroupForm, setFilterGroupForm] = useState(emptyFilterGroupForm);
+  const [filterParameterForm, setFilterParameterForm] = useState(emptyFilterParameterForm);
+  const [catalogFilterParameterId, setCatalogFilterParameterId] = useState("");
   const [discountForm, setDiscountForm] = useState({
     id: "",
     name: "",
@@ -389,6 +444,31 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
   const [newsDragOverIndex, setNewsDragOverIndex] = useState<number | null>(null);
   const newsImageList = useMemo(() => parseCatalogImages(newsForm.images), [newsForm.images]);
   const catalogImageList = useMemo(() => parseCatalogImages(catalogForm.images), [catalogForm.images]);
+  const availableFilterParameters = useMemo(
+    () =>
+      filterGroups.flatMap((group) =>
+        (group.parameters ?? [])
+          .filter((parameter) => parameter.isActive !== false)
+          .map((parameter) => ({ group, parameter })),
+      ),
+    [filterGroups],
+  );
+
+  useEffect(() => {
+    if (availableFilterParameters.some((item) => item.parameter.id === catalogFilterParameterId)) {
+      return;
+    }
+
+    setCatalogFilterParameterId(availableFilterParameters[0]?.parameter.id ?? "");
+  }, [availableFilterParameters, catalogFilterParameterId]);
+
+  useEffect(() => {
+    if (filterGroups.some((group) => group.id === filterParameterForm.groupId)) {
+      return;
+    }
+
+    setFilterParameterForm((prev) => ({ ...prev, groupId: filterGroups[0]?.id ?? "" }));
+  }, [filterGroups, filterParameterForm.groupId]);
 
   function handleAdminLogout() {
     clearStoredAuthSession();
@@ -435,6 +515,40 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
     setCatalogImageUrlDraft("");
     setCatalogDraggedIndex(null);
     setCatalogDragOverIndex(null);
+  }
+
+  function handleAddCatalogFilterValue() {
+    const selected = availableFilterParameters.find((item) => item.parameter.id === catalogFilterParameterId);
+
+    if (!selected) {
+      return;
+    }
+
+    setCatalogForm((prev) => {
+      if (prev.filterValues.some((item) => item.parameterId === selected.parameter.id)) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        filterValues: [...prev.filterValues, toCatalogFilterFormItem(selected.group, selected.parameter)],
+      };
+    });
+    setCatalogFilterParameterId("");
+  }
+
+  function handleRemoveCatalogFilterValue(parameterId: string) {
+    setCatalogForm((prev) => ({
+      ...prev,
+      filterValues: prev.filterValues.filter((item) => item.parameterId !== parameterId),
+    }));
+  }
+
+  function handleCatalogFilterValueChange(parameterId: string, nextValue: string) {
+    setCatalogForm((prev) => ({
+      ...prev,
+      filterValues: prev.filterValues.map((item) => (item.parameterId === parameterId ? { ...item, value: nextValue } : item)),
+    }));
   }
 
   async function appendNewsImageFiles(fileList: FileList | File[]) {
@@ -661,9 +775,11 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
     setCatalog(data.catalog);
 
     if (activeKey === "catalog") {
-      const nextCategories = await loadAdminCategories();
+      const [nextCategories, nextFilterGroups] = await Promise.all([loadAdminCategories(), loadAdminFilterGroups()]);
       setCategories(nextCategories);
+      setFilterGroups(nextFilterGroups);
       setCatalogForm((prev) => ({ ...prev, categoryId: prev.categoryId || nextCategories[0]?.id || "" }));
+      setCatalogFilterParameterId((prev) => prev || nextFilterGroups[0]?.parameters?.[0]?.id || "");
     }
 
     if (activeKey === "orders") {
@@ -696,9 +812,10 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
     }
 
     if (activeKey === "settings") {
-      const [nextDiscounts, nextAdmins] = await Promise.all([
+      const [nextDiscounts, nextAdmins, nextFilterGroups] = await Promise.all([
         loadAdminDiscounts(),
         loadAdminUsers(),
+        loadAdminFilterGroups(),
       ]);
       setDiscounts(
         nextDiscounts
@@ -712,6 +829,11 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
           email: item.email,
         })),
       );
+      setFilterGroups(nextFilterGroups);
+      setFilterParameterForm((prev) => ({
+        ...prev,
+        groupId: prev.groupId || nextFilterGroups[0]?.id || "",
+      }));
     }
   }
 
@@ -824,6 +946,26 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
         filtration: catalogForm.filtration.trim() || undefined,
         power: Number.isNaN(powerValue ?? 0) ? undefined : powerValue,
         volume: Number.isNaN(volumeValue ?? 0) ? undefined : volumeValue,
+        filterValues: catalogForm.filterValues
+          .map((item) => {
+            const rawValue = item.value.trim();
+            const numericValue = item.parameterType === "NUMBER" ? Number(rawValue.replace(",", ".")) : undefined;
+
+            if (!rawValue) {
+              return null;
+            }
+
+            if (item.parameterType === "NUMBER" && Number.isNaN(numericValue ?? NaN)) {
+              return null;
+            }
+
+            return {
+              parameterId: item.parameterId,
+              value: rawValue,
+              numericValue: item.parameterType === "NUMBER" ? numericValue : undefined,
+            };
+          })
+          .filter((item): item is { parameterId: string; value: string; numericValue?: number } => Boolean(item)),
         images: imagesValue.length ? imagesValue : undefined,
         stock: Number.isNaN(stockValue ?? 0) ? undefined : stockValue,
         status: catalogForm.status as "ACTIVE" | "DRAFT" | "ARCHIVED",
@@ -859,6 +1001,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
         filtration: "",
         power: "",
         volume: "",
+        filterValues: [],
         images: "",
         stock: "",
         status: "DRAFT",
@@ -904,6 +1047,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
         filtration: "",
         power: "",
         volume: "",
+        filterValues: [],
         images: "",
         stock: "",
         status: "DRAFT",
@@ -937,6 +1081,8 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
         metaDescription: item.metaDescription ?? "",
         metaKeywords: item.metaKeywords ?? "",
       });
+      setCatalogCategoryFilterId(id);
+      setCatalogPage(1);
       resetNewsImageUiState();
     } catch (nextError) {
       setActionError(nextError instanceof Error ? nextError.message : "Не удалось загрузить новость.");
@@ -971,6 +1117,19 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
         filtration: item.filtration ?? "",
         power: item.power ? String(item.power) : "",
         volume: item.volume ? String(item.volume) : "",
+        filterValues: (item.filterValues ?? [])
+          .filter((filterItem) => filterItem.parameter?.group)
+          .map((filterItem) => ({
+            parameterId: filterItem.parameterId,
+            parameterName: filterItem.parameter?.name ?? "",
+            parameterType: filterItem.parameter?.type ?? "TEXT",
+            groupName: filterItem.parameter?.group?.name ?? "",
+            unit: filterItem.parameter?.unit ?? "",
+            value:
+              filterItem.parameter?.type === "NUMBER" && typeof filterItem.numericValue === "number"
+                ? String(filterItem.numericValue)
+                : filterItem.value ?? "",
+          })),
         images: stringifyCatalogImages(item.images ?? []),
         stock: item.stock !== undefined && item.stock !== null ? String(item.stock) : "",
         status: item.status ?? "DRAFT",
@@ -1072,6 +1231,118 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
       setCategoryForm({ id: "", name: "", slug: "", description: "", parentId: "", ...emptySeoFields });
     } catch (nextError) {
       setActionError(nextError instanceof Error ? nextError.message : "Не удалось удалить категорию.");
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleFilterGroupSubmit() {
+    const nameValue = filterGroupForm.name.trim();
+    const resolvedSlug = filterGroupForm.slug.trim() || slugify(nameValue);
+    const sortOrder = Number(filterGroupForm.sortOrder);
+
+    if (!nameValue || !resolvedSlug) {
+      setActionError("Заполните название и slug группы фильтрации.");
+      return;
+    }
+
+    setActionLoading(true);
+    setActionError(null);
+
+    try {
+      const payload = {
+        name: nameValue,
+        slug: resolvedSlug,
+        sortOrder: Number.isFinite(sortOrder) ? sortOrder : 0,
+      };
+
+      if (filterGroupForm.id) {
+        await updateAdminFilterGroup(filterGroupForm.id, payload);
+      } else {
+        await createAdminFilterGroup(payload);
+      }
+
+      await refreshAdminData();
+      setFilterGroupForm(emptyFilterGroupForm);
+    } catch (nextError) {
+      setActionError(nextError instanceof Error ? nextError.message : "Не удалось сохранить группу фильтрации.");
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleFilterGroupDelete() {
+    if (!filterGroupForm.id) {
+      return;
+    }
+
+    setActionLoading(true);
+    setActionError(null);
+
+    try {
+      await deleteAdminFilterGroup(filterGroupForm.id);
+      await refreshAdminData();
+      setFilterGroupForm(emptyFilterGroupForm);
+      setFilterParameterForm(emptyFilterParameterForm);
+    } catch (nextError) {
+      setActionError(nextError instanceof Error ? nextError.message : "Не удалось удалить группу фильтрации.");
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleFilterParameterSubmit() {
+    const nameValue = filterParameterForm.name.trim();
+    const resolvedSlug = filterParameterForm.slug.trim() || slugify(nameValue);
+    const sortOrder = Number(filterParameterForm.sortOrder);
+
+    if (!filterParameterForm.groupId || !nameValue || !resolvedSlug) {
+      setActionError("Выберите группу и заполните название параметра.");
+      return;
+    }
+
+    setActionLoading(true);
+    setActionError(null);
+
+    try {
+      const payload = {
+        name: nameValue,
+        slug: resolvedSlug,
+        type: filterParameterForm.type as "TEXT" | "NUMBER",
+        unit: filterParameterForm.unit.trim() || undefined,
+        sortOrder: Number.isFinite(sortOrder) ? sortOrder : 0,
+        isActive: filterParameterForm.isActive,
+      };
+
+      if (filterParameterForm.id) {
+        await updateAdminFilterParameter(filterParameterForm.groupId, filterParameterForm.id, payload);
+      } else {
+        await createAdminFilterParameter(filterParameterForm.groupId, payload);
+      }
+
+      await refreshAdminData();
+      setFilterParameterForm((prev) => ({ ...emptyFilterParameterForm, groupId: prev.groupId || filterParameterForm.groupId }));
+    } catch (nextError) {
+      setActionError(nextError instanceof Error ? nextError.message : "Не удалось сохранить параметр фильтрации.");
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleFilterParameterDelete() {
+    if (!filterParameterForm.id || !filterParameterForm.groupId) {
+      return;
+    }
+
+    setActionLoading(true);
+    setActionError(null);
+
+    try {
+      await deleteAdminFilterParameter(filterParameterForm.groupId, filterParameterForm.id);
+      await refreshAdminData();
+      setFilterParameterForm((prev) => ({ ...emptyFilterParameterForm, groupId: prev.groupId }));
+    } catch (nextError) {
+      setActionError(nextError instanceof Error ? nextError.message : "Не удалось удалить параметр фильтрации.");
     } finally {
       setActionLoading(false);
     }
@@ -1716,6 +1987,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
       try {
         const data = await loadAdminSectionData();
         const nextCategories = activeKey === "catalog" ? await loadAdminCategories() : [];
+        const nextFilterGroups = activeKey === "catalog" || activeKey === "settings" ? await loadAdminFilterGroups() : [];
         const nextServices = activeKey === "orders" ? await loadAdminServices() : [];
         const nextPayments = activeKey === "requests" ? await loadAdminPayments() : [];
         const nextDiscounts = activeKey === "settings" ? await loadAdminDiscounts() : [];
@@ -1731,6 +2003,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
         setNews(data.news);
         setCatalog(data.catalog);
         setCategories(nextCategories);
+        setFilterGroups(nextFilterGroups);
         setServices(nextServices.map((item) => ({ id: item.id, name: item.name, slug: item.slug })));
         setPayments(
           nextPayments.map((item) => ({
@@ -1765,6 +2038,8 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
           })),
         );
         setCatalogForm((prev) => ({ ...prev, categoryId: prev.categoryId || nextCategories[0]?.id || "" }));
+        setFilterParameterForm((prev) => ({ ...prev, groupId: prev.groupId || nextFilterGroups[0]?.id || "" }));
+        setCatalogFilterParameterId((prev) => prev || nextFilterGroups[0]?.parameters?.[0]?.id || "");
         setError(null);
       } catch (nextError) {
         if (!active) {
@@ -1784,6 +2059,12 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
     return () => {
       active = false;
     };
+  }, [activeKey]);
+
+  useEffect(() => {
+    setSecondaryFilter("all");
+    setCatalogCategoryFilterId("");
+    setCatalogPage(1);
   }, [activeKey]);
 
 
@@ -1822,9 +2103,35 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
       const haystack = `${item.title} ${item.brand}`.toLowerCase();
       const matchesQuery = !query || haystack.includes(query.toLowerCase());
       const matchesStock = secondaryFilter === "all" || item.stock === secondaryFilter;
-      return matchesQuery && matchesStock;
+      const matchesCategory = !catalogCategoryFilterId || item.categoryId === catalogCategoryFilterId;
+      return matchesQuery && matchesStock && matchesCategory;
     });
-  }, [catalog, query, secondaryFilter]);
+  }, [catalog, query, secondaryFilter, catalogCategoryFilterId]);
+
+  useEffect(() => {
+    if (activeKey !== "catalog") {
+      return;
+    }
+
+    setCatalogPage(1);
+  }, [activeKey, query, secondaryFilter, catalogCategoryFilterId]);
+
+  const catalogTotalPages = useMemo(() => {
+    return Math.max(1, Math.ceil(filteredCatalog.length / CATALOG_PAGE_SIZE));
+  }, [filteredCatalog.length]);
+
+  useEffect(() => {
+    if (activeKey !== "catalog") {
+      return;
+    }
+
+    setCatalogPage((prev) => Math.min(Math.max(prev, 1), catalogTotalPages));
+  }, [activeKey, catalogTotalPages]);
+
+  const pagedCatalog = useMemo(() => {
+    const startIndex = (catalogPage - 1) * CATALOG_PAGE_SIZE;
+    return filteredCatalog.slice(startIndex, startIndex + CATALOG_PAGE_SIZE);
+  }, [catalogPage, filteredCatalog]);
 
   const availableOrderEntities = useMemo(() => {
     return orderItemDraft.kind === "product"
@@ -1884,24 +2191,39 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
               {adminNav.map((item) => {
                 const active = item.key === activeKey;
                 return (
-                  <a
-                    key={item.key}
-                    href={item.href}
-                    className={`flex min-h-[56px] items-center gap-4 px-5 text-[16px] ${active ? "border-l-4 border-white bg-white/4" : "text-white/70"}`}
-                    onClick={() => setNavOpen(false)}
-                  >
-                    <img src={item.icon} alt="" aria-hidden="true" width="20" height="20" className="h-5 w-5 object-contain" />
-                    <span className={active ? "text-white" : ""}>{item.label}</span>
-                    {item.badge ? (
-                      <span className="ml-auto inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-white px-2 text-[14px] font-semibold text-[#111]">
-                        {item.badge}
-                      </span>
+                  <div key={item.key}>
+                    <a
+                      href={item.href}
+                      className={`flex min-h-[56px] items-center gap-4 px-5 text-[16px] ${active ? "border-l-4 border-white bg-white/4" : "text-white/70"}`}
+                      onClick={() => setNavOpen(false)}
+                    >
+                      <img src={item.icon} alt="" aria-hidden="true" width="20" height="20" className="h-5 w-5 object-contain" />
+                      <span className={active ? "text-white" : ""}>{item.label}</span>
+                      {item.badge ? (
+                        <span className="ml-auto inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-white px-2 text-[14px] font-semibold text-[#111]">
+                          {item.badge}
+                        </span>
+                      ) : null}
+                    </a>
+                    {item.key === "settings" ? (
+                      <div className="px-5 pt-2">
+                        <button
+                          type="button"
+                          className="flex w-full items-center justify-center rounded-md border border-white/20 px-4 py-3 text-[14px] uppercase tracking-[2px] text-white/90 [font-family:Jaldi,'JetBrains_Mono',monospace] hover:bg-white/5"
+                          onClick={() => {
+                            setNavOpen(false);
+                            handleAdminLogout();
+                          }}
+                        >
+                          Выйти
+                        </button>
+                      </div>
                     ) : null}
-                  </a>
+                  </div>
                 );
               })}
             </nav>
-            <div className="border-t border-white/10 p-5">
+            <div className="hidden">
               <button
                 type="button"
                 className="flex w-full items-center justify-center rounded-md border border-white/20 px-4 py-3 text-[14px] uppercase tracking-[2px] text-white/90 [font-family:Jaldi,'JetBrains_Mono',monospace] hover:bg-white/5"
@@ -1931,19 +2253,32 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
             {adminNav.map((item) => {
               const active = item.key === activeKey;
               return (
-                <a key={item.key} href={item.href} className={`flex min-h-[68px] items-center gap-5 px-6 text-[18px] ${active ? "border-l-4 border-white bg-white/4" : "text-white/70"}`}>
-                  <img src={item.icon} alt="" aria-hidden="true" width="22" height="22" loading="lazy" decoding="async" className="h-5 w-5 object-contain" />
-                  <span className={active ? "text-white" : ""}>{item.label}</span>
-                  {item.badge ? (
-                    <span className="ml-auto inline-flex h-8 min-w-8 items-center justify-center rounded-full bg-white px-2 text-[16px] font-semibold text-[#111]">
-                      {item.badge}
-                    </span>
+                <div key={item.key}>
+                  <a href={item.href} className={`flex min-h-[68px] items-center gap-5 px-6 text-[18px] ${active ? "border-l-4 border-white bg-white/4" : "text-white/70"}`}>
+                    <img src={item.icon} alt="" aria-hidden="true" width="22" height="22" loading="lazy" decoding="async" className="h-5 w-5 object-contain" />
+                    <span className={active ? "text-white" : ""}>{item.label}</span>
+                    {item.badge ? (
+                      <span className="ml-auto inline-flex h-8 min-w-8 items-center justify-center rounded-full bg-white px-2 text-[16px] font-semibold text-[#111]">
+                        {item.badge}
+                      </span>
+                    ) : null}
+                  </a>
+                  {item.key === "settings" ? (
+                    <div className="px-6 pt-3">
+                      <button
+                        type="button"
+                        className="flex w-full items-center justify-center rounded-md border border-white/20 px-4 py-3 text-[14px] uppercase tracking-[2px] text-white/90 [font-family:Jaldi,'JetBrains_Mono',monospace] hover:bg-white/5"
+                        onClick={handleAdminLogout}
+                      >
+                        Выйти
+                      </button>
+                    </div>
                   ) : null}
-                </a>
+                </div>
               );
             })}
           </nav>
-          <div className="border-t border-white/10 px-8 py-6">
+          <div className="hidden">
             <button
               type="button"
               className="flex w-full items-center justify-center rounded-md border border-white/20 px-4 py-3 text-[14px] uppercase tracking-[2px] text-white/90 [font-family:Jaldi,'JetBrains_Mono',monospace] hover:bg-white/5"
@@ -2007,12 +2342,32 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
                     </div>
                   ) : null}
                   {activeKey === "catalog" ? (
-                    <div className="flex gap-2">
-                      {["all", "В наличии", "Под заказ"].map((item) => (
-                        <button key={item} type="button" className={`admin-filter-pill ${secondaryFilter === item ? "admin-filter-pill--active" : ""}`} onClick={() => setSecondaryFilter(item)}>
-                          {item === "all" ? "Все" : item}
-                        </button>
-                      ))}
+                    <div className="flex flex-col gap-4 md:flex-row md:items-end">
+                      <label className="text-[14px] text-[#7a7a75]">
+                        Категория
+                        <select
+                          className="admin-input mt-2"
+                          value={catalogCategoryFilterId}
+                          onChange={(event) => {
+                            setCatalogCategoryFilterId(event.target.value);
+                            setCatalogPage(1);
+                          }}
+                        >
+                          <option value="">Все категории</option>
+                          {categories.map((item) => (
+                            <option key={item.id} value={item.id}>
+                              {item.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <div className="flex gap-2">
+                        {["all", "В наличии", "Под заказ"].map((item) => (
+                          <button key={item} type="button" className={`admin-filter-pill ${secondaryFilter === item ? "admin-filter-pill--active" : ""}`} onClick={() => setSecondaryFilter(item)}>
+                            {item === "all" ? "Все" : item}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   ) : null}
                 </div>
@@ -2242,6 +2597,29 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
                       ])}
                     />
                   </div>
+                  {filteredCatalog.length > 0 && catalogTotalPages > 1 ? (
+                    <div className="mt-6 flex flex-col items-center justify-between gap-3 border-t border-[#ece8e1] pt-5 sm:flex-row">
+                      <button
+                        type="button"
+                        className="admin-action-btn admin-action-btn--ghost"
+                        disabled={catalogPage <= 1}
+                        onClick={() => setCatalogPage((prev) => Math.max(1, prev - 1))}
+                      >
+                        Назад
+                      </button>
+                      <span className="text-[14px] text-[#7a7a75]">
+                        Страница {catalogPage} из {catalogTotalPages}
+                      </span>
+                      <button
+                        type="button"
+                        className="admin-action-btn admin-action-btn--ghost"
+                        disabled={catalogPage >= catalogTotalPages}
+                        onClick={() => setCatalogPage((prev) => Math.min(catalogTotalPages, prev + 1))}
+                      >
+                        Вперед
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
 
@@ -2943,6 +3321,61 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
                       </label>
                     </div>
                     <div className="mt-4">
+                      <div className="border border-[#ece8e1] bg-[#faf8f4] p-6">
+                        <div className="flex flex-wrap items-end gap-3">
+                          <label className="admin-toolbar__label min-w-[260px] flex-1">
+                            Параметр фильтрации
+                            <select
+                              className="admin-input mt-2"
+                              value={catalogFilterParameterId}
+                              onChange={(event) => setCatalogFilterParameterId(event.target.value)}
+                            >
+                              <option value="">Выберите параметр</option>
+                              {availableFilterParameters.map(({ group, parameter }) => (
+                                <option key={parameter.id} value={parameter.id}>
+                                  {group.name} / {parameter.name}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <button type="button" className="admin-action-btn" onClick={handleAddCatalogFilterValue} disabled={!catalogFilterParameterId}>
+                            Добавить параметр
+                          </button>
+                        </div>
+                        <div className="mt-4 grid gap-3">
+                          {catalogForm.filterValues.length === 0 ? (
+                            <p className="text-[14px] text-[#7a7a75]">Параметры фильтрации пока не выбраны.</p>
+                          ) : (
+                            catalogForm.filterValues.map((item) => (
+                              <div key={item.parameterId} className="grid gap-3 rounded-md border border-[#e8e3db] bg-white p-4 md:grid-cols-[1.2fr_minmax(220px,1fr)_auto]">
+                                <div>
+                                  <p className="text-[12px] uppercase tracking-[2px] text-[#9b958b]">{item.groupName}</p>
+                                  <p className="mt-1 text-[18px] text-[#1f1f1d]">{item.parameterName}</p>
+                                </div>
+                                <label className="admin-toolbar__label">
+                                  Значение{item.unit ? ` (${item.unit})` : ""}
+                                  <input
+                                    className="admin-input mt-2"
+                                    type={item.parameterType === "NUMBER" ? "number" : "text"}
+                                    inputMode={item.parameterType === "NUMBER" ? "decimal" : "text"}
+                                    step={item.parameterType === "NUMBER" ? "0.01" : undefined}
+                                    value={item.value}
+                                    onChange={(event) => handleCatalogFilterValueChange(item.parameterId, event.target.value)}
+                                    placeholder={item.parameterType === "NUMBER" ? "0" : "Введите значение"}
+                                  />
+                                </label>
+                                <div className="flex items-end">
+                                  <button type="button" className="admin-action-btn admin-action-btn--ghost" onClick={() => handleRemoveCatalogFilterValue(item.parameterId)}>
+                                    Удалить
+                                  </button>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-4">
                       <label className="admin-toolbar__label">
                         Короткое описание
                         <textarea
@@ -3114,6 +3547,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
                             filtration: "",
                             power: "",
                             volume: "",
+                            filterValues: [],
                             images: "",
                             stock: "",
                             status: "DRAFT",
@@ -3135,7 +3569,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
                   </div>
 
                   <div className="mt-8 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                    {filteredCatalog.map((item) => (
+                    {pagedCatalog.map((item) => (
                       <article key={item.id} className="border border-[#e8e3db] bg-white p-7">
                         <p className="text-[12px] uppercase tracking-[3px] text-[#b1ada6] [font-family:Jaldi,'JetBrains_Mono',monospace]">{item.brand}</p>
                         <h3 className="mt-3 text-[22px] [font-family:'Cormorant_Garamond',serif]">{item.title}</h3>
@@ -3579,6 +4013,159 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
                     </div>
                   </div>
 
+                  <div className="admin-form-card xl:col-span-2">
+                    <div className="grid gap-8 xl:grid-cols-2">
+                      <div>
+                        <h2 className="text-[24px] [font-family:'Cormorant_Garamond',serif]">Группы фильтрации</h2>
+                        <div className="mt-6 admin-form-grid">
+                          <label className="admin-toolbar__label">
+                            Название
+                            <input className="admin-input mt-2" value={filterGroupForm.name} onChange={(event) => setFilterGroupForm((prev) => ({ ...prev, name: event.target.value }))} placeholder="Основные параметры" />
+                          </label>
+                          <label className="admin-toolbar__label">
+                            Slug
+                            <input className="admin-input mt-2" value={filterGroupForm.slug} onChange={(event) => setFilterGroupForm((prev) => ({ ...prev, slug: event.target.value }))} placeholder="osnovnye-parametry" />
+                          </label>
+                          <label className="admin-toolbar__label">
+                            Порядок
+                            <input className="admin-input mt-2" value={filterGroupForm.sortOrder} onChange={(event) => setFilterGroupForm((prev) => ({ ...prev, sortOrder: event.target.value }))} placeholder="0" />
+                          </label>
+                        </div>
+                        {actionError ? <p className="mt-3 text-[14px] text-[#9b3d2f]">{actionError}</p> : null}
+                        <div className="admin-form-actions">
+                          <button className="admin-action-btn" type="button" onClick={handleFilterGroupSubmit} disabled={actionLoading}>
+                            {filterGroupForm.id ? "Сохранить" : "Создать"}
+                          </button>
+                          <button className="admin-action-btn admin-action-btn--ghost" type="button" onClick={() => setFilterGroupForm(emptyFilterGroupForm)} disabled={actionLoading}>
+                            Очистить
+                          </button>
+                          {filterGroupForm.id ? (
+                            <button className="admin-action-btn admin-action-btn--ghost" type="button" onClick={handleFilterGroupDelete} disabled={actionLoading}>
+                              Удалить
+                            </button>
+                          ) : null}
+                        </div>
+                        <div className="mt-6 flex flex-wrap gap-2">
+                          {filterGroups.map((group) => (
+                            <button
+                              key={group.id}
+                              type="button"
+                              className="admin-action-btn admin-action-btn--ghost"
+                              onClick={() => {
+                                setFilterGroupForm({
+                                  id: group.id,
+                                  name: group.name,
+                                  slug: group.slug,
+                                  sortOrder: String(group.sortOrder ?? 0),
+                                });
+                                setFilterParameterForm((prev) => ({ ...prev, groupId: group.id }));
+                              }}
+                            >
+                              {group.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <h2 className="text-[24px] [font-family:'Cormorant_Garamond',serif]">Параметры фильтрации</h2>
+                        <div className="mt-6 admin-form-grid admin-form-grid--catalog">
+                          <label className="admin-toolbar__label">
+                            Группа
+                            <select className="admin-input mt-2" value={filterParameterForm.groupId} onChange={(event) => setFilterParameterForm((prev) => ({ ...prev, groupId: event.target.value }))}>
+                              <option value="">Выберите группу</option>
+                              {filterGroups.map((group) => (
+                                <option key={group.id} value={group.id}>
+                                  {group.name}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <label className="admin-toolbar__label">
+                            Название
+                            <input className="admin-input mt-2" value={filterParameterForm.name} onChange={(event) => setFilterParameterForm((prev) => ({ ...prev, name: event.target.value }))} placeholder="Мощность" />
+                          </label>
+                          <label className="admin-toolbar__label">
+                            Slug
+                            <input className="admin-input mt-2" value={filterParameterForm.slug} onChange={(event) => setFilterParameterForm((prev) => ({ ...prev, slug: event.target.value }))} placeholder="power" />
+                          </label>
+                          <label className="admin-toolbar__label">
+                            Тип
+                            <select className="admin-input mt-2" value={filterParameterForm.type} onChange={(event) => setFilterParameterForm((prev) => ({ ...prev, type: event.target.value }))}>
+                              <option value="NUMBER">Число</option>
+                              <option value="TEXT">Текст</option>
+                            </select>
+                          </label>
+                          <label className="admin-toolbar__label">
+                            Единица
+                            <input className="admin-input mt-2" value={filterParameterForm.unit} onChange={(event) => setFilterParameterForm((prev) => ({ ...prev, unit: event.target.value }))} placeholder="кВт" />
+                          </label>
+                          <label className="admin-toolbar__label">
+                            Порядок
+                            <input className="admin-input mt-2" value={filterParameterForm.sortOrder} onChange={(event) => setFilterParameterForm((prev) => ({ ...prev, sortOrder: event.target.value }))} placeholder="0" />
+                          </label>
+                          <label className="admin-toolbar__label">
+                            Активен
+                            <select className="admin-input mt-2" value={filterParameterForm.isActive ? "1" : "0"} onChange={(event) => setFilterParameterForm((prev) => ({ ...prev, isActive: event.target.value === "1" }))}>
+                              <option value="1">Да</option>
+                              <option value="0">Нет</option>
+                            </select>
+                          </label>
+                        </div>
+                        {actionError ? <p className="mt-3 text-[14px] text-[#9b3d2f]">{actionError}</p> : null}
+                        <div className="admin-form-actions">
+                          <button className="admin-action-btn" type="button" onClick={handleFilterParameterSubmit} disabled={actionLoading}>
+                            {filterParameterForm.id ? "Сохранить" : "Создать"}
+                          </button>
+                          <button
+                            className="admin-action-btn admin-action-btn--ghost"
+                            type="button"
+                            onClick={() => setFilterParameterForm((prev) => ({ ...emptyFilterParameterForm, groupId: prev.groupId }))}
+                            disabled={actionLoading}
+                          >
+                            Очистить
+                          </button>
+                          {filterParameterForm.id ? (
+                            <button className="admin-action-btn admin-action-btn--ghost" type="button" onClick={handleFilterParameterDelete} disabled={actionLoading}>
+                              Удалить
+                            </button>
+                          ) : null}
+                        </div>
+                        <div className="mt-6 grid gap-3">
+                          {filterGroups.flatMap((group) =>
+                            (group.parameters ?? []).map((parameter) => (
+                              <button
+                                key={parameter.id}
+                                type="button"
+                                className="rounded-md border border-[#e8e3db] bg-[#faf8f4] px-4 py-3 text-left transition hover:border-[#d2c7b8]"
+                                onClick={() =>
+                                  setFilterParameterForm({
+                                    id: parameter.id,
+                                    groupId: group.id,
+                                    name: parameter.name,
+                                    slug: parameter.slug,
+                                    type: parameter.type,
+                                    unit: parameter.unit ?? "",
+                                    sortOrder: String(parameter.sortOrder ?? 0),
+                                    isActive: parameter.isActive !== false,
+                                  })
+                                }
+                              >
+                                <p className="text-[12px] uppercase tracking-[2px] text-[#9b958b]">{group.name}</p>
+                                <p className="mt-1 text-[18px] text-[#1f1f1d]">{parameter.name}</p>
+                                <p className="mt-1 text-[14px] text-[#7a7a75]">
+                                  {parameter.type === "NUMBER" ? "Число" : "Текст"}
+                                  {parameter.unit ? ` / ${parameter.unit}` : ""}
+                                </p>
+                              </button>
+                            )),
+                          )}
+                          {filterGroups.every((group) => (group.parameters ?? []).length === 0) ? <p className="text-[14px] text-[#7a7a75]">Параметры фильтрации пока не созданы.</p> : null}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                 </div>
               ) : null}
 
@@ -3597,3 +4184,4 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
 }
 
 export default AdminSectionPage;
+

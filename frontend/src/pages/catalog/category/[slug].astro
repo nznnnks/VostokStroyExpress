@@ -1,11 +1,22 @@
 ---
-import { CatalogCategoriesPage } from "../components/CatalogCategoriesPage";
-import { loadCatalogProducts } from "../lib/catalog-api";
-import "../styles/global.css";
+import { CatalogPage } from "../../../components/CatalogPage";
+import { loadCatalogProducts } from "../../../lib/catalog-api";
+import "../../../styles/global.css";
+import { slugify } from "../../../lib/slug";
 
 export const prerender = false;
 
 const products = await loadCatalogProducts();
+const slug = Astro.params.slug ?? "";
+const categories = Array.from(new Set(products.map((p) => p.category))).map((name) => ({
+  name,
+  slug: slugify(name),
+}));
+const categoryName = categories.find((item) => item.slug === slug)?.name ?? "";
+
+if (!categoryName) {
+  return Astro.redirect("/catalog");
+}
 ---
 
 <!doctype html>
@@ -13,7 +24,7 @@ const products = await loadCatalogProducts();
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Каталог</title>
+    <title>{categoryName}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -22,6 +33,7 @@ const products = await loadCatalogProducts();
     />
   </head>
   <body>
-    <CatalogCategoriesPage client:load products={products} />
+    <CatalogPage client:load products={products} initialCategory={categoryName} />
   </body>
 </html>
+

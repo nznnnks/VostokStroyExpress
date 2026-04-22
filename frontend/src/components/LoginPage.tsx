@@ -88,19 +88,9 @@ export function LoginPage() {
 
                   <button
                     disabled={loading}
-                    className="inline-flex h-[52px] w-full items-center justify-center gap-6 bg-[#111] px-10 text-[clamp(0.9rem,1.2vw,1.05rem)] uppercase tracking-[2.4px] text-white [font-family:Jaldi,'JetBrains_Mono',monospace]"
+                    className="inline-flex h-[52px] w-full items-center justify-center bg-[#111] px-10 text-center text-[clamp(0.9rem,1.2vw,1.05rem)] uppercase tracking-[2.4px] text-white [font-family:Jaldi,'JetBrains_Mono',monospace]"
                   >
-                    <span>{loading ? "вход..." : "войти"}</span>
-                    <img
-                      src="/login/arrow.svg"
-                      alt=""
-                      aria-hidden="true"
-                      width="18"
-                      height="18"
-                      loading="lazy"
-                      decoding="async"
-                      className="h-[18px] w-[18px] object-contain"
-                    />
+                    {loading ? "вход..." : "войти"}
                   </button>
                 </form>
 

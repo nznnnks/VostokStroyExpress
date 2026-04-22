@@ -1,3 +1,16 @@
+export type ProductFilter = {
+  parameterId: string;
+  parameterName: string;
+  parameterSlug: string;
+  parameterType: "TEXT" | "NUMBER";
+  groupId: string;
+  groupName: string;
+  groupSlug: string;
+  unit?: string;
+  value: string;
+  numericValue?: number | null;
+};
+
 export type Product = {
   slug: string;
   image: string;
@@ -18,6 +31,7 @@ export type Product = {
   coverage?: string;
   acoustics?: string;
   filtration?: string;
+  filters?: ProductFilter[];
   description?: string[];
   relatedSlugs?: string[];
   metaTitle?: string;

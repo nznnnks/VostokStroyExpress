@@ -1,4 +1,4 @@
-import { PrismaClient, NewsStatus, ProductStatus } from "@prisma/client";
+import { FilterParameterType, PrismaClient, NewsStatus, ProductStatus } from "@prisma/client";
 import { randomBytes, scrypt } from "node:crypto";
 import { promisify } from "node:util";
 
@@ -50,8 +50,12 @@ const serviceContentBySlug: Record<
   },
 };
 
-function buildCategorySlug(name: string, index: number) {
-  return `catalog-category-${index + 1}`;
+function buildCategorySlug(name: string) {
+  return name
+    .toLowerCase()
+    .replace(/ё/g, "е")
+    .replace(/[^a-zа-я0-9]+/gi, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 function buildCategoryImage(index: number) {
@@ -64,15 +68,17 @@ async function seedCategories(seedProducts: SeedProduct[]) {
 
   for (const [index, name] of categoryNames.entries()) {
     const category = await prisma.category.upsert({
-      where: { slug: buildCategorySlug(name, index) },
+      where: { slug: buildCategorySlug(name) },
       update: {
         name,
         imageUrl: buildCategoryImage(index),
+        sortOrder: index,
       },
       create: {
         name,
-        slug: buildCategorySlug(name, index),
+        slug: buildCategorySlug(name),
         imageUrl: buildCategoryImage(index),
+        sortOrder: index,
       },
       select: {
         id: true,
@@ -84,6 +90,30 @@ async function seedCategories(seedProducts: SeedProduct[]) {
   }
 
   return categories;
+}
+
+async function cleanupObsoleteCatalogData(seedProducts: SeedProduct[]) {
+  const categoryNames = Array.from(new Set(seedProducts.map((item) => item.category).filter(Boolean)));
+  const productSlugs = seedProducts.map((item) => item.slug);
+
+  await prisma.product.deleteMany({
+    where: {
+      slug: {
+        notIn: productSlugs,
+      },
+    },
+  });
+
+  await prisma.category.deleteMany({
+    where: {
+      name: {
+        notIn: categoryNames,
+      },
+      products: {
+        none: {},
+      },
+    },
+  });
 }
 
 async function seedProductsData(seedProducts: SeedProduct[], categories: Map<string, string>) {
@@ -214,6 +244,115 @@ async function seedNewsData(seedNews: readonly SeedNews[]) {
         publishedAt,
       },
     });
+  }
+}
+
+async function seedProductFilters() {
+  const group = await prisma.filterGroup.upsert({
+    where: { slug: "osnovnye-parametry" },
+    update: {
+      name: "Основные параметры",
+      sortOrder: 0,
+    },
+    create: {
+      name: "Основные параметры",
+      slug: "osnovnye-parametry",
+      sortOrder: 0,
+    },
+  });
+
+  const powerParameter = await prisma.filterParameter.upsert({
+    where: {
+      groupId_slug: {
+        groupId: group.id,
+        slug: "power",
+      },
+    },
+    update: {
+      name: "Мощность",
+      type: FilterParameterType.NUMBER,
+      unit: "кВт",
+      sortOrder: 0,
+      isActive: true,
+    },
+    create: {
+      groupId: group.id,
+      name: "Мощность",
+      slug: "power",
+      type: FilterParameterType.NUMBER,
+      unit: "кВт",
+      sortOrder: 0,
+      isActive: true,
+    },
+  });
+
+  const volumeParameter = await prisma.filterParameter.upsert({
+    where: {
+      groupId_slug: {
+        groupId: group.id,
+        slug: "volume",
+      },
+    },
+    update: {
+      name: "Объем",
+      type: FilterParameterType.NUMBER,
+      unit: "л",
+      sortOrder: 1,
+      isActive: true,
+    },
+    create: {
+      groupId: group.id,
+      name: "Объем",
+      slug: "volume",
+      type: FilterParameterType.NUMBER,
+      unit: "л",
+      sortOrder: 1,
+      isActive: true,
+    },
+  });
+
+  const products = await prisma.product.findMany({
+    select: {
+      id: true,
+      power: true,
+      volume: true,
+    },
+  });
+
+  for (const product of products) {
+    await prisma.productFilterValue.deleteMany({
+      where: { productId: product.id },
+    });
+
+    const values = [
+      product.power
+        ? {
+            productId: product.id,
+            parameterId: powerParameter.id,
+            value: product.power.toString(),
+            numericValue: product.power.toNumber(),
+          }
+        : null,
+      product.volume
+        ? {
+            productId: product.id,
+            parameterId: volumeParameter.id,
+            value: product.volume.toString(),
+            numericValue: product.volume.toNumber(),
+          }
+        : null,
+    ].filter(Boolean) as Array<{
+      productId: string;
+      parameterId: string;
+      value: string;
+      numericValue: number;
+    }>;
+
+    if (values.length > 0) {
+      await prisma.productFilterValue.createMany({
+        data: values,
+      });
+    }
   }
 }
 
@@ -410,6 +549,8 @@ async function main() {
   const categories = await seedCategories(seedProducts);
 
   await seedProductsData(seedProducts, categories);
+  await seedProductFilters();
+  await cleanupObsoleteCatalogData(seedProducts);
   await seedServicesData(seedServices);
   await seedNewsData(seedNews);
   const { createdClients, createdRequests } = await seedClientsAndRequests();

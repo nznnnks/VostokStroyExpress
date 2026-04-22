@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useRef } from "react";
+﻿import { useMemo, useState, useEffect, useRef } from "react";
 import type { CSSProperties } from "react";
 
 import { formatPrice, type Product } from "../data/products";
@@ -7,10 +7,26 @@ import SiteFooter from "./SiteFooter";
 
 type CatalogPageProps = {
   products: Product[];
+  initialCategory?: string;
 };
 
-export function CatalogPage({ products }: CatalogPageProps) {
+type CatalogDynamicFilter = {
+  id: string;
+  groupId: string;
+  groupName: string;
+  parameterName: string;
+  parameterType: "TEXT" | "NUMBER";
+  unit?: string;
+  values: string[];
+  numericValues: number[];
+  min: number;
+  max: number;
+  fallbackKey?: "power" | "volume";
+};
+
+export function CatalogPage({ products, initialCategory }: CatalogPageProps) {
   const resultsTopRef = useRef<HTMLDivElement>(null);
+  const isCategoryPage = Boolean(initialCategory && initialCategory !== "all");
   const categories = useMemo(() => {
     const counts = new Map<string, number>();
 
@@ -28,28 +44,138 @@ export function CatalogPage({ products }: CatalogPageProps) {
   const brands = useMemo(() => uniqueValues(products.map((product) => product.brand)), [products]);
   const countries = useMemo(() => uniqueValues(products.map((product) => product.country)), [products]);
   const types = useMemo(() => uniqueValues(products.map((product) => product.type)), [products]);
+  const dynamicFilters = useMemo(() => {
+    const filtersMap = new Map<
+      string,
+      Omit<CatalogDynamicFilter, "min" | "max" | "values"> & { values: Set<string> }
+    >();
+
+    for (const product of products) {
+      for (const filter of product.filters ?? []) {
+        const current = filtersMap.get(filter.parameterId) ?? {
+          id: filter.parameterId,
+          groupId: filter.groupId,
+          groupName: filter.groupName,
+          parameterName: filter.parameterName,
+          parameterType: filter.parameterType,
+          unit: filter.unit,
+          values: new Set<string>(),
+          numericValues: [],
+        };
+
+        current.values.add(filter.value);
+        if (filter.parameterType === "NUMBER" && typeof filter.numericValue === "number") {
+          current.numericValues.push(filter.numericValue);
+        }
+
+        filtersMap.set(filter.parameterId, current);
+      }
+    }
+
+    const hasPowerFilter = Array.from(filtersMap.values()).some((item) => item.id === "legacy-power" || item.parameterName.toLowerCase() === "мощность");
+    const hasVolumeFilter = Array.from(filtersMap.values()).some((item) => item.id === "legacy-volume" || item.parameterName.toLowerCase() === "объем");
+
+    if (!hasPowerFilter) {
+      const numericValues = products.map((product) => product.power).filter((value) => value > 0);
+      if (numericValues.length > 0) {
+        filtersMap.set("legacy-power", {
+          id: "legacy-power",
+          groupId: "legacy-main",
+          groupName: "Основные параметры",
+          parameterName: "Мощность",
+          parameterType: "NUMBER",
+          unit: "кВт",
+          values: new Set<string>(),
+          numericValues,
+          fallbackKey: "power",
+        });
+      }
+    }
+
+    if (!hasVolumeFilter) {
+      const numericValues = products.map((product) => product.volume).filter((value) => value > 0);
+      if (numericValues.length > 0) {
+        filtersMap.set("legacy-volume", {
+          id: "legacy-volume",
+          groupId: "legacy-main",
+          groupName: "Основные параметры",
+          parameterName: "Объем",
+          parameterType: "NUMBER",
+          unit: "л",
+          values: new Set<string>(),
+          numericValues,
+          fallbackKey: "volume",
+        });
+      }
+    }
+
+    return Array.from(filtersMap.values())
+      .map((item) => ({
+        ...item,
+        min: item.parameterType === "NUMBER" ? getSafeMin(item.numericValues, 0) : 0,
+        max: item.parameterType === "NUMBER" ? getSafeMax(item.numericValues, 0) : 0,
+        values: Array.from(item.values).sort((left, right) => left.localeCompare(right, "ru")),
+      }) satisfies CatalogDynamicFilter)
+      .sort((left, right) => left.groupName.localeCompare(right.groupName, "ru") || left.parameterName.localeCompare(right.parameterName, "ru"));
+  }, [products]);
+
+  const dynamicFilterGroups = useMemo(() => {
+    const grouped = new Map<string, { id: string; name: string; filters: CatalogDynamicFilter[] }>();
+
+    for (const filter of dynamicFilters) {
+      const current = grouped.get(filter.groupId) ?? { id: filter.groupId, name: filter.groupName, filters: [] };
+      current.filters.push(filter);
+      grouped.set(filter.groupId, current);
+    }
+
+    return Array.from(grouped.values());
+  }, [dynamicFilters]);
 
   const maxProductPrice = getSafeMax(products.map((product) => product.price), 100000);
-  const minPower = getSafeMin(products.map((product) => product.power), 0);
-  const maxPower = getSafeMax(products.map((product) => product.power), 20);
-  const minVolume = getSafeMin(products.map((product) => product.volume), 0);
-  const maxVolume = getSafeMax(products.map((product) => product.volume), 20);
   const itemsPerPage = 6;
 
   const [query, setQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedCategory, setSelectedCategory] = useState(initialCategory ?? "all");
   const [priceRange, setPriceRange] = useState<[number, number]>([0, maxProductPrice]);
   const [priceRangeDraft, setPriceRangeDraft] = useState<[number, number]>([0, maxProductPrice]);
-  const [powerRange, setPowerRange] = useState<[number, number]>([minPower, maxPower]);
-  const [powerRangeDraft, setPowerRangeDraft] = useState<[number, number]>([minPower, maxPower]);
-  const [volumeRange, setVolumeRange] = useState<[number, number]>([minVolume, maxVolume]);
-  const [volumeRangeDraft, setVolumeRangeDraft] = useState<[number, number]>([minVolume, maxVolume]);
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [selectedTextFilters, setSelectedTextFilters] = useState<Record<string, string[]>>({});
+  const [selectedNumericFilters, setSelectedNumericFilters] = useState<Record<string, [number, number]>>({});
+  const [selectedNumericFilterDrafts, setSelectedNumericFilterDrafts] = useState<Record<string, [number, number]>>({});
   const [page, setPage] = useState(1);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+
+  useEffect(() => {
+    setSelectedNumericFilters((prev) => {
+      const next: Record<string, [number, number]> = {};
+      for (const filter of dynamicFilters) {
+        if (filter.parameterType !== "NUMBER") continue;
+        const current = prev[filter.id];
+        next[filter.id] = current ? [Math.max(filter.min, current[0]), Math.min(filter.max, current[1])] : [filter.min, filter.max];
+      }
+      return next;
+    });
+    setSelectedNumericFilterDrafts((prev) => {
+      const next: Record<string, [number, number]> = {};
+      for (const filter of dynamicFilters) {
+        if (filter.parameterType !== "NUMBER") continue;
+        const current = prev[filter.id];
+        next[filter.id] = current ? [Math.max(filter.min, current[0]), Math.min(filter.max, current[1])] : [filter.min, filter.max];
+      }
+      return next;
+    });
+    setSelectedTextFilters((prev) => {
+      const next: Record<string, string[]> = {};
+      for (const filter of dynamicFilters) {
+        if (filter.parameterType !== "TEXT") continue;
+        next[filter.id] = prev[filter.id]?.filter((value) => filter.values.includes(value)) ?? [];
+      }
+      return next;
+    });
+  }, [dynamicFilters]);
 
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
@@ -61,24 +187,48 @@ export function CatalogPage({ products }: CatalogPageProps) {
         product.article.toLowerCase().includes(normalizedQuery);
       const matchesCategory = selectedCategory === "all" || product.category === selectedCategory;
       const matchesPrice = product.price >= priceRange[0] && product.price <= priceRange[1];
-      const matchesPower = product.power >= powerRange[0] && product.power <= powerRange[1];
-      const matchesVolume = product.volume >= volumeRange[0] && product.volume <= volumeRange[1];
       const matchesBrand = selectedBrands.length === 0 || selectedBrands.includes(product.brand);
       const matchesCountry = selectedCountries.length === 0 || selectedCountries.includes(product.country);
       const matchesType = selectedTypes.length === 0 || selectedTypes.includes(product.type);
+      const matchesDynamicFilters = dynamicFilters.every((filter) => {
+        if (filter.parameterType === "NUMBER") {
+          const selectedRange = selectedNumericFilters[filter.id] ?? [filter.min, filter.max];
+          const isActive = selectedRange[0] !== filter.min || selectedRange[1] !== filter.max;
+
+          if (!isActive) {
+            return true;
+          }
+
+          const numericValue =
+            filter.fallbackKey === "power"
+              ? product.power
+              : filter.fallbackKey === "volume"
+                ? product.volume
+                : product.filters?.find((item) => item.parameterId === filter.id)?.numericValue ?? null;
+
+          return typeof numericValue === "number" && numericValue >= selectedRange[0] && numericValue <= selectedRange[1];
+        }
+
+        const selectedValues = selectedTextFilters[filter.id] ?? [];
+        if (selectedValues.length === 0) {
+          return true;
+        }
+
+        const filterValue = product.filters?.find((item) => item.parameterId === filter.id)?.value;
+        return Boolean(filterValue && selectedValues.includes(filterValue));
+      });
 
       return (
         matchesQuery &&
         matchesCategory &&
         matchesPrice &&
-        matchesPower &&
-        matchesVolume &&
         matchesBrand &&
         matchesCountry &&
-        matchesType
+        matchesType &&
+        matchesDynamicFilters
       );
     });
-  }, [products, query, selectedCategory, priceRange, powerRange, volumeRange, selectedBrands, selectedCountries, selectedTypes]);
+  }, [products, query, selectedCategory, priceRange, selectedBrands, selectedCountries, selectedTypes, dynamicFilters, selectedNumericFilters, selectedTextFilters]);
 
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / itemsPerPage));
   const safePage = Math.min(page, totalPages);
@@ -88,11 +238,11 @@ export function CatalogPage({ products }: CatalogPageProps) {
     query,
     selectedCategory,
     priceRange.join("-"),
-    powerRange.join("-"),
-    volumeRange.join("-"),
     selectedBrands.join("-"),
     selectedCountries.join("-"),
     selectedTypes.join("-"),
+    JSON.stringify(selectedNumericFilters),
+    JSON.stringify(selectedTextFilters),
     safePage,
   ].join("|");
 
@@ -100,6 +250,12 @@ export function CatalogPage({ products }: CatalogPageProps) {
     if (!resultsTopRef.current) return;
     resultsTopRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [safePage]);
+
+  useEffect(() => {
+    if (!initialCategory) return;
+    setSelectedCategory(initialCategory);
+    setPage(1);
+  }, [initialCategory]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -137,32 +293,38 @@ export function CatalogPage({ products }: CatalogPageProps) {
     const mood = visiblePercent >= 80 ? "happy" : visiblePercent >= 40 ? "neutral" : "sad";
     return (
       <div className="space-y-8">
-        <section>
-          <h2 className="text-[20px] uppercase tracking-[1.6px] 2xl:text-[22px] [font-family:Jaldi,'JetBrains_Mono',monospace]">Категории</h2>
-          <div className="mt-3 border-t border-[#e7e1d9] pt-5">
-            <div className="space-y-5 text-[18px] text-[#6f6f69] 2xl:text-[20px]">
-              {categories.map((category) => {
-                const active = selectedCategory === category.value;
-                return (
-                  <button
-                    key={category.value}
-                    type="button"
-                    onClick={() => {
-                      setSelectedCategory(category.value);
-                      setPage(1);
-                    }}
-                    className={`catalog-filter-row flex w-full items-center justify-between border-l-2 pl-4 text-left transition-all duration-300 ${
-                      active ? "border-[#d3b46a] text-[#111]" : "border-transparent text-[#8a8a85] hover:border-[#e4cf98] hover:text-[#3d3d39]"
-                    }`}
-                  >
-                    <span>{category.label}</span>
-                    <span className="text-[14px]">({category.count})</span>
-                  </button>
-                );
-              })}
+        {!isCategoryPage && (
+          <section>
+            <h2 className="text-[20px] uppercase tracking-[1.6px] 2xl:text-[22px] [font-family:Jaldi,'JetBrains_Mono',monospace]">
+              Категории
+            </h2>
+            <div className="mt-3 border-t border-[#e7e1d9] pt-5">
+              <div className="space-y-5 text-[18px] text-[#6f6f69] 2xl:text-[20px]">
+                {categories.map((category) => {
+                  const active = selectedCategory === category.value;
+                  return (
+                    <button
+                      key={category.value}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCategory(category.value);
+                        setPage(1);
+                      }}
+                      className={`catalog-filter-row flex w-full items-center justify-between border-l-2 pl-4 text-left transition-all duration-300 ${
+                        active
+                          ? "border-[#d3b46a] text-[#111]"
+                          : "border-transparent text-[#8a8a85] hover:border-[#e4cf98] hover:text-[#3d3d39]"
+                      }`}
+                    >
+                      <span>{category.label}</span>
+                      <span className="text-[14px]">({category.count})</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         <section>
           <div className="flex items-center justify-between gap-4 text-[16px] uppercase tracking-[1.4px] 2xl:text-[18px] [font-family:Jaldi,'JetBrains_Mono',monospace]">
@@ -221,7 +383,11 @@ export function CatalogPage({ products }: CatalogPageProps) {
           </div>
         </section>
 
-        {[["Бренд", brands], ["Страна производства", countries], ["Тип", types]].map(([title, items]) => (
+        {[
+          ["Бренд", brands],
+          ["Страна производства", countries],
+          ...(!isCategoryPage ? ([["Тип", types]] as const) : ([] as const)),
+        ].map(([title, items]) => (
           <section key={title}>
             <h2 className="text-[20px] uppercase tracking-[1.6px] 2xl:text-[22px] [font-family:Jaldi,'JetBrains_Mono',monospace]">{title}</h2>
             <div className="mt-3 space-y-5 border-t border-[#e7e1d9] pt-5">
@@ -245,38 +411,72 @@ export function CatalogPage({ products }: CatalogPageProps) {
             </div>
           </section>
         ))}
+        {dynamicFilterGroups.map((group) => {
+          const visibleFilters = group.filters;
 
-        <RangeFilter
-          title="Мощность (кВт)"
-          min={minPower}
-          max={maxPower}
-          step={0.1}
-          value={powerRangeDraft}
-          ariaLabelMin="Минимальная мощность"
-          ariaLabelMax="Максимальная мощность"
-          onChange={setPowerRangeDraft}
-          onCommit={(value) => {
-            if (powerRange[0] === value[0] && powerRange[1] === value[1]) return;
-            setPowerRange(value);
-            setPage(1);
-          }}
-        />
+          if (visibleFilters.length === 0) {
+            return null;
+          }
 
-        <RangeFilter
-          title="Объем"
-          min={minVolume}
-          max={maxVolume}
-          step={0.1}
-          value={volumeRangeDraft}
-          ariaLabelMin="Минимальный объем"
-          ariaLabelMax="Максимальный объем"
-          onChange={setVolumeRangeDraft}
-          onCommit={(value) => {
-            if (volumeRange[0] === value[0] && volumeRange[1] === value[1]) return;
-            setVolumeRange(value);
-            setPage(1);
-          }}
-        />
+          return (
+            <section key={group.id} className="space-y-6">
+            <h2 className="text-[20px] uppercase tracking-[1.6px] 2xl:text-[22px] [font-family:Jaldi,'JetBrains_Mono',monospace]">{group.name}</h2>
+            {visibleFilters.map((filter) =>
+                filter.parameterType === "NUMBER" ? (
+                  <RangeFilter
+                    key={filter.id}
+                    title={`${filter.parameterName}${filter.unit ? ` (${filter.unit})` : ""}`}
+                    min={filter.min}
+                    max={filter.max}
+                    step={0.1}
+                    value={selectedNumericFilterDrafts[filter.id] ?? [filter.min, filter.max]}
+                    ariaLabelMin={`Минимум ${filter.parameterName.toLowerCase()}`}
+                    ariaLabelMax={`Максимум ${filter.parameterName.toLowerCase()}`}
+                    onChange={(value) => setSelectedNumericFilterDrafts((prev) => ({ ...prev, [filter.id]: value }))}
+                    onCommit={(value) => {
+                      const current = selectedNumericFilters[filter.id] ?? [filter.min, filter.max];
+                      if (current[0] === value[0] && current[1] === value[1]) return;
+                      setSelectedNumericFilters((prev) => ({ ...prev, [filter.id]: value }));
+                      setPage(1);
+                    }}
+                  />
+                ) : (
+                  <section key={filter.id}>
+                    <h3 className="text-[18px] uppercase tracking-[1.4px] 2xl:text-[20px] [font-family:Jaldi,'JetBrains_Mono',monospace]">{filter.parameterName}</h3>
+                    <div className="mt-3 space-y-5 border-t border-[#e7e1d9] pt-5">
+                      {filter.values.map((item, index) => {
+                        const id = `${idPrefix}-${filter.id}-${index}`;
+                        const selected = selectedTextFilters[filter.id] ?? [];
+
+                        return (
+                          <label key={item} htmlFor={id} className="flex items-center gap-4 text-[18px] text-[#6f6f69] 2xl:text-[20px]">
+                            <input
+                              id={id}
+                              type="checkbox"
+                              checked={selected.includes(item)}
+                              onChange={() => {
+                                setSelectedTextFilters((prev) => {
+                                  const current = prev[filter.id] ?? [];
+                                  return {
+                                    ...prev,
+                                    [filter.id]: current.includes(item) ? current.filter((value) => value !== item) : [...current, item],
+                                  };
+                                });
+                                setPage(1);
+                              }}
+                              className="catalog-checkbox h-6 w-6 border border-[#e1dbd2] transition-all duration-200"
+                            />
+                            <span>{item}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </section>
+                ),
+              )}
+          </section>
+          );
+        })}
       </div>
     );
   }
@@ -427,13 +627,13 @@ export function CatalogPage({ products }: CatalogPageProps) {
               ) : (
                 <div
                   key={resultsAnimationKey}
-                  className="catalog-results mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 2xl:gap-8"
+                  className="catalog-results mt-10 grid gap-8 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3 2xl:gap-10"
                 >
                   {pageProducts.map((product, index) => (
                     <article
                       key={product.slug}
                       style={{ animationDelay: `${index * 60}ms` }}
-                      className="catalog-card group flex h-full flex-col border border-[#ebe5de] bg-white p-7 transition-all duration-300 hover:-translate-y-1 hover:border-[#d8ccb8] hover:shadow-[0_16px_40px_rgba(17,17,17,0.06)] 2xl:p-9"
+                      className="catalog-card group flex h-full flex-col border border-[#ebe5de] bg-white p-9 transition-all duration-300 hover:-translate-y-1 hover:border-[#d8ccb8] hover:shadow-[0_16px_40px_rgba(17,17,17,0.06)] 2xl:p-11"
                     >
                       <a href={`/catalog/${product.slug}`}>
                         <img
@@ -448,8 +648,10 @@ export function CatalogPage({ products }: CatalogPageProps) {
                       </a>
                       <div className="mt-8 flex flex-1 flex-col">
                         <p className="text-[14px] uppercase tracking-[2.4px] text-[#7a7a75] 2xl:text-[15px] [font-family:Jaldi,'JetBrains_Mono',monospace]">{product.brandLabel}</p>
-                        <h3 className="mt-4 min-h-[88px] text-[32px] leading-[1.15] 2xl:min-h-[96px] 2xl:text-[36px] [font-family:DM_Sans,Manrope,sans-serif]">
-                          <a href={`/catalog/${product.slug}`}>{product.title}</a>
+                        <h3 className="mt-4 min-h-[120px] break-words hyphens-auto text-[26px] leading-[1.15] 2xl:min-h-[140px] 2xl:text-[30px] [font-family:DM_Sans,Manrope,sans-serif]">
+                          <a href={`/catalog/${product.slug}`} className="block break-words hyphens-auto">
+                            {product.title}
+                          </a>
                         </h3>
                         <div className="mt-5 min-h-[56px] space-y-1 text-[17px] leading-7 text-[#7a7a75] 2xl:min-h-[60px] 2xl:text-[18px] [font-family:Jaldi,'JetBrains_Mono',monospace]">
                           <p>{product.rating}</p>
@@ -690,3 +892,4 @@ function getSafeMax(values: number[], fallback: number) {
 }
 
 export default CatalogPage;
+

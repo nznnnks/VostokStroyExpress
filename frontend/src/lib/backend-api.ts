@@ -1,4 +1,4 @@
-import { formatPrice, type Product } from "../data/products";
+import { formatPrice, type Product, type ProductFilter } from "../data/products";
 import { ApiError, apiRequest } from "./api-client";
 import { getStoredAccessToken } from "./auth";
 
@@ -15,6 +15,38 @@ type ApiCategory = {
 };
 
 export type AdminCategoryView = ApiCategory;
+
+type ApiFilterGroup = {
+  id: string;
+  name: string;
+  slug: string;
+  sortOrder?: number;
+  parameters?: ApiFilterParameter[];
+};
+
+type ApiFilterParameter = {
+  id: string;
+  groupId: string;
+  name: string;
+  slug: string;
+  type: "TEXT" | "NUMBER";
+  unit?: string | null;
+  sortOrder?: number;
+  isActive?: boolean;
+  group?: ApiFilterGroup | null;
+};
+
+type ApiProductFilterValue = {
+  id: string;
+  parameterId: string;
+  value: string;
+  numericValue?: number | null;
+  parameter?: ApiFilterParameter | null;
+};
+
+export type AdminFilterGroupView = ApiFilterGroup & {
+  parameters: ApiFilterParameter[];
+};
 
 type ApiDiscount = {
   id: string;
@@ -63,6 +95,7 @@ type ApiProduct = {
   metaKeywords?: string | null;
   category?: ApiCategory | null;
   discount?: ApiDiscount;
+  filterValues?: ApiProductFilterValue[];
 };
 
 type ApiNews = {
@@ -436,6 +469,7 @@ export type AdminCatalogView = {
   brand: string;
   price: string;
   stock: string;
+  categoryId: string;
 };
 
 function splitDescription(description?: string | null) {
@@ -531,10 +565,36 @@ function mapNewsStatus(status: ApiNews["status"]) {
   }
 }
 
+function mapProductFilters(product: ApiProduct): ProductFilter[] {
+  return (product.filterValues ?? [])
+    .map((item) => {
+      if (!item.parameter?.group) {
+        return null;
+      }
+
+      return {
+        parameterId: item.parameterId,
+        parameterName: item.parameter.name,
+        parameterSlug: item.parameter.slug,
+        parameterType: item.parameter.type,
+        groupId: item.parameter.group.id,
+        groupName: item.parameter.group.name,
+        groupSlug: item.parameter.group.slug,
+        unit: item.parameter.unit ?? undefined,
+        value: item.value,
+        numericValue: typeof item.numericValue === "number" ? item.numericValue : null,
+      } satisfies ProductFilter;
+    })
+    .filter((item): item is ProductFilter => Boolean(item));
+}
+
 function mapApiProduct(product: ApiProduct): Product {
   const brand = product.brand ?? "Climate";
-  const power = typeof product.power === "number" ? product.power : 0;
-  const volume = typeof product.volume === "number" ? product.volume : 0;
+  const filters = mapProductFilters(product);
+  const powerFilter = filters.find((item) => item.parameterSlug === "power" && item.parameterType === "NUMBER");
+  const volumeFilter = filters.find((item) => item.parameterSlug === "volume" && item.parameterType === "NUMBER");
+  const power = typeof product.power === "number" ? product.power : powerFilter?.numericValue ?? 0;
+  const volume = typeof product.volume === "number" ? product.volume : volumeFilter?.numericValue ?? 0;
   const actualPrice = typeof product.finalPrice === "number" ? product.finalPrice : product.price;
 
   return {
@@ -557,6 +617,7 @@ function mapApiProduct(product: ApiProduct): Product {
     coverage: product.coverage ?? undefined,
     acoustics: product.acoustics ?? undefined,
     filtration: product.filtration ?? undefined,
+    filters,
     description: splitDescription(product.description),
     metaTitle: product.metaTitle ?? undefined,
     metaDescription: product.metaDescription ?? undefined,
@@ -1047,6 +1108,7 @@ export async function loadAdminSectionData() {
     catalog: catalog.map((item) => ({
       id: item.id,
       title: item.name,
+      categoryId: item.category?.id ?? item.categoryId,
       brand: item.brandLabel ?? item.brand ?? "—",
       price: formatPrice(typeof item.finalPrice === "number" ? item.finalPrice : item.price),
       stock: typeof item.stock === "number" && item.stock > 0 ? "В наличии" : "Под заказ",
@@ -1799,6 +1861,23 @@ export async function loadAdminNewsById(id: string) {
   });
 }
 
+export async function loadAdminFilterGroups() {
+  const authToken = getStoredAccessToken("admin");
+
+  if (!authToken) {
+    throw new ApiError("РўСЂРµР±СѓРµС‚СЃСЏ Р°РІС‚РѕСЂРёР·Р°С†РёСЏ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР°.", 401);
+  }
+
+  const groups = await apiRequest<ApiFilterGroup[]>("/api/filter-groups", {
+    authToken,
+  });
+
+  return groups.map((group) => ({
+    ...group,
+    parameters: group.parameters ?? [],
+  })) satisfies AdminFilterGroupView[];
+}
+
 export async function uploadAdminNewsImage(file: File) {
   const authToken = getStoredAccessToken("admin");
 
@@ -1833,6 +1912,123 @@ export async function uploadAdminProductImage(file: File) {
   });
 }
 
+export async function createAdminFilterGroup(payload: {
+  name: string;
+  slug: string;
+  sortOrder?: number;
+}) {
+  const authToken = getStoredAccessToken("admin");
+
+  if (!authToken) {
+    throw new ApiError("РўСЂРµР±СѓРµС‚СЃСЏ Р°РІС‚РѕСЂРёР·Р°С†РёСЏ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР°.", 401);
+  }
+
+  return apiRequest<ApiFilterGroup>("/api/filter-groups", {
+    method: "POST",
+    authToken,
+    body: payload,
+  });
+}
+
+export async function updateAdminFilterGroup(
+  id: string,
+  payload: {
+    name?: string;
+    slug?: string;
+    sortOrder?: number;
+  },
+) {
+  const authToken = getStoredAccessToken("admin");
+
+  if (!authToken) {
+    throw new ApiError("РўСЂРµР±СѓРµС‚СЃСЏ Р°РІС‚РѕСЂРёР·Р°С†РёСЏ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР°.", 401);
+  }
+
+  return apiRequest<ApiFilterGroup>(`/api/filter-groups/${id}`.replace(/\/+/g, "/"), {
+    method: "PATCH",
+    authToken,
+    body: payload,
+  });
+}
+
+export async function deleteAdminFilterGroup(id: string) {
+  const authToken = getStoredAccessToken("admin");
+
+  if (!authToken) {
+    throw new ApiError("РўСЂРµР±СѓРµС‚СЃСЏ Р°РІС‚РѕСЂРёР·Р°С†РёСЏ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР°.", 401);
+  }
+
+  await apiRequest(`/api/filter-groups/${id}`.replace(/\/+/g, "/"), {
+    method: "DELETE",
+    authToken,
+  });
+}
+
+export async function createAdminFilterParameter(
+  groupId: string,
+  payload: {
+    name: string;
+    slug: string;
+    type?: "TEXT" | "NUMBER";
+    unit?: string;
+    sortOrder?: number;
+    isActive?: boolean;
+  },
+) {
+  const authToken = getStoredAccessToken("admin");
+
+  if (!authToken) {
+    throw new ApiError("РўСЂРµР±СѓРµС‚СЃСЏ Р°РІС‚РѕСЂРёР·Р°С†РёСЏ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР°.", 401);
+  }
+
+  return apiRequest<ApiFilterParameter>(`/api/filter-groups/${groupId}/parameters`.replace(/\/+/g, "/"), {
+    method: "POST",
+    authToken,
+    body: payload,
+  });
+}
+
+export async function updateAdminFilterParameter(
+  groupId: string,
+  parameterId: string,
+  payload: {
+    name?: string;
+    slug?: string;
+    type?: "TEXT" | "NUMBER";
+    unit?: string;
+    sortOrder?: number;
+    isActive?: boolean;
+  },
+) {
+  const authToken = getStoredAccessToken("admin");
+
+  if (!authToken) {
+    throw new ApiError("РўСЂРµР±СѓРµС‚СЃСЏ Р°РІС‚РѕСЂРёР·Р°С†РёСЏ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР°.", 401);
+  }
+
+  return apiRequest<ApiFilterParameter>(
+    `/api/filter-groups/${groupId}/parameters/${parameterId}`.replace(/\/+/g, "/"),
+    {
+      method: "PATCH",
+      authToken,
+      body: payload,
+    },
+  );
+}
+
+export async function deleteAdminFilterParameter(groupId: string, parameterId: string) {
+  const authToken = getStoredAccessToken("admin");
+
+  if (!authToken) {
+    throw new ApiError("РўСЂРµР±СѓРµС‚СЃСЏ Р°РІС‚РѕСЂРёР·Р°С†РёСЏ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР°.", 401);
+  }
+
+  await apiRequest(`/api/filter-groups/${groupId}/parameters/${parameterId}`.replace(/\/+/g, "/"), {
+    method: "DELETE",
+    authToken,
+  });
+}
+
 export async function createAdminProduct(payload: {
   categoryId: string;
   slug: string;
@@ -1853,6 +2049,11 @@ export async function createAdminProduct(payload: {
   filtration?: string;
   power?: number;
   volume?: number;
+  filterValues?: Array<{
+    parameterId: string;
+    value?: string;
+    numericValue?: number;
+  }>;
   images?: string[];
   stock?: number;
   status?: "ACTIVE" | "DRAFT" | "ARCHIVED";
@@ -1895,6 +2096,11 @@ export async function updateAdminProduct(
     filtration?: string;
     power?: number;
     volume?: number;
+    filterValues?: Array<{
+      parameterId: string;
+      value?: string;
+      numericValue?: number;
+    }>;
     images?: string[];
     stock?: number;
     status?: "ACTIVE" | "DRAFT" | "ARCHIVED";

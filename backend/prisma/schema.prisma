@@ -78,6 +78,11 @@ enum NewsStatus {
   ARCHIVED
 }
 
+enum FilterParameterType {
+  TEXT
+  NUMBER
+}
+
 model User {
   id            String         @id @default(uuid()) @db.Uuid
   email         String         @unique
@@ -166,9 +171,53 @@ model Product {
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
   category         Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  filterValues     ProductFilterValue[]
   discounts        Discount[]
   cartItems        CartItem[]
   orderItems       OrderItem[]
+}
+
+model FilterGroup {
+  id         String            @id @default(uuid()) @db.Uuid
+  name       String
+  slug       String            @unique
+  sortOrder  Int               @default(0)
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  parameters FilterParameter[]
+}
+
+model FilterParameter {
+  id           String              @id @default(uuid()) @db.Uuid
+  groupId      String              @db.Uuid
+  name         String
+  slug         String
+  type         FilterParameterType @default(TEXT)
+  unit         String?
+  sortOrder    Int                 @default(0)
+  isActive     Boolean             @default(true)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  group        FilterGroup         @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  productValues ProductFilterValue[]
+
+  @@unique([groupId, slug])
+  @@index([groupId, sortOrder])
+}
+
+model ProductFilterValue {
+  id          String          @id @default(uuid()) @db.Uuid
+  productId   String          @db.Uuid
+  parameterId String          @db.Uuid
+  value       String
+  numericValue Decimal?       @db.Decimal(12, 2)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  product     Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  parameter   FilterParameter @relation(fields: [parameterId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, parameterId])
+  @@index([parameterId])
 }
 
 model Service {

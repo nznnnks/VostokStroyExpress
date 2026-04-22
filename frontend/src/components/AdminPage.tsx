@@ -178,7 +178,7 @@ export function AdminPage({ activeKey = "dashboard" }: AdminPageProps) {
       {navOpen ? (
         <div className="fixed inset-0 z-50 xl:hidden">
           <button type="button" aria-label="Закрыть меню" className="absolute inset-0 bg-black/40" onClick={() => setNavOpen(false)} />
-          <aside className="absolute left-0 top-0 h-full w-[85vw] max-w-[340px] bg-[#211d1a] text-white">
+           <aside className="absolute left-0 top-0 flex h-full w-[85vw] max-w-[340px] flex-col bg-[#211d1a] text-white">
             <div className="border-b border-white/10 px-6 py-8">
               <div className="flex items-center justify-between">
                 <p className="max-w-full text-[20px] italic uppercase leading-none tracking-[-0.04em] text-white [font-family:'Cormorant_Garamond',serif]">
@@ -192,28 +192,36 @@ export function AdminPage({ activeKey = "dashboard" }: AdminPageProps) {
                 панель администратора
               </p>
             </div>
-            <nav className="pt-4">
+             <nav className="flex-1 overflow-auto pt-4">
               {adminNav.map((item) => {
                 const active = item.key === activeKey;
                 return (
-                  <a
-                    key={item.key}
-                    href={item.href}
-                    className={`flex min-h-[56px] items-center gap-4 px-5 text-[16px] ${active ? "border-l-4 border-white bg-white/4" : "text-white/70"}`}
-                    onClick={() => setNavOpen(false)}
-                  >
-                    <img src={item.icon} alt="" aria-hidden="true" width="20" height="20" className="h-5 w-5 object-contain" />
-                    <span className={active ? "text-white" : ""}>{item.label}</span>
-                    {item.badge ? (
-                      <span className="ml-auto inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-white px-2 text-[14px] font-semibold text-[#111]">
-                        {item.badge}
-                      </span>
+                  <div key={item.key}>
+                    <a
+                      href={item.href}
+                      className={`flex min-h-[56px] items-center gap-4 px-5 text-[16px] ${active ? "border-l-4 border-white bg-white/4" : "text-white/70"}`}
+                      onClick={() => setNavOpen(false)}
+                    >
+                      <img src={item.icon} alt="" aria-hidden="true" width="20" height="20" className="h-5 w-5 object-contain" />
+                      <span className={active ? "text-white" : ""}>{item.label}</span>
+                      {item.badge ? (
+                        <span className="ml-auto inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-white px-2 text-[14px] font-semibold text-[#111]">
+                          {item.badge}
+                        </span>
+                      ) : null}
+                    </a>
+                    {item.key === "settings" ? (
+                      <div className="px-5 pt-2">
+                        <LogoutLink className="flex w-full items-center justify-center rounded-md border border-white/20 px-4 py-3 text-[14px] uppercase tracking-[2px] text-white/90 [font-family:Jaldi,'JetBrains_Mono',monospace] hover:bg-white/5">
+                          Выйти
+                        </LogoutLink>
+                      </div>
                     ) : null}
-                  </a>
+                  </div>
                 );
               })}
             </nav>
-            <div className="mt-auto border-t border-white/10 p-5">
+            <div className="hidden">
               <LogoutLink className="flex w-full items-center justify-center rounded-md border border-white/20 px-4 py-3 text-[14px] uppercase tracking-[2px] text-white/90 [font-family:Jaldi,'JetBrains_Mono',monospace] hover:bg-white/5">
                 Выйти
               </LogoutLink>
@@ -232,39 +240,47 @@ export function AdminPage({ activeKey = "dashboard" }: AdminPageProps) {
             </p>
           </div>
 
-          <nav className="pt-6">
+          <nav className="flex-1 overflow-auto pt-6">
             {adminNav.map((item) => {
               const active = item.key === activeKey;
               return (
-                <a
-                  key={item.key}
-                  href={item.href}
-                  className={`flex min-h-[68px] items-center gap-5 px-6 text-[18px] ${
-                    active ? "border-l-4 border-white bg-white/4" : "text-white/70"
-                  }`}
-                >
-                  <img
-                    src={item.icon}
-                    alt=""
-                    aria-hidden="true"
-                    width="22"
-                    height="22"
-                    loading="lazy"
-                    decoding="async"
-                    className="h-5 w-5 object-contain"
-                  />
-                  <span className={active ? "text-white" : ""}>{item.label}</span>
-                  {item.badge ? (
-                    <span className="ml-auto inline-flex h-8 min-w-8 items-center justify-center rounded-full bg-white px-2 text-[16px] font-semibold text-[#111]">
-                      {item.badge}
-                    </span>
+                <div key={item.key}>
+                  <a
+                    href={item.href}
+                    className={`flex min-h-[68px] items-center gap-5 px-6 text-[18px] ${
+                      active ? "border-l-4 border-white bg-white/4" : "text-white/70"
+                    }`}
+                  >
+                    <img
+                      src={item.icon}
+                      alt=""
+                      aria-hidden="true"
+                      width="22"
+                      height="22"
+                      loading="lazy"
+                      decoding="async"
+                      className="h-5 w-5 object-contain"
+                    />
+                    <span className={active ? "text-white" : ""}>{item.label}</span>
+                    {item.badge ? (
+                      <span className="ml-auto inline-flex h-8 min-w-8 items-center justify-center rounded-full bg-white px-2 text-[16px] font-semibold text-[#111]">
+                        {item.badge}
+                      </span>
+                    ) : null}
+                  </a>
+                  {item.key === "settings" ? (
+                    <div className="px-6 pt-3">
+                      <LogoutLink className="flex w-full items-center justify-center rounded-md border border-white/20 px-4 py-3 text-[14px] uppercase tracking-[2px] text-white/90 [font-family:Jaldi,'JetBrains_Mono',monospace] hover:bg-white/5">
+                        Выйти
+                      </LogoutLink>
+                    </div>
                   ) : null}
-                </a>
+                </div>
               );
             })}
           </nav>
 
-          <div className="mt-auto border-t border-white/10 px-8 py-6">
+          <div className="hidden">
             <LogoutLink className="flex w-full items-center justify-center rounded-md border border-white/20 px-4 py-3 text-[14px] uppercase tracking-[2px] text-white/90 [font-family:Jaldi,'JetBrains_Mono',monospace] hover:bg-white/5">
               Выйти
             </LogoutLink>
