@@ -30,6 +30,13 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
   const resultsTopRef = useRef<HTMLDivElement>(null);
   const isLanding = variant === "landing";
   const isCategoryPage = Boolean(initialCategory && initialCategory !== "all");
+  const formatFilterCountLabel = (count: number) => {
+    const mod10 = count % 10;
+    const mod100 = count % 100;
+    if (mod10 === 1 && mod100 !== 11) return `${count} фильтр`;
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${count} фильтра`;
+    return `${count} фильтров`;
+  };
   const productOrderMap = useMemo(() => new Map(products.map((product, index) => [product.slug, index])), [products]);
   const categoryTypeTree = useMemo(() => {
     const grouped = new Map<string, { category: string; count: number; types: Map<string, number> }>();
@@ -411,7 +418,7 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
 
   const activeFiltersCount = useMemo(() => {
     let count = 0;
-    if (selectedCategory !== "all") count += 1;
+    if (!isCategoryPage && selectedCategory !== "all") count += 1;
     if (selectedBrands.length > 0) count += selectedBrands.length;
     if (selectedCountries.length > 0) count += selectedCountries.length;
     if (selectedTypes.length > 0) count += selectedTypes.length;
@@ -427,7 +434,7 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
     }
 
     return count;
-  }, [dynamicFilters, maxProductPrice, priceRange, selectedBrands, selectedCategory, selectedCountries, selectedNumericFilters, selectedTextFilters, selectedTypes]);
+  }, [dynamicFilters, isCategoryPage, maxProductPrice, priceRange, selectedBrands, selectedCategory, selectedCountries, selectedNumericFilters, selectedTextFilters, selectedTypes]);
 
   useEffect(() => {
     if (!resultsTopRef.current) return;
@@ -507,8 +514,6 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
     setPriceRange([0, globalMaxProductPrice]);
     setPriceRangeDraft([0, globalMaxProductPrice]);
     setPage(1);
-    setFiltersOpen(false);
-    setAllFiltersOpen(false);
     setSortMode("popular");
     setExpandedCategory(null);
   }
@@ -640,8 +645,11 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
                         </button>
                       </div>
 
-                      {isExpanded ? (
-                        <div className="ml-10 mt-3 space-y-3">
+                      <div
+                        className={`catalog-category-accordion ml-10 ${isExpanded ? "catalog-category-accordion--open" : ""}`}
+                        aria-hidden={!isExpanded}
+                      >
+                        <div className="catalog-category-accordion__inner mt-3 space-y-3">
                           {item.types.map(({ type, count }) => (
                             <label key={type} className="flex items-center gap-4 text-[16px] text-[#6f6f69]">
                               <input
@@ -659,7 +667,7 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
                             </label>
                           ))}
                         </div>
-                      ) : null}
+                      </div>
                     </div>
                   );
                 })}
@@ -1119,6 +1127,15 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
                 >
                   Показать товары
                 </button>
+                {hasActiveFilters ? (
+                  <button
+                    type="button"
+                    onClick={resetAllFilters}
+                    className="mt-3 h-12 w-full border border-[#e7e1d9] bg-white text-[13px] uppercase tracking-[1.4px] text-[#111] transition-colors hover:border-[#d3b46a] md:h-14 md:text-[15px] md:tracking-[1.8px] [font-family:Jaldi,'JetBrains_Mono',monospace]"
+                  >
+                    Сбросить фильтры
+                  </button>
+                ) : null}
               </aside>
             </div>
 
@@ -1198,9 +1215,32 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
                         <button
                           type="button"
                           onClick={() => setFiltersOpen(true)}
-                          className="flex h-12 items-center justify-center rounded-[20px] border border-[#e7e1d9] bg-white px-3 text-[11px] uppercase tracking-[1px] text-[#111] transition-colors hover:border-[#d3b46a] [font-family:Jaldi,'JetBrains_Mono',monospace]"
+                          className="flex h-12 min-w-0 items-center justify-center gap-2 rounded-[20px] border border-[#e7e1d9] bg-white px-3 text-[11px] uppercase tracking-[1px] text-[#111] transition-colors hover:border-[#d3b46a] [font-family:Jaldi,'JetBrains_Mono',monospace]"
                         >
-                          {activeFiltersCount > 0 ? `${activeFiltersCount} фильтра` : "фильтры"}
+                          <span className="truncate">{activeFiltersCount > 0 ? formatFilterCountLabel(activeFiltersCount) : "фильтры"}</span>
+                          {activeFiltersCount > 0 ? (
+                            <span
+                              role="button"
+                              tabIndex={0}
+                              onClick={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                resetAllFilters();
+                              }}
+                              onKeyDown={(event) => {
+                                if (event.key !== "Enter" && event.key !== " ") return;
+                                event.preventDefault();
+                                event.stopPropagation();
+                                resetAllFilters();
+                              }}
+                              className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[#d9d3ca] text-[#7a7a75] transition-colors hover:border-[#d3b46a] hover:text-[#111]"
+                              aria-label="Сбросить фильтры"
+                            >
+                              <svg viewBox="0 0 16 16" width="10" height="10" aria-hidden="true">
+                                <path d="M4 4l8 8m0-8l-8 8" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                              </svg>
+                            </span>
+                          ) : null}
                         </button>
                       </div>
 
