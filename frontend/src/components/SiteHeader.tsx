@@ -13,6 +13,10 @@ const PAGE_TRANSITION_STORAGE_KEY = "site-transition-pending";
 const PAGE_TRANSITION_HOLD_MS = 880;
 const PAGE_TRANSITION_TEXT = "открываем раздел climatrade";
 
+function isCatalogPath(pathname: string) {
+  return pathname === "/catalog" || pathname.startsWith("/catalog/");
+}
+
 function PageTransitionOverlay({ visible }: { visible: boolean }) {
   return (
     <div
@@ -51,7 +55,6 @@ export function SiteHeader({ light = true, fullBleed = false }: SiteHeaderProps)
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   const searchRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const maxHeaderHeightRef = useRef(0);
   const scrollLockUntilRef = useRef(0);
   const transitionTimeoutRef = useRef<number | null>(null);
 
@@ -162,8 +165,6 @@ export function SiteHeader({ light = true, fullBleed = false }: SiteHeaderProps)
     const setCssVar = (height: number) => {
       const next = Math.ceil(height);
       if (next <= 0) return;
-      if (next <= maxHeaderHeightRef.current) return;
-      maxHeaderHeightRef.current = next;
       document.documentElement.style.setProperty("--site-header-offset", `${next}px`);
     };
 
@@ -249,6 +250,12 @@ export function SiteHeader({ light = true, fullBleed = false }: SiteHeaderProps)
         url.search === window.location.search &&
         !url.hash
       ) {
+        return;
+      }
+
+      const currentIsCatalog = isCatalogPath(window.location.pathname);
+      const nextIsCatalog = isCatalogPath(url.pathname);
+      if (currentIsCatalog && nextIsCatalog) {
         return;
       }
 

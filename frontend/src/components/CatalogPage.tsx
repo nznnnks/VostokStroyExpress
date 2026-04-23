@@ -30,6 +30,47 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
   const resultsTopRef = useRef<HTMLDivElement>(null);
   const isLanding = variant === "landing";
   const isCategoryPage = Boolean(initialCategory && initialCategory !== "all");
+  const productOrderMap = useMemo(() => new Map(products.map((product, index) => [product.slug, index])), [products]);
+  const categoryTypeTree = useMemo(() => {
+    const grouped = new Map<string, { category: string; count: number; types: Map<string, number> }>();
+
+    for (const product of products) {
+      const current = grouped.get(product.category) ?? {
+        category: product.category,
+        count: 0,
+        types: new Map<string, number>(),
+      };
+
+      current.count += 1;
+      current.types.set(product.type, (current.types.get(product.type) ?? 0) + 1);
+      grouped.set(product.category, current);
+    }
+
+    return Array.from(grouped.values())
+      .map((item) => ({
+        category: item.category,
+        count: item.count,
+        types: Array.from(item.types.entries())
+          .map(([type, count]) => ({ type, count }))
+          .sort((left, right) => right.count - left.count || left.type.localeCompare(right.type, "ru")),
+      }))
+      .sort((left, right) => right.count - left.count || left.category.localeCompare(right.category, "ru"));
+  }, [products]);
+  const currentCategoryTypes = useMemo(() => {
+    if (!isCategoryPage || !initialCategory) return [];
+
+    return products
+      .filter((product) => product.category === initialCategory)
+      .reduce<Map<string, number>>((acc, product) => {
+        acc.set(product.type, (acc.get(product.type) ?? 0) + 1);
+        return acc;
+      }, new Map<string, number>());
+  }, [initialCategory, isCategoryPage, products]);
+  const currentCategoryTypeOptions = useMemo(() => {
+    return Array.from(currentCategoryTypes.entries())
+      .map(([type, count]) => ({ type, count }))
+      .sort((left, right) => right.count - left.count || left.type.localeCompare(right.type, "ru"));
+  }, [currentCategoryTypes]);
 
   const categoryCards = useMemo(() => {
     const map = new Map<string, { count: number; image: string }>();
@@ -163,13 +204,34 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [allFiltersOpen, setAllFiltersOpen] = useState(false);
+  const [sortMode, setSortMode] = useState<"popular" | "new" | "price-asc" | "price-desc">("popular");
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
   useEffect(() => {
     if (!allFiltersOpen && !filtersOpen) return;
-    const previousOverflow = document.body.style.overflow;
+    const scrollY = window.scrollY;
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousBodyPosition = document.body.style.position;
+    const previousBodyTop = document.body.style.top;
+    const previousBodyWidth = document.body.style.width;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    const previousOverscroll = document.documentElement.style.overscrollBehavior;
+
+    document.documentElement.style.overflow = "hidden";
+    document.documentElement.style.overscrollBehavior = "none";
     document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = "100%";
+
     return () => {
-      document.body.style.overflow = previousOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.documentElement.style.overscrollBehavior = previousOverscroll;
+      document.body.style.overflow = previousBodyOverflow;
+      document.body.style.position = previousBodyPosition;
+      document.body.style.top = previousBodyTop;
+      document.body.style.width = previousBodyWidth;
+      window.scrollTo(0, scrollY);
     };
   }, [allFiltersOpen, filtersOpen]);
 
@@ -285,8 +347,17 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
   }, [maxProductPrice]);
 
   const filteredProducts = useMemo(() => {
-    return productsBeforePriceFilter.filter((product) => product.price >= priceRange[0] && product.price <= priceRange[1]);
-  }, [productsBeforePriceFilter, priceRange]);
+    const next = productsBeforePriceFilter.filter((product) => product.price >= priceRange[0] && product.price <= priceRange[1]);
+
+    next.sort((left, right) => {
+      if (sortMode === "price-asc") return left.price - right.price;
+      if (sortMode === "price-desc") return right.price - left.price;
+      if (sortMode === "new") return (productOrderMap.get(right.slug) ?? 0) - (productOrderMap.get(left.slug) ?? 0);
+      return (productOrderMap.get(left.slug) ?? 0) - (productOrderMap.get(right.slug) ?? 0);
+    });
+
+    return next;
+  }, [priceRange, productOrderMap, productsBeforePriceFilter, sortMode]);
 
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / itemsPerPage));
   const safePage = Math.min(page, totalPages);
@@ -308,6 +379,7 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
 
   const hasActiveFilters = useMemo(() => {
     if (query.trim().length > 0) return true;
+    if (selectedCategory !== "all") return true;
     if (selectedBrands.length > 0) return true;
     if (selectedCountries.length > 0) return true;
     if (selectedTypes.length > 0) return true;
@@ -326,6 +398,7 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
     return false;
   }, [
     query,
+    selectedCategory,
     selectedBrands,
     selectedCountries,
     selectedTypes,
@@ -336,11 +409,36 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
     selectedTextFilters,
   ]);
 
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (selectedCategory !== "all") count += 1;
+    if (selectedBrands.length > 0) count += selectedBrands.length;
+    if (selectedCountries.length > 0) count += selectedCountries.length;
+    if (selectedTypes.length > 0) count += selectedTypes.length;
+    if (priceRange[0] !== 0 || priceRange[1] !== maxProductPrice) count += 1;
+
+    for (const filter of dynamicFilters) {
+      if (filter.parameterType === "NUMBER") {
+        const selectedRange = selectedNumericFilters[filter.id] ?? [filter.min, filter.max];
+        if (selectedRange[0] !== filter.min || selectedRange[1] !== filter.max) count += 1;
+      } else {
+        count += (selectedTextFilters[filter.id] ?? []).length;
+      }
+    }
+
+    return count;
+  }, [dynamicFilters, maxProductPrice, priceRange, selectedBrands, selectedCategory, selectedCountries, selectedNumericFilters, selectedTextFilters, selectedTypes]);
+
   useEffect(() => {
     if (!resultsTopRef.current) return;
     if (isLanding) return;
     resultsTopRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [safePage]);
+
+  useEffect(() => {
+    if (!resultsTopRef.current) return;
+    resultsTopRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [query]);
 
   useEffect(() => {
     if (!initialCategory) return;
@@ -352,6 +450,15 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const brandFromQuery = params.get("brand")?.trim();
+    const typesFromQuery = params.getAll("type").map((value) => value.trim()).filter(Boolean);
+
+    if (typesFromQuery.length > 0) {
+      const matchedTypes = types.filter((type) => typesFromQuery.some((item) => item.toLowerCase() === type.toLowerCase()));
+      if (matchedTypes.length > 0) {
+        setSelectedTypes(matchedTypes);
+      }
+    }
+
     if (!brandFromQuery) return;
 
     const matchedBrand = brands.find((brand) => brand.toLowerCase() === brandFromQuery.toLowerCase());
@@ -365,6 +472,24 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
     setPage(1);
   }, [brands]);
 
+  function handleShowProducts() {
+    if (typeof window === "undefined") return;
+
+    if (isLanding && selectedCategory !== "all") {
+      const params = new URLSearchParams();
+      for (const type of selectedTypes) {
+        params.append("type", type);
+      }
+      const queryString = params.toString();
+      const href = `/catalog/category/${slugify(selectedCategory)}${queryString ? `?${queryString}` : ""}`;
+      window.location.href = href;
+      return;
+    }
+
+    setFiltersOpen(false);
+    setAllFiltersOpen(false);
+  }
+
   function toggleValue(value: string, selected: string[], setter: (values: string[]) => void) {
     setter(selected.includes(value) ? selected.filter((item) => item !== value) : [...selected, value]);
     setPage(1);
@@ -372,6 +497,7 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
 
   function resetAllFilters() {
     setQuery("");
+    setSelectedCategory(initialCategory ?? "all");
     setSelectedBrands([]);
     setSelectedCountries([]);
     setSelectedTypes([]);
@@ -383,6 +509,25 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
     setPage(1);
     setFiltersOpen(false);
     setAllFiltersOpen(false);
+    setSortMode("popular");
+    setExpandedCategory(null);
+  }
+
+  const quickSortOptions = [
+    { id: "popular", label: "По популярности" },
+    { id: "price-asc", label: "По цене ↑" },
+    { id: "price-desc", label: "По цене ↓" },
+    { id: "new", label: "Сначала новые" },
+  ] as const;
+
+  function cycleSortMode() {
+    setPage(1);
+    setSortMode((current) => {
+      if (current === "popular") return "price-asc";
+      if (current === "price-asc") return "price-desc";
+      if (current === "price-desc") return "popular";
+      return "popular";
+    });
   }
 
   function getFilterState(title: string) {
@@ -398,8 +543,131 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
   function renderFilters(idPrefix: string, mode: "compact" | "full", variant: "default" | "overlay" = "default") {
     const mood = visiblePercent >= 80 ? "happy" : visiblePercent >= 40 ? "neutral" : "sad";
     const isOverlay = variant === "overlay";
+    const isLandingCategoryFilters = isLanding && mode === "full" && !isOverlay;
+    const isCategoryTypeFilters = isCategoryPage && mode === "full" && !isOverlay;
     return (
       <div className={isOverlay ? "space-y-6" : "space-y-8"}>
+        {isCategoryTypeFilters ? (
+          <section>
+            <h2 className="text-[20px] uppercase tracking-[1.6px] 2xl:text-[22px] [font-family:Jaldi,'JetBrains_Mono',monospace]">
+              Тип товара
+            </h2>
+            <div className="mt-3 border-t border-[#e7e1d9] pt-5 space-y-4">
+              {currentCategoryTypeOptions.map(({ type, count }) => (
+                <label key={type} className="flex items-center gap-4 text-[18px] text-[#6f6f69] 2xl:text-[20px]">
+                  <input
+                    type="checkbox"
+                    checked={selectedTypes.includes(type)}
+                    onChange={() => toggleValue(type, selectedTypes, setSelectedTypes)}
+                    className="catalog-checkbox h-6 w-6 border border-[#e1dbd2] transition-all duration-200"
+                  />
+                  <span className="min-w-0">
+                    <span className="block">{type}</span>
+                    <span className="mt-1 block text-[13px] uppercase tracking-[1.1px] text-[#8a8a85] [font-family:Jaldi,'JetBrains_Mono',monospace]">
+                      {count} шт
+                    </span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {isLandingCategoryFilters ? (
+          <section>
+            <h2 className="text-[20px] uppercase tracking-[1.6px] 2xl:text-[22px] [font-family:Jaldi,'JetBrains_Mono',monospace]">
+              Категория
+            </h2>
+            <div className="mt-3 border-t border-[#e7e1d9] pt-5">
+              <div className="space-y-4">
+                <label className="flex items-center gap-4 text-[18px] text-[#6f6f69] 2xl:text-[20px]">
+                  <input
+                    type="radio"
+                    name={`${idPrefix}-landing-category`}
+                    checked={selectedCategory === "all"}
+                    onChange={() => {
+                      setSelectedCategory("all");
+                      setSelectedTypes([]);
+                      setPage(1);
+                    }}
+                    className="catalog-checkbox h-6 w-6 border border-[#e1dbd2] transition-all duration-200"
+                  />
+                  <span>Все категории</span>
+                </label>
+
+                {categoryTypeTree.map((item) => {
+                  const isExpanded = expandedCategory === item.category;
+                  const isActiveCategory = selectedCategory === item.category;
+
+                  return (
+                    <div key={item.category} className="border-b border-[#f0ebe4] pb-4 last:border-b-0">
+                      <div className="flex items-start justify-between gap-3">
+                        <label className="flex min-w-0 items-start gap-4 text-[18px] text-[#111] 2xl:text-[20px]">
+                          <input
+                            type="radio"
+                            name={`${idPrefix}-landing-category`}
+                            checked={isActiveCategory}
+                            onChange={() => {
+                              setSelectedCategory(item.category);
+                              setPage(1);
+                            }}
+                            className="catalog-checkbox mt-1 h-6 w-6 border border-[#e1dbd2] transition-all duration-200"
+                          />
+                          <span className="min-w-0">
+                            <span className="block">{item.category}</span>
+                            <span className="mt-1 block text-[13px] uppercase tracking-[1.1px] text-[#8a8a85] [font-family:Jaldi,'JetBrains_Mono',monospace]">
+                              {item.count} шт
+                            </span>
+                          </span>
+                        </label>
+
+                        <button
+                          type="button"
+                          onClick={() => setExpandedCategory((current) => (current === item.category ? null : item.category))}
+                          className="flex h-9 w-9 shrink-0 items-center justify-center text-[#111]"
+                          aria-expanded={isExpanded}
+                          aria-label={isExpanded ? `Скрыть типы ${item.category}` : `Показать типы ${item.category}`}
+                        >
+                          <svg
+                            viewBox="0 0 20 20"
+                            width="16"
+                            height="16"
+                            aria-hidden="true"
+                            className={`transition-transform duration-300 ${isExpanded ? "rotate-180" : ""}`}
+                          >
+                            <path d="M4 7.5l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </button>
+                      </div>
+
+                      {isExpanded ? (
+                        <div className="ml-10 mt-3 space-y-3">
+                          {item.types.map(({ type, count }) => (
+                            <label key={type} className="flex items-center gap-4 text-[16px] text-[#6f6f69]">
+                              <input
+                                type="checkbox"
+                                checked={selectedTypes.includes(type)}
+                                onChange={() => toggleValue(type, selectedTypes, setSelectedTypes)}
+                                className="catalog-checkbox h-5 w-5 border border-[#e1dbd2] transition-all duration-200"
+                              />
+                              <span className="min-w-0">
+                                <span className="block">{type}</span>
+                                <span className="mt-0.5 block text-[12px] uppercase tracking-[1px] text-[#9b9891] [font-family:Jaldi,'JetBrains_Mono',monospace]">
+                                  {count} шт
+                                </span>
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+        ) : null}
+
         {isOverlay ? null : (
           <section>
           <div className="flex items-center justify-between gap-4 text-[16px] uppercase tracking-[1.4px] 2xl:text-[18px] [font-family:Jaldi,'JetBrains_Mono',monospace]">
@@ -464,7 +732,7 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
           const filterGroups = [
             ["Бренд", brands],
             ...(mode === "full" ? ([["Страна производства", countries]] as const) : ([] as const)),
-            ...(!isCategoryPage && mode === "full" && !isOverlay ? ([["Тип", types]] as const) : ([] as const)),
+            ...(!isLandingCategoryFilters && !isCategoryPage && mode === "full" && !isOverlay ? ([["Тип", types]] as const) : ([] as const)),
           ] as const;
 
           if (isOverlay && filterGroups.length > 1) {
@@ -542,9 +810,12 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
             </section>
           ));
         })()}
-        {mode === "full"
+        {!isLandingCategoryFilters && mode === "full"
           ? dynamicFilterGroups.map((group) => {
-          const visibleFilters = group.filters;
+          const visibleFilters = group.filters.filter((filter) => {
+            if (!isCategoryPage) return true;
+            return filter.fallbackKey !== "power" && filter.fallbackKey !== "volume";
+          });
 
           if (visibleFilters.length === 0) {
             return null;
@@ -777,11 +1048,11 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
           </p>
 
           <div className="mt-8 flex flex-col gap-8 md:mt-12 md:gap-10 xl:flex-row 2xl:gap-14">
-            <aside className="hidden w-full xl:sticky xl:top-8 xl:block xl:max-h-[calc(100vh-4rem)] xl:overflow-y-auto xl:self-start xl:max-w-[360px] 2xl:max-w-[420px]">
+            <aside className="hidden w-full xl:sticky xl:top-[calc(var(--site-header-offset,76px)+6px)] xl:block xl:max-h-[calc(100vh-var(--site-header-offset,76px)-14px)] xl:overflow-y-auto xl:self-start xl:max-w-[360px] 2xl:max-w-[420px]">
               {renderFilters("desktop", "compact")}
             </aside>
 
-            <div className={`fixed inset-0 z-50 ${allFiltersOpen ? "pointer-events-auto" : "pointer-events-none"}`} aria-hidden={!allFiltersOpen}>
+            <div className={`fixed inset-0 z-[240] ${allFiltersOpen ? "pointer-events-auto" : "pointer-events-none"}`} aria-hidden={!allFiltersOpen}>
               <button
                 type="button"
                 aria-label="Закрыть фильтры"
@@ -812,7 +1083,7 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
                     {renderFilters("desktop-all", "full", "overlay")}
                     <button
                       type="button"
-                      onClick={() => setAllFiltersOpen(false)}
+                      onClick={handleShowProducts}
                       className="mt-6 h-11 w-full bg-[#111] text-[13px] uppercase tracking-[1.4px] text-white md:mt-7 md:h-12 md:text-[14px] md:tracking-[1.6px] [font-family:Jaldi,'JetBrains_Mono',monospace]"
                     >
                       Показать товары
@@ -822,7 +1093,7 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
               </div>
             </div>
 
-            <div className={`fixed inset-0 z-50 xl:hidden ${filtersOpen ? "pointer-events-auto" : "pointer-events-none"}`} aria-hidden={!filtersOpen}>
+            <div className={`fixed inset-0 z-[240] xl:hidden ${filtersOpen ? "pointer-events-auto" : "pointer-events-none"}`} aria-hidden={!filtersOpen}>
               <button
                 type="button"
                 aria-label="Закрыть фильтры"
@@ -843,7 +1114,7 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
                 {renderFilters("mobile", "full")}
                 <button
                   type="button"
-                  onClick={() => setFiltersOpen(false)}
+                  onClick={handleShowProducts}
                   className="mt-8 h-12 w-full bg-[#111] text-[14px] uppercase tracking-[1.5px] text-white md:mt-10 md:h-14 md:text-[16px] md:tracking-[2px] [font-family:Jaldi,'JetBrains_Mono',monospace]"
                 >
                   Показать товары
@@ -865,151 +1136,229 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
                 </div>
               ) : null}
 
-              <div className="sticky top-[var(--site-header-offset,76px)] z-30 bg-[#e1ddd6] py-3 md:py-4">
-                <div className="flex flex-wrap items-center gap-3 md:gap-4">
-                <button
-                  type="button"
-                  onClick={() => setFiltersOpen(true)}
-                  className="flex h-12 items-center justify-center border border-[#e7e1d9] px-4 text-[13px] uppercase tracking-[1.2px] transition-colors hover:border-[#d3b46a] md:h-16 md:px-5 md:text-[16px] md:tracking-[1.6px] xl:hidden 2xl:h-[72px] 2xl:text-[18px] [font-family:Jaldi,'JetBrains_Mono',monospace]"
+              <div className="relative">
+                <div
+                  className={`sticky top-[calc(var(--site-header-offset,76px)+2px)] z-[110] py-2 md:z-[120] md:py-4 ${
+                    isLanding ? "lg:top-[calc(var(--site-header-offset,76px)+6px)]" : "md:top-[calc(var(--site-header-offset,76px)+6px)]"
+                  }`}
                 >
-                  фильтры
-                </button>
+                  <div className="ml-auto w-full md:w-fit">
+                    <div className="flex flex-col gap-2 rounded-[28px] border border-white/70 bg-[rgba(255,253,250,0.82)] p-2 shadow-[0_16px_40px_rgba(17,17,17,0.08)] backdrop-blur-[18px] md:flex-row md:flex-wrap md:items-center md:gap-3 md:rounded-[32px] md:p-3">
+                      <div className="grid grid-cols-[1.3fr_1fr_auto] gap-2 md:hidden">
+                        <div className="relative flex h-12 min-w-0 items-center rounded-[20px] border border-[#e7e1d9] bg-white pl-11 pr-3 transition-colors focus-within:border-[#d3b46a]">
+                          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-[#7a7a75]">
+                            <circle cx="11" cy="11" r="6.6" fill="none" stroke="currentColor" strokeWidth="1.7" />
+                            <path d="M16.2 16.2l4.3 4.3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                          </svg>
+                          <input
+                            type="text"
+                            value={query}
+                            onChange={(event) => {
+                              setQuery(event.target.value);
+                              setPage(1);
+                            }}
+                            placeholder="Поиск"
+                            className="w-full min-w-0 border-0 bg-transparent text-[15px] text-[#3c3c38] placeholder:text-[#bdbcb7] focus:outline-none [font-family:DM_Sans,Manrope,sans-serif]"
+                          />
+                          {query ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setQuery("");
+                                setPage(1);
+                              }}
+                              className="ml-2 flex h-8 w-8 items-center justify-center text-[#7a7a75]"
+                              aria-label="Очистить поиск"
+                            >
+                              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                                <circle cx="12" cy="12" r="10" fill="currentColor" opacity="0.12" />
+                                <path d="M8.5 8.5l7 7m0-7l-7 7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                              </svg>
+                            </button>
+                          ) : null}
+                        </div>
 
-                <div className="ml-auto flex items-center gap-3 md:gap-4">
-                  {hasActiveFilters ? (
-                    <button
-                      type="button"
-                      onClick={resetAllFilters}
-                      className="flex h-12 items-center justify-center border border-[#e7e1d9] bg-[#fff] px-4 text-[13px] uppercase tracking-[1.2px] text-[#111] transition-colors hover:border-[#d3b46a] md:h-16 md:px-5 md:text-[16px] md:tracking-[1.6px] 2xl:h-[72px] 2xl:text-[18px] [font-family:Jaldi,'JetBrains_Mono',monospace]"
-                    >
-                      Сбросить
-                    </button>
-                  ) : null}
+                        <button
+                          type="button"
+                          onClick={cycleSortMode}
+                          className="flex h-12 items-center justify-center overflow-hidden rounded-[20px] border border-[#e7e1d9] bg-white px-3 text-center text-[11px] uppercase leading-[1.05] tracking-[1px] text-[#111] transition-colors hover:border-[#d3b46a] [font-family:Jaldi,'JetBrains_Mono',monospace]"
+                          aria-label="Изменить сортировку"
+                        >
+                          <span key={sortMode} className="catalog-sort-label-roll">
+                            {sortMode === "price-asc"
+                              ? "по цене ↑"
+                              : sortMode === "price-desc"
+                                ? "по цене ↓"
+                                : sortMode === "new"
+                                  ? "сначала новые"
+                                  : "по популярности"}
+                          </span>
+                        </button>
 
-                  <button
-                    type="button"
-                    onClick={() => setShowAdvanced((prev) => !prev)}
-                    className="flex h-12 w-12 items-center justify-center border border-[#e7e1d9] bg-[#fff] transition-colors hover:border-[#d3b46a] md:h-16 md:w-16 2xl:h-[72px] 2xl:w-[72px]"
-                    aria-pressed={showAdvanced}
-                    aria-label="Показать расширенные фильтры и сортировку"
-                  >
-                    <img src="/catalog/list-icon.png" alt="" aria-hidden="true" width="28" height="28" className="h-5 w-5 object-contain md:h-7 md:w-7" />
-                  </button>
+                        <button
+                          type="button"
+                          onClick={() => setFiltersOpen(true)}
+                          className="flex h-12 items-center justify-center rounded-[20px] border border-[#e7e1d9] bg-white px-3 text-[11px] uppercase tracking-[1px] text-[#111] transition-colors hover:border-[#d3b46a] [font-family:Jaldi,'JetBrains_Mono',monospace]"
+                        >
+                          {activeFiltersCount > 0 ? `${activeFiltersCount} фильтра` : "фильтры"}
+                        </button>
+                      </div>
 
-                  <div className="relative flex h-12 w-[min(76vw,380px)] items-center border border-[#e7e1d9] bg-[#fff] pl-11 pr-3 transition-colors focus-within:border-[#d3b46a] md:h-16 md:w-[380px] md:pl-12 md:pr-4 2xl:h-[72px] 2xl:w-[420px] 2xl:pl-14 2xl:pr-5">
-                    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-[#7a7a75] md:left-4 2xl:left-5">
-                      <circle cx="11" cy="11" r="6.6" fill="none" stroke="currentColor" strokeWidth="1.7" />
-                      <path d="M16.2 16.2l4.3 4.3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-                    </svg>
-                    <input
-                      type="text"
-                      value={query}
-                      onChange={(event) => {
-                        setQuery(event.target.value);
-                        setPage(1);
-                      }}
-                      placeholder="Поиск по каталогу"
-                      className="w-full border-0 bg-transparent text-[16px] text-[#3c3c38] placeholder:text-[#c2c2bf] focus:outline-none md:text-[20px] 2xl:text-[22px] [font-family:DM_Sans,Manrope,sans-serif]"
-                    />
-                    {query ? (
                       <button
                         type="button"
-                        onClick={() => {
-                          setQuery("");
-                          setPage(1);
-                        }}
-                        className="flex h-9 w-9 items-center justify-center text-[#7a7a75] hover:text-[#111]"
-                        aria-label="Очистить поиск"
+                        onClick={() => setFiltersOpen(true)}
+                        className="hidden h-12 items-center justify-center rounded-[20px] border border-[#e7e1d9] bg-white px-4 text-[13px] uppercase tracking-[1.2px] transition-colors hover:border-[#d3b46a] md:flex md:h-16 md:px-5 md:text-[16px] md:tracking-[1.6px] xl:hidden 2xl:h-[72px] 2xl:text-[18px] [font-family:Jaldi,'JetBrains_Mono',monospace]"
                       >
-                        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-                          <circle cx="12" cy="12" r="10" fill="currentColor" opacity="0.12" />
-                          <path d="M8.5 8.5l7 7m0-7l-7 7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                        </svg>
+                        {activeFiltersCount > 0 ? `Фильтры (${activeFiltersCount})` : "Фильтры"}
                       </button>
-                    ) : null}
+
+                      {hasActiveFilters ? (
+                        <button
+                          type="button"
+                          onClick={resetAllFilters}
+                          className="hidden h-12 items-center justify-center rounded-[20px] border border-[#e7e1d9] bg-white px-4 text-[13px] uppercase tracking-[1.2px] text-[#111] transition-colors hover:border-[#d3b46a] md:flex md:h-16 md:px-5 md:text-[16px] md:tracking-[1.6px] 2xl:h-[72px] 2xl:text-[18px] [font-family:Jaldi,'JetBrains_Mono',monospace]"
+                        >
+                          Сбросить
+                        </button>
+                      ) : null}
+
+                      <button
+                        type="button"
+                        onClick={() => setShowAdvanced((prev) => !prev)}
+                        className="hidden h-12 w-12 items-center justify-center rounded-[20px] border border-[#e7e1d9] bg-white transition-colors hover:border-[#d3b46a] md:flex md:h-16 md:w-16 2xl:h-[72px] 2xl:w-[72px]"
+                        aria-pressed={showAdvanced}
+                        aria-label="Показать расширенные фильтры и сортировку"
+                      >
+                        <img src="/catalog/list-icon.png" alt="" aria-hidden="true" width="28" height="28" className="h-5 w-5 object-contain md:h-7 md:w-7" />
+                      </button>
+
+                      <div className="relative hidden h-12 min-w-0 flex-1 items-center rounded-[20px] border border-[#e7e1d9] bg-white pl-11 pr-3 transition-colors focus-within:border-[#d3b46a] md:flex md:h-16 md:w-[380px] md:flex-none md:pl-12 md:pr-4 2xl:h-[72px] 2xl:w-[420px] 2xl:pl-14 2xl:pr-5">
+                        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-[#7a7a75] md:left-4 2xl:left-5">
+                          <circle cx="11" cy="11" r="6.6" fill="none" stroke="currentColor" strokeWidth="1.7" />
+                          <path d="M16.2 16.2l4.3 4.3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                        </svg>
+                        <input
+                          type="text"
+                          value={query}
+                          onChange={(event) => {
+                            setQuery(event.target.value);
+                            setPage(1);
+                          }}
+                          placeholder="Поиск по каталогу"
+                          className="w-full min-w-0 border-0 bg-transparent text-[16px] text-[#3c3c38] placeholder:text-[#c2c2bf] focus:outline-none md:text-[20px] 2xl:text-[22px] [font-family:DM_Sans,Manrope,sans-serif]"
+                        />
+                        {query ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setQuery("");
+                              setPage(1);
+                            }}
+                            className="flex h-9 w-9 items-center justify-center text-[#7a7a75] hover:text-[#111]"
+                            aria-label="Очистить поиск"
+                          >
+                            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                              <circle cx="12" cy="12" r="10" fill="currentColor" opacity="0.12" />
+                              <path d="M8.5 8.5l7 7m0-7l-7 7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                            </svg>
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
                   </div>
                 </div>
-                </div>
-              </div>
 
-              <div ref={resultsTopRef} id="catalog-results-top" />
-              {showAdvanced ? (
-                <div className="mt-10 border border-[#ebe5de] bg-white p-8 2xl:p-10">
+                <div ref={resultsTopRef} id="catalog-results-top" />
+                {showAdvanced ? (
+                  <div className="mt-10 border border-[#ebe5de] bg-white p-8 2xl:p-10">
                   <div className="flex flex-wrap items-center justify-between gap-6 border-b border-[#e7e1d9] pb-6">
                     <div>
                       <p className="text-[14px] uppercase tracking-[2px] text-[#7a7a75] [font-family:Jaldi,'JetBrains_Mono',monospace]">Сортировка</p>
                       <p className="mt-2 text-[28px] [font-family:'Cormorant_Garamond',serif]">Выберите порядок показа товаров</p>
                     </div>
                     <div className="flex flex-wrap gap-3 text-[14px] uppercase tracking-[1.6px] [font-family:Jaldi,'JetBrains_Mono',monospace]">
-                      {["Популярные", "Сначала новые", "По цене ↑", "По цене ↓"].map((label) => (
-                        <button key={label} type="button" className="border border-[#111] px-4 py-2 text-[#111] hover:border-[#d3b46a] hover:text-[#7f6522]">
-                          {label}
+                      {quickSortOptions.map((option) => (
+                        <button
+                          key={option.id}
+                          type="button"
+                          onClick={() => {
+                            setSortMode(option.id);
+                            setPage(1);
+                          }}
+                          className={`border px-4 py-2 ${
+                            sortMode === option.id
+                              ? "border-[#111] bg-[#111] text-white"
+                              : "border-[#111] text-[#111] hover:border-[#d3b46a] hover:text-[#7f6522]"
+                          }`}
+                        >
+                          {option.label}
                         </button>
                       ))}
                     </div>
                   </div>
                 </div>
-              ) : (
-                <div
-                  key={resultsAnimationKey}
-                  className={`catalog-results mt-10 grid gap-8 md:grid-cols-2 lg:grid-cols-2 ${isLanding ? "xl:grid-cols-4 2xl:grid-cols-4" : "xl:grid-cols-3 2xl:grid-cols-3"} 2xl:gap-10`}
-                >
-                  {pageProducts.map((product, index) => (
-                    <article
-                      key={product.slug}
-                      style={{ animationDelay: `${index * 60}ms` }}
-                      className="catalog-card group flex h-full flex-col border border-[#ebe5de] bg-white p-9 transition-all duration-300 hover:-translate-y-1 hover:border-[#d8ccb8] hover:shadow-[0_16px_40px_rgba(17,17,17,0.06)] 2xl:p-11"
-                    >
-                      <a href={`/catalog/${product.slug}`}>
-                        <img
-                          src={product.image}
-                          alt={product.title}
-                          width="600"
-                          height="600"
-                          loading="lazy"
-                          decoding="async"
-                          className="aspect-square w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
-                        />
-                      </a>
-                      <div className="mt-8 flex flex-1 flex-col">
-                        <p className="text-[14px] uppercase tracking-[2.4px] text-[#7a7a75] 2xl:text-[15px] [font-family:Jaldi,'JetBrains_Mono',monospace]">{product.brandLabel}</p>
-                        <h3 className="mt-4 min-h-[120px] break-words hyphens-auto text-[26px] leading-[1.15] 2xl:min-h-[140px] 2xl:text-[30px] [font-family:DM_Sans,Manrope,sans-serif]">
-                          <a href={`/catalog/${product.slug}`} className="block break-words hyphens-auto">
-                            {product.title}
-                          </a>
-                        </h3>
-                        <div className="mt-5 min-h-[56px] space-y-1 text-[17px] leading-7 text-[#7a7a75] 2xl:min-h-[60px] 2xl:text-[18px] [font-family:Jaldi,'JetBrains_Mono',monospace]">
-                          <p>{product.rating}</p>
-                          <p>{product.efficiency}</p>
+                ) : (
+                  <div
+                    key={resultsAnimationKey}
+                    className={`catalog-results mt-10 grid grid-cols-2 gap-4 md:gap-8 lg:grid-cols-2 ${isLanding ? "xl:grid-cols-4 2xl:grid-cols-4" : "xl:grid-cols-3 2xl:grid-cols-3"} 2xl:gap-10`}
+                  >
+                    {pageProducts.map((product, index) => (
+                      <article
+                        key={product.slug}
+                        style={{ animationDelay: `${index * 60}ms` }}
+                        className="catalog-card group flex h-full flex-col border border-[#ebe5de] bg-white p-4 transition-all duration-300 hover:-translate-y-1 hover:border-[#d8ccb8] hover:shadow-[0_16px_40px_rgba(17,17,17,0.06)] md:p-9 2xl:p-11"
+                      >
+                        <a href={`/catalog/${product.slug}`}>
+                          <img
+                            src={product.image}
+                            alt={product.title}
+                            width="600"
+                            height="600"
+                            loading="lazy"
+                            decoding="async"
+                            className="aspect-square w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                          />
+                        </a>
+                        <div className="mt-4 flex flex-1 flex-col md:mt-8">
+                          <p className="text-[10px] uppercase tracking-[1.6px] text-[#7a7a75] md:text-[14px] md:tracking-[2.4px] 2xl:text-[15px] [font-family:Jaldi,'JetBrains_Mono',monospace]">{product.brandLabel}</p>
+                          <h3 className="mt-3 min-h-[72px] break-words hyphens-auto text-[16px] leading-[1.12] md:mt-4 md:min-h-[120px] md:text-[26px] md:leading-[1.15] 2xl:min-h-[140px] 2xl:text-[30px] [font-family:DM_Sans,Manrope,sans-serif]">
+                            <a href={`/catalog/${product.slug}`} className="block break-words hyphens-auto">
+                              {product.title}
+                            </a>
+                          </h3>
+                          <div className="mt-3 min-h-[34px] space-y-0.5 text-[11px] leading-[1.35] text-[#7a7a75] md:mt-5 md:min-h-[56px] md:space-y-1 md:text-[17px] md:leading-7 2xl:min-h-[60px] 2xl:text-[18px] [font-family:Jaldi,'JetBrains_Mono',monospace]">
+                            <p>{product.rating}</p>
+                            <p>{product.efficiency}</p>
+                          </div>
+                          <p className="mt-auto pt-5 text-[clamp(1.15rem,3.6vw,1.5rem)] leading-none tabular-nums whitespace-nowrap md:pt-8 md:text-[clamp(1.9rem,3.8vw,2.6rem)] lg:text-[clamp(1.8rem,2.4vw,2.2rem)] 2xl:text-[clamp(2rem,1.9vw,2.5rem)] [font-family:DM_Sans,Manrope,sans-serif]">
+                            {formatPrice(product.price)}
+                          </p>
+                          <div className="mt-4 grid gap-2 md:mt-8 md:gap-3">
+                            <a
+                              href={`/cart?add=${product.slug}`}
+                              className="inline-flex h-11 items-center justify-center bg-[#111] px-2 text-[10px] uppercase tracking-[1.3px] text-white transition-all duration-300 hover:bg-[#2a2a26] md:h-16 md:text-[18px] md:tracking-[2px] md:hover:tracking-[2.5px] 2xl:h-[70px] 2xl:text-[19px] [font-family:Jaldi,'JetBrains_Mono',monospace]"
+                            >
+                              в корзину
+                            </a>
+                            <a
+                              href={`/checkout?buy=${product.slug}`}
+                              className="inline-flex min-h-[52px] items-center justify-center border border-[#111] px-2 py-2 text-center text-[10px] uppercase tracking-[1.1px] text-[#111] transition-all duration-300 hover:border-[#d3b46a] hover:text-[#7f6522] md:h-16 md:min-h-0 md:text-[18px] md:tracking-[2px] 2xl:h-[70px] 2xl:text-[19px] [font-family:Jaldi,'JetBrains_Mono',monospace]"
+                            >
+                              купить в 1 клик
+                            </a>
+                          </div>
                         </div>
-                        <p className="mt-auto pt-8 text-[clamp(2rem,5vw,3rem)] leading-none tabular-nums whitespace-nowrap md:text-[clamp(1.9rem,3.8vw,2.6rem)] lg:text-[clamp(1.8rem,2.4vw,2.2rem)] 2xl:text-[clamp(2rem,1.9vw,2.5rem)] [font-family:DM_Sans,Manrope,sans-serif]">
-                          {formatPrice(product.price)}
-                        </p>
-                        <div className="mt-8 grid gap-3">
-                          <a
-                            href={`/cart?add=${product.slug}`}
-                            className="inline-flex h-16 items-center justify-center bg-[#111] text-[18px] uppercase tracking-[2px] text-white transition-all duration-300 hover:bg-[#2a2a26] hover:tracking-[2.5px] 2xl:h-[70px] 2xl:text-[19px] [font-family:Jaldi,'JetBrains_Mono',monospace]"
-                          >
-                            в корзину
-                          </a>
-                          <a
-                            href={`/checkout?buy=${product.slug}`}
-                            className="inline-flex h-16 items-center justify-center border border-[#111] text-[18px] uppercase tracking-[2px] text-[#111] transition-all duration-300 hover:border-[#d3b46a] hover:text-[#7f6522] 2xl:h-[70px] 2xl:text-[19px] [font-family:Jaldi,'JetBrains_Mono',monospace]"
-                          >
-                            купить в 1 клик
-                          </a>
-                        </div>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              )}
+                      </article>
+                    ))}
+                  </div>
+                )}
 
-              {pageProducts.length === 0 ? (
-                <div className="mt-10 border border-[#ebe5de] px-8 py-14 text-center text-[24px] text-[#6f6f69] 2xl:text-[28px] [font-family:DM_Sans,Manrope,sans-serif]">
-                  По заданным параметрам товары не найдены.
-                </div>
-              ) : null}
+                {pageProducts.length === 0 ? (
+                  <div className="mt-10 border border-[#ebe5de] px-8 py-14 text-center text-[24px] text-[#6f6f69] 2xl:text-[28px] [font-family:DM_Sans,Manrope,sans-serif]">
+                    По заданным параметрам товары не найдены.
+                  </div>
+                ) : null}
+              </div>
 
               {isLanding ? (
                 pageProducts.length < filteredProducts.length ? (
@@ -1277,4 +1626,3 @@ function getSafeMax(values: number[], fallback: number) {
 }
 
 export default CatalogPage;
-
