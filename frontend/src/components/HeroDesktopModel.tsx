@@ -10,10 +10,10 @@ const HERO_FILL_RATIO_MAX = 1.12;
 
 function getHeroViewportScaleFactor(viewportWidth: number) {
   if (viewportWidth <= 1536) return 1;
-  if (viewportWidth >= 1920) return 0.78;
+  if (viewportWidth >= 2560) return 0.94;
 
-  const progress = (viewportWidth - 1536) / (1920 - 1536);
-  return THREE.MathUtils.lerp(1, 0.78, progress);
+  const progress = (viewportWidth - 1536) / (2560 - 1536);
+  return THREE.MathUtils.lerp(1, 0.94, progress);
 }
 
 function getHeroFillRatio(width: number, height: number) {
@@ -120,12 +120,12 @@ const HERO_MODEL_LAYOUTS = {
     },
   },
   ultraWide: {
-    groupPosition: [0.2, -1.28, 0] as [number, number, number],
-    scale: 2.45,
+    groupPosition: [0.68, -1.18, 0] as [number, number, number],
+    scale: 2.68,
     wrapperClassName: "hero-model-edgefade hero-model-edgefade--wide hero-model-frame pointer-events-none",
     camera: {
-      position: [0, 1.18, 9.15] as [number, number, number],
-      fov: 24.8,
+      position: [0, 1.14, 8.85] as [number, number, number],
+      fov: 23.4,
     },
   },
 } satisfies Record<string, HeroModelLayout>;

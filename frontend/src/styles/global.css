@@ -38,10 +38,10 @@ body {
 
 .hero-model-edgefade {
   --hero-model-fade-top: 10%;
-  --hero-model-fade-right: 16%;
+  --hero-model-fade-right: 6%;
   --hero-model-fade-bottom: 18%;
   --hero-model-fade-left: 0%;
-  --hero-model-corner-x: 32%;
+  --hero-model-corner-x: 22%;
   --hero-model-corner-y: 26%;
   position: relative;
   width: 100%;
@@ -135,46 +135,46 @@ body {
 
 .hero-model-edgefade--mobile {
   --hero-model-fade-top: 6%;
-  --hero-model-fade-right: 10%;
+  --hero-model-fade-right: 4%;
   --hero-model-fade-bottom: 12%;
   --hero-model-fade-left: 0%;
-  --hero-model-corner-x: 24%;
+  --hero-model-corner-x: 16%;
   --hero-model-corner-y: 22%;
 }
 
 .hero-model-edgefade--tablet {
   --hero-model-fade-top: 8%;
-  --hero-model-fade-right: 14%;
+  --hero-model-fade-right: 5%;
   --hero-model-fade-bottom: 16%;
   --hero-model-fade-left: 0%;
-  --hero-model-corner-x: 30%;
+  --hero-model-corner-x: 18%;
   --hero-model-corner-y: 24%;
 }
 
 .hero-model-edgefade--compact {
   --hero-model-fade-top: 8%;
-  --hero-model-fade-right: 18%;
+  --hero-model-fade-right: 7%;
   --hero-model-fade-bottom: 20%;
   --hero-model-fade-left: 0%;
-  --hero-model-corner-x: 34%;
+  --hero-model-corner-x: 22%;
   --hero-model-corner-y: 28%;
 }
 
 .hero-model-edgefade--medium {
   --hero-model-fade-top: 9%;
-  --hero-model-fade-right: 16%;
+  --hero-model-fade-right: 6%;
   --hero-model-fade-bottom: 18%;
   --hero-model-fade-left: 0%;
-  --hero-model-corner-x: 32%;
+  --hero-model-corner-x: 22%;
   --hero-model-corner-y: 26%;
 }
 
 .hero-model-edgefade--wide {
   --hero-model-fade-top: 10%;
-  --hero-model-fade-right: 14%;
+  --hero-model-fade-right: 5%;
   --hero-model-fade-bottom: 16%;
   --hero-model-fade-left: 2%;
-  --hero-model-corner-x: 30%;
+  --hero-model-corner-x: 20%;
   --hero-model-corner-y: 24%;
 }
 
@@ -738,20 +738,21 @@ body {
 
 @media (min-width: 1920px) {
   .hero__inner {
-    width: min(100%, 1920px);
+    width: min(100%, 2560px);
+    padding-inline: clamp(56px, 4.4vw, 120px);
   }
 
   .hero__stage {
-    grid-template-columns: minmax(0, 0.76fr) minmax(720px, 1.24fr);
-    gap: clamp(56px, 4.6vw, 108px);
+    grid-template-columns: minmax(0, 0.68fr) minmax(980px, 1.42fr);
+    gap: clamp(56px, 4vw, 132px);
   }
 
   .hero__media {
-    height: clamp(700px, min(42vw, 76vh), 1080px);
+    height: clamp(760px, min(44vw, 78vh), 1240px);
   }
 
   .hero__content {
-    width: min(42vw, 760px);
+    width: min(32vw, 760px);
   }
 }
 
