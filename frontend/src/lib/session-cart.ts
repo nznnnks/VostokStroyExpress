@@ -7,6 +7,7 @@ type StoredCartItem = {
 };
 
 const CART_COOKIE_KEY = "vostokstroyexpert-cart";
+export const SESSION_CART_UPDATED_EVENT = "session-cart-updated";
 
 function isBrowser() {
   return typeof document !== "undefined";
@@ -83,10 +84,20 @@ function writeStoredCartItems(items: StoredCartItem[]) {
 
   if (normalized.length === 0) {
     clearCookie(CART_COOKIE_KEY);
+    notifySessionCartUpdated();
     return;
   }
 
   writeCookie(CART_COOKIE_KEY, JSON.stringify(normalized));
+  notifySessionCartUpdated();
+}
+
+function notifySessionCartUpdated() {
+  if (!isBrowser()) {
+    return;
+  }
+
+  window.dispatchEvent(new CustomEvent(SESSION_CART_UPDATED_EVENT));
 }
 
 function mapCart(products: Product[], items: StoredCartItem[]): CartView {
@@ -174,6 +185,7 @@ export async function removeSessionCartItem(itemId: string) {
 
 export function clearSessionCart() {
   clearCookie(CART_COOKIE_KEY);
+  notifySessionCartUpdated();
 }
 
 export async function resolveSessionCartOrderItems(cart: CartView) {

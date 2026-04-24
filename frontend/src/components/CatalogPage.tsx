@@ -3,6 +3,7 @@ import type { CSSProperties } from "react";
 
 import { formatPrice, type Product } from "../data/products";
 import { slugify } from "../lib/slug";
+import { addProductToSessionCartBySlug } from "../lib/session-cart";
 import SiteHeader from "./SiteHeader";
 import SiteFooter from "./SiteFooter";
 
@@ -28,6 +29,8 @@ type CatalogDynamicFilter = {
 
 export function CatalogPage({ products, initialCategory, variant = "default" }: CatalogPageProps) {
   const resultsTopRef = useRef<HTMLDivElement>(null);
+  const hasMountedQueryEffectRef = useRef(false);
+  const pendingOverlayScrollRef = useRef<"restore" | "results">("restore");
   const isLanding = variant === "landing";
   const isCategoryPage = Boolean(initialCategory && initialCategory !== "all");
   const formatFilterCountLabel = (count: number) => {
@@ -213,32 +216,35 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
   const [allFiltersOpen, setAllFiltersOpen] = useState(false);
   const [sortMode, setSortMode] = useState<"popular" | "new" | "price-asc" | "price-desc">("popular");
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+  const [pendingCartSlug, setPendingCartSlug] = useState<string | null>(null);
 
   useEffect(() => {
     if (!allFiltersOpen && !filtersOpen) return;
-    const scrollY = window.scrollY;
     const previousBodyOverflow = document.body.style.overflow;
-    const previousBodyPosition = document.body.style.position;
-    const previousBodyTop = document.body.style.top;
-    const previousBodyWidth = document.body.style.width;
+    const previousBodyPaddingRight = document.body.style.paddingRight;
     const previousHtmlOverflow = document.documentElement.style.overflow;
     const previousOverscroll = document.documentElement.style.overscrollBehavior;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
 
     document.documentElement.style.overflow = "hidden";
     document.documentElement.style.overscrollBehavior = "none";
     document.body.style.overflow = "hidden";
-    document.body.style.position = "fixed";
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.width = "100%";
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
 
     return () => {
       document.documentElement.style.overflow = previousHtmlOverflow;
       document.documentElement.style.overscrollBehavior = previousOverscroll;
       document.body.style.overflow = previousBodyOverflow;
-      document.body.style.position = previousBodyPosition;
-      document.body.style.top = previousBodyTop;
-      document.body.style.width = previousBodyWidth;
-      window.scrollTo(0, scrollY);
+      document.body.style.paddingRight = previousBodyPaddingRight;
+
+      if (pendingOverlayScrollRef.current === "results") {
+        pendingOverlayScrollRef.current = "restore";
+        window.requestAnimationFrame(() => {
+          resultsTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      }
     };
   }, [allFiltersOpen, filtersOpen]);
 
@@ -443,6 +449,10 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
   }, [safePage]);
 
   useEffect(() => {
+    if (!hasMountedQueryEffectRef.current) {
+      hasMountedQueryEffectRef.current = true;
+      return;
+    }
     if (!resultsTopRef.current) return;
     resultsTopRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [query]);
@@ -493,8 +503,26 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
       return;
     }
 
+    pendingOverlayScrollRef.current = "results";
     setFiltersOpen(false);
     setAllFiltersOpen(false);
+  }
+
+  function closeFiltersOverlays() {
+    pendingOverlayScrollRef.current = "restore";
+    setFiltersOpen(false);
+    setAllFiltersOpen(false);
+  }
+
+  async function handleAddToCart(slug: string) {
+    if (pendingCartSlug === slug) return;
+
+    setPendingCartSlug(slug);
+    try {
+      await addProductToSessionCartBySlug(slug);
+    } finally {
+      setPendingCartSlug((current) => (current === slug ? null : current));
+    }
   }
 
   function toggleValue(value: string, selected: string[], setter: (values: string[]) => void) {
@@ -551,7 +579,7 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
     const isLandingCategoryFilters = isLanding && mode === "full" && !isOverlay;
     const isCategoryTypeFilters = isCategoryPage && mode === "full" && !isOverlay;
     return (
-      <div className={isOverlay ? "space-y-6" : "space-y-8"}>
+      <div className={isOverlay ? "space-y-6 2xl:space-y-8 min-[2200px]:space-y-10" : "space-y-8"}>
         {isCategoryTypeFilters ? (
           <section>
             <h2 className="text-[20px] uppercase tracking-[1.6px] 2xl:text-[22px] [font-family:Jaldi,'JetBrains_Mono',monospace]">
@@ -748,20 +776,20 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 {filterGroups.map(([title, items]) => (
                   <section key={title}>
-                    <h2 className="text-[16px] uppercase tracking-[1.6px] 2xl:text-[18px] [font-family:Jaldi,'JetBrains_Mono',monospace]">{title}</h2>
-                    <div className="mt-2 border-t border-[#e7e1d9] pt-3 [column-gap:22px] xl:columns-2">
+                    <h2 className="text-[16px] uppercase tracking-[1.6px] 2xl:text-[20px] min-[2200px]:text-[24px] [font-family:Jaldi,'JetBrains_Mono',monospace]">{title}</h2>
+                    <div className="mt-2 border-t border-[#e7e1d9] pt-3 2xl:pt-4 [column-gap:22px] 2xl:[column-gap:30px] xl:columns-2">
                       {items.map((item, index) => {
                         const id = `${idPrefix}-${String(title).toLowerCase().replace(/\s+/g, "-")}-${index}`;
                         const [selected, setSelected] = getFilterState(String(title));
 
                         return (
-                          <label key={item} htmlFor={id} className="mb-3 flex break-inside-avoid items-center gap-3 text-[14px] text-[#6f6f69] 2xl:text-[15px]">
+                          <label key={item} htmlFor={id} className="mb-3 flex break-inside-avoid items-center gap-3 2xl:gap-4 min-[2200px]:gap-5 text-[14px] text-[#6f6f69] 2xl:text-[18px] min-[2200px]:text-[21px]">
                             <input
                               id={id}
                               type="checkbox"
                               checked={selected.includes(item)}
                               onChange={() => toggleValue(item, selected, setSelected)}
-                              className="catalog-checkbox h-5 w-5 border border-[#e1dbd2] transition-all duration-200"
+                              className="catalog-checkbox h-5 w-5 2xl:h-6 2xl:w-6 min-[2200px]:h-7 min-[2200px]:w-7 border border-[#e1dbd2] transition-all duration-200"
                             />
                             <span>{item}</span>
                           </label>
@@ -777,14 +805,14 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
           return filterGroups.map(([title, items]) => (
             <section key={title}>
               <h2
-                className={`${isOverlay ? "text-[16px] 2xl:text-[18px]" : "text-[20px] 2xl:text-[22px]"} uppercase tracking-[1.6px] [font-family:Jaldi,'JetBrains_Mono',monospace]`}
+                className={`${isOverlay ? "text-[16px] 2xl:text-[20px] min-[2200px]:text-[24px]" : "text-[20px] 2xl:text-[22px]"} uppercase tracking-[1.6px] [font-family:Jaldi,'JetBrains_Mono',monospace]`}
               >
                 {title}
               </h2>
               <div
                 className={[
                   "mt-3 border-t border-[#e7e1d9]",
-                  isOverlay ? "pt-4 [column-gap:26px] xl:columns-2" : "space-y-5 pt-5",
+                  isOverlay ? "pt-4 2xl:pt-5 [column-gap:26px] 2xl:[column-gap:32px] xl:columns-2" : "space-y-5 pt-5",
                 ].join(" ")}
               >
                 {items.map((item, index) => {
@@ -797,7 +825,7 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
                       htmlFor={id}
                       className={[
                         "flex items-center gap-4 text-[#6f6f69]",
-                        isOverlay ? "mb-4 break-inside-avoid text-[14px] 2xl:text-[15px]" : "text-[18px] 2xl:text-[20px]",
+                        isOverlay ? "mb-4 2xl:mb-5 break-inside-avoid text-[14px] 2xl:text-[18px] min-[2200px]:text-[21px]" : "text-[18px] 2xl:text-[20px]",
                       ].join(" ")}
                     >
                       <input
@@ -807,7 +835,7 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
                         onChange={() => toggleValue(item, selected, setSelected)}
                         className={[
                           "catalog-checkbox border border-[#e1dbd2] transition-all duration-200",
-                          isOverlay ? "h-5 w-5" : "h-6 w-6",
+                          isOverlay ? "h-5 w-5 2xl:h-6 2xl:w-6 min-[2200px]:h-7 min-[2200px]:w-7" : "h-6 w-6",
                         ].join(" ")}
                       />
                       <span>{item}</span>
@@ -830,9 +858,9 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
           }
 
           return (
-            <section key={group.id} className={isOverlay ? "space-y-4" : "space-y-6"}>
+            <section key={group.id} className={isOverlay ? "space-y-4 2xl:space-y-5 min-[2200px]:space-y-6" : "space-y-6"}>
             <h2
-              className={`${isOverlay ? "text-[16px] 2xl:text-[18px]" : "text-[20px] 2xl:text-[22px]"} uppercase tracking-[1.6px] [font-family:Jaldi,'JetBrains_Mono',monospace]`}
+              className={`${isOverlay ? "text-[16px] 2xl:text-[20px] min-[2200px]:text-[24px]" : "text-[20px] 2xl:text-[22px]"} uppercase tracking-[1.6px] [font-family:Jaldi,'JetBrains_Mono',monospace]`}
             >
               {group.name}
             </h2>
@@ -843,7 +871,7 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
                   if (numberFilters.length === 0) return null;
 
                   return (
-                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-6 2xl:gap-8 min-[2200px]:gap-10 lg:grid-cols-2">
                       {numberFilters.map((filter) => (
                         <RangeFilter
                           key={filter.id}
@@ -872,16 +900,16 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
                   .filter((filter) => filter.parameterType === "TEXT")
                   .map((filter) => (
                     <section key={filter.id}>
-                      <h3 className="text-[14px] uppercase tracking-[1.4px] 2xl:text-[15px] [font-family:Jaldi,'JetBrains_Mono',monospace]">
+                      <h3 className="text-[14px] uppercase tracking-[1.4px] 2xl:text-[18px] min-[2200px]:text-[21px] [font-family:Jaldi,'JetBrains_Mono',monospace]">
                         {filter.parameterName}
                       </h3>
-                      <div className="mt-3 border-t border-[#e7e1d9] pt-4 [column-gap:26px] xl:columns-2">
+                      <div className="mt-3 border-t border-[#e7e1d9] pt-4 2xl:pt-5 [column-gap:26px] 2xl:[column-gap:32px] xl:columns-2">
                         {filter.values.map((item, index) => {
                           const id = `${idPrefix}-${filter.id}-${index}`;
                           const selected = selectedTextFilters[filter.id] ?? [];
 
                           return (
-                            <label key={item} htmlFor={id} className="mb-4 flex break-inside-avoid items-center gap-4 text-[14px] text-[#6f6f69] 2xl:text-[15px]">
+                            <label key={item} htmlFor={id} className="mb-4 2xl:mb-5 flex break-inside-avoid items-center gap-4 2xl:gap-5 text-[14px] text-[#6f6f69] 2xl:text-[18px] min-[2200px]:text-[21px]">
                               <input
                                 id={id}
                                 type="checkbox"
@@ -896,7 +924,7 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
                                   });
                                   setPage(1);
                                 }}
-                                className="catalog-checkbox h-5 w-5 border border-[#e1dbd2] transition-all duration-200"
+                                className="catalog-checkbox h-5 w-5 2xl:h-6 2xl:w-6 min-[2200px]:h-7 min-[2200px]:w-7 border border-[#e1dbd2] transition-all duration-200"
                               />
                               <span>{item}</span>
                             </label>
@@ -1034,7 +1062,7 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
   return (
     <main className="flex min-h-screen flex-col bg-white text-[#111] [font-family:DM_Sans,Manrope,'Liberation_Sans',sans-serif]">
       <div className="flex-1">
-        <SiteHeader />
+        <SiteHeader lockScrolledState={filtersOpen || allFiltersOpen} />
 
         <section className="px-4 py-10 md:px-10 md:py-14">
           <div className="mx-auto max-w-[1480px] 2xl:max-w-[1860px]">
@@ -1064,38 +1092,62 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
               <button
                 type="button"
                 aria-label="Закрыть фильтры"
-                onClick={() => setAllFiltersOpen(false)}
-                className={`absolute inset-0 bg-black/35 transition-opacity duration-300 ${allFiltersOpen ? "opacity-100" : "opacity-0"}`}
+                onClick={closeFiltersOverlays}
+                className={`absolute inset-0 bg-[rgba(20,18,14,0.38)] backdrop-blur-[6px] transition-opacity duration-300 ${allFiltersOpen ? "opacity-100" : "opacity-0"}`}
               />
-              <div className={`absolute inset-0 px-4 py-10 transition-opacity duration-300 md:px-10 md:py-14 ${allFiltersOpen ? "opacity-100" : "opacity-0"}`}>
-                <div className="mx-auto h-full max-w-[1480px] 2xl:max-w-[1860px]">
+              <div className={`absolute inset-0 flex items-center justify-center overflow-y-auto px-4 py-8 transition-opacity duration-300 md:px-8 md:py-14 2xl:px-10 min-[2200px]:px-14 ${allFiltersOpen ? "opacity-100" : "opacity-0"}`}>
+                <div className="mx-auto w-full max-w-[1120px] 2xl:max-w-[1560px] min-[2200px]:max-w-[1820px]">
                   <aside
                     role="dialog"
                     aria-modal="true"
                     aria-label="Все фильтры"
-                    className="h-full w-full overflow-hidden border border-[#e7e1d9] bg-white px-5 py-5 shadow-2xl md:px-6 md:py-6"
+                    className="overflow-hidden rounded-[30px] 2xl:rounded-[34px] min-[2200px]:rounded-[40px] border border-[rgba(231,225,217,0.9)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(249,246,241,0.96)_100%)] shadow-[0_32px_90px_rgba(18,16,12,0.20)]"
                   >
-                    <div className="mb-5 flex items-center justify-between border-b border-[#e7e1d9] pb-3 md:mb-6">
-                      <p className="text-[18px] uppercase tracking-[1.4px] [font-family:Jaldi,'JetBrains_Mono',monospace] md:text-[20px]">
-                        Все фильтры
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setAllFiltersOpen(false)}
-                        className="text-[28px] leading-none text-[#111] md:text-[32px]"
-                        aria-label="Закрыть фильтры"
-                      >
-                        x
-                      </button>
+                    <div className="flex max-h-[min(84vh,860px)] 2xl:max-h-[min(87vh,1120px)] min-[2200px]:max-h-[min(89vh,1260px)] min-h-0 flex-col">
+                      <div className="flex items-center justify-between border-b border-[#ebe4da] px-5 py-4 md:px-7 md:py-5 2xl:px-12 2xl:py-8 min-[2200px]:px-14 min-[2200px]:py-9">
+                        <div>
+                          <p className="text-[11px] uppercase tracking-[0.28em] text-[#8d857a] [font-family:Jaldi,'JetBrains_Mono',monospace] md:text-[12px] 2xl:text-[15px] min-[2200px]:text-[17px]">
+                            Каталог
+                          </p>
+                          <p className="mt-1 text-[18px] uppercase tracking-[1.4px] text-[#111] [font-family:Jaldi,'JetBrains_Mono',monospace] md:text-[20px] 2xl:text-[31px] min-[2200px]:text-[38px]">
+                            Все фильтры
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={closeFiltersOverlays}
+                          className="flex h-11 w-11 2xl:h-15 2xl:w-15 min-[2200px]:h-[72px] min-[2200px]:w-[72px] items-center justify-center rounded-full border border-[#ddd4c8] bg-white/88 text-[24px] 2xl:text-[32px] min-[2200px]:text-[38px] leading-none text-[#111] transition-colors hover:border-[#d3b46a] hover:text-[#7f6522]"
+                          aria-label="Закрыть фильтры"
+                        >
+                          ×
+                        </button>
+                      </div>
+
+                      <div className="min-h-0 overflow-y-auto px-5 py-5 md:px-7 md:py-6 2xl:px-12 2xl:py-9 min-[2200px]:px-14 min-[2200px]:py-11">
+                        {renderFilters("desktop-all", "full", "overlay")}
+                      </div>
+
+                      <div className="border-t border-[#ebe4da] bg-[rgba(255,251,246,0.92)] px-5 py-4 md:px-7 md:py-5 2xl:px-12 2xl:py-8 min-[2200px]:px-14 min-[2200px]:py-9">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                          {hasActiveFilters ? (
+                            <button
+                              type="button"
+                              onClick={resetAllFilters}
+                              className="h-11 rounded-[18px] 2xl:h-16 2xl:rounded-[24px] min-[2200px]:h-[72px] min-[2200px]:rounded-[26px] border border-[#ddd4c8] bg-white px-5 2xl:px-8 min-[2200px]:px-10 text-[13px] uppercase tracking-[1.3px] text-[#111] transition-colors hover:border-[#d3b46a] hover:text-[#7f6522] md:h-12 md:text-[14px] 2xl:text-[19px] min-[2200px]:text-[22px] [font-family:Jaldi,'JetBrains_Mono',monospace]"
+                            >
+                              Сбросить
+                            </button>
+                          ) : null}
+                          <button
+                            type="button"
+                            onClick={handleShowProducts}
+                            className="h-11 rounded-[18px] 2xl:h-16 2xl:rounded-[24px] min-[2200px]:h-[72px] min-[2200px]:rounded-[26px] bg-[#111] px-7 2xl:px-12 min-[2200px]:px-14 text-[13px] uppercase tracking-[1.4px] text-white transition-colors hover:bg-[#2a2a26] md:h-12 md:min-w-[240px] 2xl:min-w-[360px] min-[2200px]:min-w-[420px] md:text-[14px] md:tracking-[1.6px] 2xl:text-[19px] min-[2200px]:text-[22px] [font-family:Jaldi,'JetBrains_Mono',monospace]"
+                          >
+                            Показать товары
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                    {renderFilters("desktop-all", "full", "overlay")}
-                    <button
-                      type="button"
-                      onClick={handleShowProducts}
-                      className="mt-6 h-11 w-full bg-[#111] text-[13px] uppercase tracking-[1.4px] text-white md:mt-7 md:h-12 md:text-[14px] md:tracking-[1.6px] [font-family:Jaldi,'JetBrains_Mono',monospace]"
-                    >
-                      Показать товары
-                    </button>
                   </aside>
                 </div>
               </div>
@@ -1105,7 +1157,7 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
               <button
                 type="button"
                 aria-label="Закрыть фильтры"
-                onClick={() => setFiltersOpen(false)}
+                onClick={closeFiltersOverlays}
                 className={`absolute inset-0 bg-black/35 transition-opacity duration-300 ${filtersOpen ? "opacity-100" : "opacity-0"}`}
               />
               <aside
@@ -1115,7 +1167,7 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
               >
                 <div className="mb-8 flex items-center justify-between border-b border-[#e7e1d9] pb-4">
                   <p className="text-[22px] uppercase tracking-[1.6px] [font-family:Jaldi,'JetBrains_Mono',monospace]">Фильтры</p>
-                  <button type="button" onClick={() => setFiltersOpen(false)} className="text-[32px] leading-none text-[#111]" aria-label="Закрыть фильтры">
+                  <button type="button" onClick={closeFiltersOverlays} className="text-[32px] leading-none text-[#111]" aria-label="Закрыть фильтры">
                     x
                   </button>
                 </div>
@@ -1374,12 +1426,14 @@ export function CatalogPage({ products, initialCategory, variant = "default" }: 
                             {formatPrice(product.price)}
                           </p>
                           <div className="mt-4 grid gap-2 md:mt-8 md:gap-3">
-                            <a
-                              href={`/cart?add=${product.slug}`}
-                              className="inline-flex h-11 items-center justify-center bg-[#111] px-2 text-[10px] uppercase tracking-[1.3px] text-white transition-all duration-300 hover:bg-[#2a2a26] md:h-16 md:text-[18px] md:tracking-[2px] md:hover:tracking-[2.5px] 2xl:h-[70px] 2xl:text-[19px] [font-family:Jaldi,'JetBrains_Mono',monospace]"
+                            <button
+                              type="button"
+                              onClick={() => void handleAddToCart(product.slug)}
+                              disabled={pendingCartSlug === product.slug}
+                              className="inline-flex h-11 items-center justify-center bg-[#111] px-2 text-[10px] uppercase tracking-[1.3px] text-white transition-all duration-300 hover:bg-[#2a2a26] disabled:cursor-wait disabled:bg-[#2a2a26] md:h-16 md:text-[18px] md:tracking-[2px] md:hover:tracking-[2.5px] 2xl:h-[70px] 2xl:text-[19px] [font-family:Jaldi,'JetBrains_Mono',monospace]"
                             >
-                              в корзину
-                            </a>
+                              {pendingCartSlug === product.slug ? "добавляем" : "в корзину"}
+                            </button>
                             <a
                               href={`/checkout?buy=${product.slug}`}
                               className="inline-flex min-h-[52px] items-center justify-center border border-[#111] px-2 py-2 text-center text-[10px] uppercase tracking-[1.1px] text-[#111] transition-all duration-300 hover:border-[#d3b46a] hover:text-[#7f6522] md:h-16 md:min-h-0 md:text-[18px] md:tracking-[2px] 2xl:h-[70px] 2xl:text-[19px] [font-family:Jaldi,'JetBrains_Mono',monospace]"

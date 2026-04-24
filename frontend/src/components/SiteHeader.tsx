@@ -3,10 +3,12 @@ import AuthHeaderButton from "./AuthHeaderButton";
 import { navLinks } from "../data/site";
 import { formatPrice, type Product } from "../data/products";
 import { loadCatalogProducts } from "../lib/backend-api";
+import { loadSessionCart, SESSION_CART_UPDATED_EVENT } from "../lib/session-cart";
 
 type SiteHeaderProps = {
   light?: boolean;
   fullBleed?: boolean;
+  lockScrolledState?: boolean;
 };
 
 const PAGE_TRANSITION_STORAGE_KEY = "site-transition-pending";
@@ -42,7 +44,7 @@ function PageTransitionOverlay({ visible }: { visible: boolean }) {
   );
 }
 
-export function SiteHeader({ light = true, fullBleed = false }: SiteHeaderProps) {
+export function SiteHeader({ light = true, fullBleed = false, lockScrolledState = false }: SiteHeaderProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMobileMenuActive, setIsMobileMenuActive] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -53,6 +55,7 @@ export function SiteHeader({ light = true, fullBleed = false }: SiteHeaderProps)
     null,
   );
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+  const [cartItemsCount, setCartItemsCount] = useState(0);
   const searchRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const scrollLockUntilRef = useRef(0);
@@ -120,6 +123,7 @@ export function SiteHeader({ light = true, fullBleed = false }: SiteHeaderProps)
   }, [isSearchOpen]);
 
   useEffect(() => {
+    if (lockScrolledState) return;
     let rafId: number | null = null;
     let lastScrollY = 0;
     let lastIsScrolled = false;
@@ -155,7 +159,7 @@ export function SiteHeader({ light = true, fullBleed = false }: SiteHeaderProps)
       if (rafId !== null) window.cancelAnimationFrame(rafId);
       window.removeEventListener("scroll", onScroll);
     };
-  }, []);
+  }, [lockScrolledState]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -179,6 +183,37 @@ export function SiteHeader({ light = true, fullBleed = false }: SiteHeaderProps)
     });
     ro.observe(el);
     return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let active = true;
+
+    const syncCartCount = async () => {
+      try {
+        const cart = await loadSessionCart();
+        if (!active) return;
+        setCartItemsCount(cart.items.reduce((sum, item) => sum + item.qty, 0));
+      } catch {
+        if (!active) return;
+        setCartItemsCount(0);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== "visible") return;
+      void syncCartCount();
+    };
+
+    void syncCartCount();
+    window.addEventListener(SESSION_CART_UPDATED_EVENT, syncCartCount as EventListener);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      active = false;
+      window.removeEventListener(SESSION_CART_UPDATED_EVENT, syncCartCount as EventListener);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, []);
 
   useEffect(() => {
@@ -444,7 +479,7 @@ export function SiteHeader({ light = true, fullBleed = false }: SiteHeaderProps)
             <a
               href="/cart"
               aria-label="Корзина"
-              className="hidden h-11 w-11 items-center justify-center transition duration-300 ease-out hover:-translate-y-0.5 hover:opacity-70 md:inline-flex xl:scale-110 2xl:scale-125"
+              className="relative hidden h-11 w-11 items-center justify-center transition duration-300 ease-out hover:-translate-y-0.5 hover:opacity-70 md:inline-flex xl:scale-110 2xl:scale-125"
             >
               <svg
                 viewBox="0 0 24 24"
@@ -464,6 +499,11 @@ export function SiteHeader({ light = true, fullBleed = false }: SiteHeaderProps)
                 <circle cx="9.5" cy="19.5" r="1.4" fill="currentColor" />
                 <circle cx="16.5" cy="19.5" r="1.4" fill="currentColor" />
               </svg>
+              {cartItemsCount > 0 ? (
+                <span className="absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-[#111] px-1.5 py-0.5 text-[10px] leading-none text-white shadow-[0_6px_18px_rgba(17,17,17,0.18)] 2xl:min-w-[20px] 2xl:text-[11px]">
+                  {cartItemsCount > 99 ? "99+" : cartItemsCount}
+                </span>
+              ) : null}
             </a>
             <div className="flex items-center gap-1 sm:hidden">
               <a
@@ -721,7 +761,7 @@ export function SiteHeader({ light = true, fullBleed = false }: SiteHeaderProps)
                 <a
                   href="/cart"
                   aria-label="Корзина"
-                  className={`inline-flex h-11 w-11 items-center justify-center transition duration-300 ease-out ${
+                  className={`relative inline-flex h-11 w-11 items-center justify-center transition duration-300 ease-out ${
                     light
                       ? "text-[#111] hover:opacity-60"
                       : "text-white hover:opacity-75"
@@ -744,6 +784,11 @@ export function SiteHeader({ light = true, fullBleed = false }: SiteHeaderProps)
                     <circle cx="9.5" cy="19.5" r="1.4" fill="currentColor" />
                     <circle cx="16.5" cy="19.5" r="1.4" fill="currentColor" />
                   </svg>
+                  {cartItemsCount > 0 ? (
+                    <span className="absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-[#111] px-1.5 py-0.5 text-[10px] leading-none text-white shadow-[0_6px_18px_rgba(17,17,17,0.18)]">
+                      {cartItemsCount > 99 ? "99+" : cartItemsCount}
+                    </span>
+                  ) : null}
                 </a>
                 <button
                   type="button"
