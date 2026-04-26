@@ -30,7 +30,7 @@ function PageTransitionOverlay({ visible }: { visible: boolean }) {
       <div className="relative flex flex-col items-center gap-8 text-center">
         <div className="absolute left-1/2 top-1/2 h-[38vh] w-[38vh] max-w-[520px] max-h-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.72)_0%,rgba(255,255,255,0.2)_42%,rgba(225,221,214,0)_72%)]" />
         <img
-          src="/logo.png"
+          src="/logo.svg"
           alt="Climatrade"
           loading="eager"
           decoding="async"
@@ -189,6 +189,9 @@ export function SiteHeader({ light = true, fullBleed = false, lockScrolledState 
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  const cartBadgeText = cartItemsCount > 99 ? "99+" : String(cartItemsCount);
+  const isCartBadgeCircle = cartBadgeText.length === 1;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -506,8 +509,12 @@ export function SiteHeader({ light = true, fullBleed = false, lockScrolledState 
                 <circle cx="16.5" cy="19.5" r="1.4" fill="currentColor" />
               </svg>
               {cartItemsCount > 0 ? (
-                <span className="absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-[#111] px-1.5 py-0.5 text-[10px] leading-none text-white shadow-[0_6px_18px_rgba(17,17,17,0.18)] 2xl:min-w-[20px] 2xl:text-[11px]">
-                  {cartItemsCount > 99 ? "99+" : cartItemsCount}
+                <span
+                  className={`absolute -right-1 -top-1 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#111] text-[10px] leading-none text-white shadow-[0_6px_18px_rgba(17,17,17,0.18)] 2xl:h-[20px] 2xl:min-w-[20px] 2xl:text-[11px] ${
+                    isCartBadgeCircle ? "w-[18px] 2xl:w-[20px]" : "px-1.5"
+                  }`}
+                >
+                  {cartBadgeText}
                 </span>
               ) : null}
             </a>
@@ -531,8 +538,12 @@ export function SiteHeader({ light = true, fullBleed = false, lockScrolledState 
                     <circle cx="16.5" cy="19.5" r="1.4" fill="currentColor" />
                   </svg>
                   {cartItemsCount > 0 ? (
-                    <span className="absolute -right-1 -top-1 inline-flex min-w-[16px] items-center justify-center rounded-full bg-white px-1 py-0.5 text-[9px] leading-none text-[#111]">
-                      {cartItemsCount > 99 ? "99+" : cartItemsCount}
+                    <span
+                      className={`absolute -right-1 -top-1 inline-flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-white text-[9px] leading-none text-[#111] ${
+                        isCartBadgeCircle ? "w-[16px]" : "px-1"
+                      }`}
+                    >
+                      {cartBadgeText}
                     </span>
                   ) : null}
                 </a>
@@ -543,7 +554,9 @@ export function SiteHeader({ light = true, fullBleed = false, lockScrolledState 
                     target="_blank"
                     rel="noreferrer"
                     aria-label="WhatsApp"
-                    className="inline-flex h-9 w-9 items-center justify-center bg-[#050505] text-white transition duration-300 ease-out hover:-translate-y-0.5 hover:bg-[#1c1c1c] sm:h-9 sm:w-9"
+                    className={`inline-flex h-9 w-9 items-center justify-center transition duration-300 ease-out hover:-translate-y-0.5 hover:opacity-70 sm:h-9 sm:w-9 ${
+                      light ? "text-[#111]" : "text-white"
+                    }`}
                   >
                     <svg
                       viewBox="0 0 24 24"
@@ -560,7 +573,9 @@ export function SiteHeader({ light = true, fullBleed = false, lockScrolledState 
                     target="_blank"
                     rel="noreferrer"
                     aria-label="Telegram"
-                    className="inline-flex h-9 w-9 items-center justify-center bg-[#050505] text-white transition duration-300 ease-out hover:-translate-y-0.5 hover:bg-[#1c1c1c] sm:h-9 sm:w-9"
+                    className={`inline-flex h-9 w-9 items-center justify-center transition duration-300 ease-out hover:-translate-y-0.5 hover:opacity-70 sm:h-9 sm:w-9 ${
+                      light ? "text-[#111]" : "text-white"
+                    }`}
                   >
                     <svg
                       viewBox="0 0 24 24"
@@ -819,8 +834,12 @@ export function SiteHeader({ light = true, fullBleed = false, lockScrolledState 
                     <circle cx="16.5" cy="19.5" r="1.4" fill="currentColor" />
                   </svg>
                   {cartItemsCount > 0 ? (
-                    <span className="absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-[#111] px-1.5 py-0.5 text-[10px] leading-none text-white shadow-[0_6px_18px_rgba(17,17,17,0.18)]">
-                      {cartItemsCount > 99 ? "99+" : cartItemsCount}
+                    <span
+                      className={`absolute -right-1 -top-1 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#111] text-[10px] leading-none text-white shadow-[0_6px_18px_rgba(17,17,17,0.18)] ${
+                        isCartBadgeCircle ? "w-[18px]" : "px-1.5"
+                      }`}
+                    >
+                      {cartBadgeText}
                     </span>
                   ) : null}
                 </a>

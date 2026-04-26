@@ -11,7 +11,7 @@
     "products:clear": "ts-node prisma/clear-products.ts",
     "seed": "ts-node prisma/seed.ts",
     "start": "nest start",
-    "start:dev": "TS_NODE_PROJECT=tsconfig.json node --watch --watch-path=src -r ts-node/register/transpile-only src/main.ts",
+    "start:dev": "cross-env TS_NODE_PROJECT=tsconfig.json node --watch --watch-path=src -r ts-node/register/transpile-only src/main.ts",
     "start:prod": "node dist/src/main.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
@@ -38,6 +38,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.1.0",
     "@types/node": "^22.14.1",
+    "cross-env": "^7.0.3",
     "prisma": "^6.6.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3"

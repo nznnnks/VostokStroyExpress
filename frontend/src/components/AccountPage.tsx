@@ -226,7 +226,7 @@ export function AccountPage() {
                 <p className="whitespace-nowrap text-[11px] uppercase tracking-[0.6px] text-[#8b8b86] [font-family:Jaldi,'JetBrains_Mono',monospace] sm:text-[12px] md:text-[16px] md:tracking-[2px]">
                   {label}
                 </p>
-                <p className="mt-4 break-words text-[clamp(1.2rem,5.8vw,1.9rem)] leading-none md:mt-6 md:text-[clamp(2rem,8vw,3.6rem)] [font-family:'Cormorant_Garamond',serif]">
+                <p className="mt-4 break-words tabular-nums text-[clamp(1.2rem,5.8vw,1.9rem)] leading-none md:mt-6 md:text-[clamp(2rem,8vw,3.6rem)] [font-family:DM_Sans,Manrope,sans-serif]">
                   {value}
                 </p>
                 <div className={`mt-5 h-px w-full md:mt-12 ${accent ? "bg-[#d3b46a]" : "bg-[#ece8e1]"}`} />
@@ -234,7 +234,7 @@ export function AccountPage() {
             ))}
           </div>
 
-          <div className="mt-12 md:mt-16">
+          <div className="mt-12 md:hidden">
             <h2 className="text-[clamp(2rem,7vw,4.8rem)] leading-none [font-family:'Cormorant_Garamond',serif]">Заказы</h2>
 
             <section className="mt-8 overflow-hidden border border-[#ece8e1] bg-white md:mt-10">
@@ -280,7 +280,7 @@ export function AccountPage() {
                   </div>
                   <div>
                     <p className="text-[14px] uppercase tracking-[2px] text-[#8b8b86] md:hidden [font-family:Jaldi,'JetBrains_Mono',monospace]">Итого</p>
-                    <p className="text-[20px] md:text-right [font-family:'Cormorant_Garamond',serif]">{order.total}</p>
+                    <p className="text-[20px] tabular-nums md:text-right [font-family:DM_Sans,Manrope,sans-serif]">{order.total}</p>
                   </div>
                 </a>
               ))}

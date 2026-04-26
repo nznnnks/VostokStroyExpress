@@ -25,18 +25,18 @@ export function ServicesPage({ services }: { services: ServiceView[] }) {
                   href={`/services/${service.slug}`}
                   className="group relative flex min-h-[300px] overflow-hidden rounded-[22px] bg-[#10100f] text-[#e1ddd6] shadow-[0_18px_44px_rgba(0,0,0,0.16)] transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#b99863] md:min-h-[420px] lg:h-full lg:min-h-0 lg:flex-1 lg:hover:flex-[1.55]"
                 >
-                  <img
-                    src="/image/services-card-bg-2026.png"
-                    alt=""
-                    aria-hidden="true"
-                    width="1024"
-                    height="768"
-                    className="absolute inset-0 h-full w-full object-cover opacity-46 transition duration-700 group-hover:scale-[1.03] group-hover:opacity-58"
-                  />
-                  <div className="absolute inset-0 bg-[#050505]/58 transition duration-700 group-hover:bg-[#050505]/48" />
-                  <div className="absolute inset-0 opacity-50 transition duration-700 group-hover:opacity-70">
-                    <div className="absolute bottom-0 left-0 h-64 w-full bg-[linear-gradient(180deg,transparent_0%,rgba(0,0,0,0.32)_58%,rgba(0,0,0,0.66)_100%)]" />
-                  </div>
+                  <video
+                    muted
+                    playsInline
+                    loop
+                    autoPlay
+                    preload="metadata"
+                    poster="/image/services-card-bg-2026.png"
+                    className="absolute inset-0 h-full w-full object-cover opacity-90 transition duration-700 group-hover:scale-[1.03]"
+                  >
+                    <source src="/video/about-trust.mp4" type="video/mp4" />
+                  </video>
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 top-[42%] bg-[linear-gradient(180deg,transparent_0%,rgba(0,0,0,0.52)_44%,rgba(0,0,0,0.9)_100%)] opacity-90 transition duration-700 group-hover:opacity-95" />
                   <div className="absolute inset-0 border border-white/10 transition duration-500 group-hover:border-[#b99863]/55" />
                   <div className="absolute right-5 top-5 h-9 w-9 border-r border-t border-[#e1ddd6]/20 opacity-0 transition duration-500 group-hover:opacity-100" />
 

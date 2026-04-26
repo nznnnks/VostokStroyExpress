@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ApiError } from "../lib/api-client";
 import { loadAccountOrder, type AccountOrderView } from "../lib/backend-api";
@@ -23,6 +23,27 @@ export function AccountOrderDetailPage({ orderId }: Props) {
   const [order, setOrder] = useState<AccountOrderView | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isFloatingBarVisible, setIsFloatingBarVisible] = useState(false);
+  const [floatingBarHeight, setFloatingBarHeight] = useState(0);
+  const bottomBarSentinelRef = useRef<HTMLDivElement | null>(null);
+  const floatingBarRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const media = window.matchMedia("(max-width: 767px)");
+    const handleMedia = () => setIsMobile(media.matches);
+
+    handleMedia();
+    media.addEventListener("change", handleMedia);
+
+    return () => {
+      media.removeEventListener("change", handleMedia);
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -59,9 +80,121 @@ export function AccountOrderDetailPage({ orderId }: Props) {
 
   const authRequired = error instanceof ApiError && error.status === 401;
 
+  useEffect(() => {
+    if (!isMobile) {
+      setIsFloatingBarVisible(false);
+      return;
+    }
+
+    if (!order) {
+      return;
+    }
+
+    const sentinel = bottomBarSentinelRef.current;
+
+    if (!sentinel) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        setIsFloatingBarVisible(!entry?.isIntersecting);
+      },
+      { root: null, threshold: 0.04 },
+    );
+
+    observer.observe(sentinel);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [isMobile, order]);
+
+  useEffect(() => {
+    if (!isMobile) {
+      setFloatingBarHeight(0);
+      return;
+    }
+
+    const element = floatingBarRef.current;
+
+    if (!element || typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    const ro = new ResizeObserver(() => {
+      setFloatingBarHeight(element.getBoundingClientRect().height);
+    });
+
+    ro.observe(element);
+    setFloatingBarHeight(element.getBoundingClientRect().height);
+
+    return () => ro.disconnect();
+  }, [isMobile, isFloatingBarVisible]);
+
+  const contentPaddingBottom = useMemo(() => {
+    if (!isMobile || !isFloatingBarVisible || floatingBarHeight <= 0) {
+      return undefined;
+    }
+
+    return floatingBarHeight + 16;
+  }, [floatingBarHeight, isFloatingBarVisible, isMobile]);
+
+  const orderItemsCount = useMemo(() => {
+    if (!order) {
+      return 0;
+    }
+
+    return order.items.length;
+  }, [order]);
+
+  function OrderInfoPanel({ className }: { className?: string }) {
+    if (!order) {
+      return null;
+    }
+
+    return (
+      <div className={className}>
+        <div className="text-center">
+          <p className="text-[20px] leading-none [font-family:'Cormorant_Garamond',serif]">
+            Статус: <span className="text-[#111]">{order.status}</span>
+          </p>
+        </div>
+
+        <div className="mt-4 h-px w-full bg-[#ece8e1]" />
+
+        <div className="mt-4 grid gap-3 text-left">
+          <div>
+            <p className="text-[11px] uppercase tracking-[2px] text-[#8b8b86] [font-family:Jaldi,'JetBrains_Mono',monospace]">Сумма</p>
+            <p className="mt-1 text-[20px] tabular-nums [font-family:DM_Sans,Manrope,sans-serif]">{order.total}</p>
+          </div>
+          <div>
+            <p className="text-[11px] uppercase tracking-[2px] text-[#8b8b86] [font-family:Jaldi,'JetBrains_Mono',monospace]">Кол-во позиций</p>
+            <p className="mt-1 text-[18px] tabular-nums [font-family:DM_Sans,Manrope,sans-serif]">{orderItemsCount}</p>
+          </div>
+          <div>
+            <p className="text-[11px] uppercase tracking-[2px] text-[#8b8b86] [font-family:Jaldi,'JetBrains_Mono',monospace]">Дата оформления</p>
+            <p className="mt-1 text-[18px] tabular-nums [font-family:DM_Sans,Manrope,sans-serif]">{order.date}</p>
+          </div>
+
+          <div className="pt-2">
+            <p className="text-[11px] uppercase tracking-[2px] text-[#8b8b86] [font-family:Jaldi,'JetBrains_Mono',monospace]">Поддержка</p>
+            <a
+              className="mt-2 inline-flex h-10 w-full items-center justify-center bg-[#111] px-4 text-[12px] uppercase tracking-[1.2px] text-white transition-colors duration-200 hover:bg-[#2a2a2a] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#111] [font-family:Jaldi,'JetBrains_Mono',monospace]"
+              href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(`Вопрос по заказу ${order.orderNumber}`)}`}
+            >
+              {SUPPORT_EMAIL}
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <AccountLayout active="orders">
-      <div className="pb-[calc(140px+env(safe-area-inset-bottom,0px))]">
+      <div style={{ paddingBottom: contentPaddingBottom }}>
       <a href="/account/orders" className="text-[14px] uppercase tracking-[1.6px] text-[#8b8b86] [font-family:Jaldi,'JetBrains_Mono',monospace]">к списку заказов</a>
       <h1 className="mt-5 text-[clamp(2rem,7vw,5rem)] leading-none [font-family:'Cormorant_Garamond',serif]">Детали заказа</h1>
 
@@ -80,7 +213,7 @@ export function AccountOrderDetailPage({ orderId }: Props) {
                         <p className="text-[22px] md:text-[24px] [font-family:'Cormorant_Garamond',serif]">{item.title}</p>
                         <p className="mt-1 text-[15px] uppercase tracking-[1.4px] text-[#8b8b86] [font-family:Jaldi,'JetBrains_Mono',monospace]">Количество: {item.qty}</p>
                       </div>
-                      <p className="text-[22px] [font-family:'Cormorant_Garamond',serif]">{item.price}</p>
+                      <p className="text-[22px] tabular-nums [font-family:DM_Sans,Manrope,sans-serif]">{item.price}</p>
                     </div>
                   ))}
                 </div>
@@ -97,35 +230,30 @@ export function AccountOrderDetailPage({ orderId }: Props) {
                 </div>
                 <div className="mt-10 border-t border-[#ece8e1] pt-6">
                   <p className="text-[16px] uppercase tracking-[1.4px] text-[#8b8b86] [font-family:Jaldi,'JetBrains_Mono',monospace]">Итого</p>
-                  <p className="mt-3 text-[42px] [font-family:'Cormorant_Garamond',serif]">{order.total}</p>
+                  <p className="mt-3 text-[42px] tabular-nums [font-family:DM_Sans,Manrope,sans-serif]">{order.total}</p>
                 </div>
               </aside>
+            </div>
+          ) : null}
+
+          {!loading && !error && order ? (
+            <div ref={bottomBarSentinelRef} className="mt-10 md:hidden">
+              <div className="border border-[#ece8e1] bg-[#fcfbf8] p-5">
+                <OrderInfoPanel />
+              </div>
             </div>
           ) : null}
       </div>
 
       {!loading && !error && order ? (
-        <div className="fixed inset-x-0 bottom-0 z-[170] border-t border-[#ece8e1] bg-[rgba(255,255,255,0.92)] backdrop-blur-[14px]">
-          <div className="mx-auto max-w-[1480px] px-4 py-3 md:px-10 xl:px-16">
-            <div className="grid gap-3 sm:grid-cols-3 sm:items-center">
-              <div>
-                <p className="text-[11px] uppercase tracking-[2px] text-[#8b8b86] [font-family:Jaldi,'JetBrains_Mono',monospace]">Статус заказа</p>
-                <p className="mt-1 text-[18px] [font-family:'Cormorant_Garamond',serif]">{order.status}</p>
-              </div>
-              <div className="sm:text-center">
-                <p className="text-[11px] uppercase tracking-[2px] text-[#8b8b86] [font-family:Jaldi,'JetBrains_Mono',monospace]">Сумма</p>
-                <p className="mt-1 text-[20px] [font-family:'Cormorant_Garamond',serif]">{order.total}</p>
-              </div>
-              <div className="sm:text-right">
-                <p className="text-[11px] uppercase tracking-[2px] text-[#8b8b86] [font-family:Jaldi,'JetBrains_Mono',monospace]">Поддержка</p>
-                <a
-                  className="mt-2 inline-flex h-10 w-full items-center justify-center bg-[#111] px-4 text-[12px] uppercase tracking-[1.2px] text-white transition-colors duration-200 hover:bg-[#2a2a2a] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#111] sm:w-auto [font-family:Jaldi,'JetBrains_Mono',monospace]"
-                  href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(`Вопрос по заказу ${order.orderNumber}`)}`}
-                >
-                  {SUPPORT_EMAIL}
-                </a>
-              </div>
-            </div>
+        <div
+          ref={floatingBarRef}
+          className={`fixed inset-x-0 bottom-0 z-[170] border-t border-[#ece8e1] bg-[rgba(255,255,255,0.92)] backdrop-blur-[14px] transition-[transform,opacity] duration-300 ease-out md:hidden ${
+            isFloatingBarVisible ? "translate-y-0 opacity-100" : "translate-y-[120%] opacity-0 pointer-events-none"
+          }`}
+        >
+          <div className="mx-auto max-w-[1480px] px-4 py-3">
+            <OrderInfoPanel />
           </div>
           <div className="h-[calc(env(safe-area-inset-bottom,0px))]" />
         </div>

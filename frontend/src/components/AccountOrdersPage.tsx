@@ -111,7 +111,7 @@ export function AccountOrdersPage() {
               </div>
               <div>
                 <p className="text-[14px] uppercase tracking-[2px] text-[#8b8b86] md:hidden [font-family:Jaldi,'JetBrains_Mono',monospace]">Итого</p>
-                <p className="text-[20px] md:text-right [font-family:'Cormorant_Garamond',serif]">{order.total}</p>
+                <p className="text-[20px] tabular-nums md:text-right [font-family:DM_Sans,Manrope,sans-serif]">{order.total}</p>
               </div>
             </a>
           ))}

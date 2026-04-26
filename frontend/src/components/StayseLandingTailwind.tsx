@@ -18,13 +18,13 @@ function HomePagePreloader({ visible }: { visible: boolean }) {
       <div className="absolute inset-x-0 top-0 h-px bg-black/10" />
       <div className="absolute inset-x-0 bottom-0 h-px bg-black/8" />
       <div className="relative flex w-full max-w-[920px] flex-col items-center justify-center gap-8 px-6 text-center md:gap-10">
-        <img
-          src="/logo.png"
-          alt="Climatrade"
-          width="320"
-          height="86"
-          className="h-auto w-[min(64vw,320px)] object-contain opacity-90"
-        />
+          <img
+            src="/logo.svg"
+            alt="Climatrade"
+            width="320"
+            height="86"
+            className="h-auto w-[min(64vw,320px)] object-contain opacity-90"
+          />
         <div className="flex flex-wrap items-center justify-center gap-y-2 text-[11px] uppercase tracking-[0.28em] text-[#6f685d] md:text-[13px] [font-family:'JetBrains_Mono',monospace]">
           {PRELOADER_TEXT.split("").map((char, index) => (
             <span

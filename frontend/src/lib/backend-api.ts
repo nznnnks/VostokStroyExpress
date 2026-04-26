@@ -968,7 +968,7 @@ export async function loadAccountSnapshot() {
       personalDiscount:
         toNumber(discount.personalDiscountPercent) !== null
           ? `${toNumber(discount.personalDiscountPercent)}%`
-          : "—",
+          : "0%",
       totalSpent: formatPrice(totalSpent),
     } satisfies AccountProfileView,
     orders: mappedOrders,
