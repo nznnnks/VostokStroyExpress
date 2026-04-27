@@ -1434,6 +1434,15 @@ body {
   }
 }
 
+@keyframes homeReviewsMarquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
 .home-services-reveal {
   opacity: 0;
   filter: blur(2px);

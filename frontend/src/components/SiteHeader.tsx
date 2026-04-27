@@ -314,7 +314,7 @@ export function SiteHeader({ light = true, fullBleed = false, lockScrolledState 
             aria-label="ВостокСтройЭксперт"
           >
               <img
-                src="/logo.png"
+                src="/logo.svg"
                 alt="ВостокСтройЭксперт"
                 loading="eager"
                 decoding="async"
@@ -859,7 +859,7 @@ export function SiteHeader({ light = true, fullBleed = false, lockScrolledState 
             ) : null}
             <div className="mt-8 flex items-center justify-center">
               <img
-                src="/logo.png"
+                src="/logo.svg"
                 alt="ВостокСтройЭксперт"
                 loading="eager"
                 decoding="async"
