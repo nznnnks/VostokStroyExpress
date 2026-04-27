@@ -217,7 +217,7 @@ function HeroModel({
   const readyRef = useRef(false);
   const invalidate = useThree((state) => state.invalidate);
   const size = useThree((state) => state.size);
-  const { scene } = useGLTF("/models/hero-dantex.glb");
+  const { scene } = useGLTF("/models/project_glb_1.glb?v=1");
   const clonedScene = useMemo(() => scene.clone(), [scene]);
   const fittedScale = useMemo(() => {
     const sphere = getRenderableBoundingSphere(clonedScene) ?? (() => {
