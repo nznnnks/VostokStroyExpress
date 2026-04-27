@@ -111,8 +111,8 @@ const HERO_MODEL_LAYOUTS = {
     },
   },
   wide: {
-    groupPosition: [0.25, -1.45, 0] as [number, number, number],
-    scale: 2.18,
+    groupPosition: [0.02, -1.45, 0] as [number, number, number],
+    scale: 2.1,
     wrapperClassName: "hero-model-edgefade hero-model-edgefade--wide hero-model-frame pointer-events-none",
     camera: {
       position: [0, 1.15, 9] as [number, number, number],
@@ -120,8 +120,8 @@ const HERO_MODEL_LAYOUTS = {
     },
   },
   ultraWide: {
-    groupPosition: [0.68, -1.18, 0] as [number, number, number],
-    scale: 2.68,
+    groupPosition: [0.28, -1.18, 0] as [number, number, number],
+    scale: 2.56,
     wrapperClassName: "hero-model-edgefade hero-model-edgefade--wide hero-model-frame pointer-events-none",
     camera: {
       position: [0, 1.14, 8.85] as [number, number, number],
