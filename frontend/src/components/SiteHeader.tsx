@@ -437,9 +437,9 @@ export function SiteHeader({ light = true, fullBleed = false, lockScrolledState 
                 <a
                   href="/cart"
                   aria-label="Корзина"
-                  className="relative inline-flex h-9 w-9 items-center justify-center bg-[#050505] text-white transition duration-300 ease-out hover:-translate-y-0.5 hover:bg-[#1c1c1c]"
+                  className="relative inline-flex h-11 w-11 items-center justify-center border border-[#e6e0d7] bg-transparent text-[#111] transition duration-300 ease-out hover:-translate-y-0.5 hover:border-[#d3b46a] sm:h-11 sm:w-11"
                 >
-                  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
                     <path
                       d="M6 7h13l-1.5 8.5a2 2 0 0 1-2 1.5H9a2 2 0 0 1-2-1.5L5 4H2"
                       stroke="currentColor"
@@ -639,7 +639,7 @@ export function SiteHeader({ light = true, fullBleed = false, lockScrolledState 
                           {item.brandLabel}
                         </p>
                         <p
-                          className={`truncate text-[15px] leading-tight ${light ? "text-[#111]" : "text-white"}`}
+                          className={`overflow-hidden text-[15px] leading-tight [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [overflow-wrap:anywhere] ${light ? "text-[#111]" : "text-white"}`}
                         >
                           {item.title}
                         </p>
@@ -841,7 +841,7 @@ export function SiteHeader({ light = true, fullBleed = false, lockScrolledState 
                             {item.brandLabel}
                           </p>
                           <p
-                            className={`truncate text-[15px] leading-tight ${light ? "text-[#111]" : "text-white"}`}
+                            className={`overflow-hidden text-[15px] leading-tight [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [overflow-wrap:anywhere] ${light ? "text-[#111]" : "text-white"}`}
                           >
                             {item.title}
                           </p>

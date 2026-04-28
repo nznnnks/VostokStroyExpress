@@ -270,13 +270,25 @@ export function CartPage() {
                           decoding="async"
                           className="aspect-square w-[110px] shrink-0 object-cover sm:w-[140px] lg:w-full"
                         />
-                        <div className="lg:hidden">
-                          <h2 className="text-[clamp(1.3rem,1.8vw,1.8rem)] leading-tight [font-family:'Cormorant_Garamond',serif]">
-                            {item.kind === "product" ? <a href={`/catalog/${item.slug}`}>{item.title}</a> : item.title}
-                          </h2>
-                          <p className="mt-3 text-[clamp(0.7rem,0.6vw,0.9rem)] uppercase tracking-[1.2px] text-[#7a7a75] [font-family:Jaldi,'JetBrains_Mono',monospace]">
-                            REF: {item.article}
-                          </p>
+                        <div className="min-w-0 flex-1 lg:hidden">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <h2 className="text-[clamp(1.3rem,1.8vw,1.8rem)] leading-tight [font-family:'Cormorant_Garamond',serif]">
+                                {item.kind === "product" ? <a href={`/catalog/${item.slug}`}>{item.title}</a> : item.title}
+                              </h2>
+                              <p className="mt-3 text-[clamp(0.7rem,0.6vw,0.9rem)] uppercase tracking-[1.2px] text-[#7a7a75] [font-family:Jaldi,'JetBrains_Mono',monospace]">
+                                REF: {item.article}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              disabled={actionLoading}
+                              onClick={() => removeItem(item.id)}
+                              className="group -mr-1 -mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[#7d7b76] transition-all duration-200 hover:bg-[#f1ebe2] hover:text-[#111] active:scale-95 disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent"
+                            >
+                              <img src="/cart/remove.svg" alt="Удалить товар" width="24" height="24" className="h-5 w-5 transition-transform duration-200 group-hover:rotate-90" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                       <div className="hidden min-w-0 lg:block">
@@ -318,7 +330,7 @@ export function CartPage() {
                         <span className="text-[clamp(0.65rem,0.5vw,0.8rem)] uppercase tracking-[1.4px] text-[#7a7a75] lg:hidden [font-family:Jaldi,'JetBrains_Mono',monospace]">Цена</span>
                         <p className="min-w-0 whitespace-nowrap text-[clamp(1.05rem,1.25vw,1.75rem)] [font-family:DM_Sans,Manrope,sans-serif] lg:text-[clamp(1rem,1.15vw,1.45rem)] xl:text-[clamp(1.15rem,1.35vw,1.75rem)]">{formatPrice(item.totalPrice)}</p>
                       </div>
-                      <div className="flex items-center justify-end lg:justify-center">
+                      <div className="hidden items-center justify-end lg:flex lg:justify-center">
                         <button
                           type="button"
                           disabled={actionLoading}

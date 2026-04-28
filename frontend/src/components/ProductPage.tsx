@@ -644,8 +644,11 @@ export function ProductPage({ product, relatedProducts, allProducts }: ProductPa
             {visibleRelated.map((relatedProduct, index) => (
               <article
                 key={relatedProduct.slug}
-                style={{ animationDelay: `${index * 70}ms` }}
-                className={`flex h-full flex-col ${index >= relatedAnimatedCount ? "" : "animate-[catalog-card-in_620ms_cubic-bezier(0.22,1,0.36,1)_both]"}`}
+                style={{
+                  animationDelay:
+                    index >= relatedAnimatedCount ? `${(index - relatedAnimatedCount) * 70}ms` : "0ms",
+                }}
+                className={`flex h-full flex-col ${index >= relatedAnimatedCount ? "animate-[catalog-card-in_620ms_cubic-bezier(0.22,1,0.36,1)_both]" : ""}`}
               >
                 <a href={`/catalog/${relatedProduct.slug}`}>
                   <img

@@ -70,9 +70,13 @@ type AddressVerificationState = {
 };
 
 export function CheckoutPage() {
+  const orderSummaryRef = useRef<HTMLElement | null>(null);
+  const [isQuickCheckout, setIsQuickCheckout] = useState(false);
+  const [showAllItems, setShowAllItems] = useState(false);
   const [cart, setCart] = useState<CartView | null>(null);
   const [cartLoading, setCartLoading] = useState(true);
   const [cartError, setCartError] = useState<Error | null>(null);
+  const [orderSummaryTop, setOrderSummaryTop] = useState(24);
   const [selectedPayment, setSelectedPayment] = useState<string>(paymentOptions[0][0]);
   const [submitError, setSubmitError] = useState<string>("");
   const [submitSuccess, setSubmitSuccess] = useState<string>("");
@@ -128,6 +132,7 @@ export function CheckoutPage() {
       try {
         const url = new URL(window.location.href);
         const quickProduct = url.searchParams.get("product");
+        setIsQuickCheckout(Boolean(quickProduct));
         const nextCart = quickProduct ? await addProductToSessionCartBySlug(quickProduct) : await loadSessionCart();
 
         if (quickProduct) {
@@ -161,6 +166,8 @@ export function CheckoutPage() {
   }, []);
 
   const hydratedItems = useMemo(() => cart?.items ?? [], [cart]);
+  const visibleItems = showAllItems ? hydratedItems : hydratedItems.slice(0, 3);
+  const hiddenItemsCount = Math.max(hydratedItems.length - 3, 0);
   const subtotal = cart?.subtotal ?? 0;
   const vat = Math.round(subtotal * 0.2);
   const total = cart?.total ?? subtotal + vat;
@@ -271,6 +278,62 @@ export function CheckoutPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const element = orderSummaryRef.current;
+    if (!element) return;
+
+    let rafId: number | null = null;
+
+    const updateOrderSummaryPosition = () => {
+      if (window.innerWidth < 1280) {
+        setOrderSummaryTop(24);
+        return;
+      }
+
+      const headerOffsetRaw = getComputedStyle(document.documentElement)
+        .getPropertyValue("--site-header-offset")
+        .trim();
+      const headerOffset = Number.parseFloat(headerOffsetRaw) || 76;
+      const viewportHeight = window.innerHeight;
+      const elementHeight = element.getBoundingClientRect().height;
+      const availableHeight = Math.max(viewportHeight - headerOffset - 24, 0);
+      const centeredOffset = Math.max((availableHeight - elementHeight) / 2, 12);
+
+      setOrderSummaryTop((current) => {
+        const next = Math.round(headerOffset + centeredOffset);
+        return current === next ? current : next;
+      });
+    };
+
+    const scheduleUpdate = () => {
+      if (rafId !== null) {
+        window.cancelAnimationFrame(rafId);
+      }
+      rafId = window.requestAnimationFrame(() => {
+        rafId = null;
+        updateOrderSummaryPosition();
+      });
+    };
+
+    scheduleUpdate();
+
+    const resizeObserver =
+      typeof ResizeObserver !== "undefined" ? new ResizeObserver(() => scheduleUpdate()) : null;
+    resizeObserver?.observe(element);
+
+    window.addEventListener("resize", scheduleUpdate);
+
+    return () => {
+      if (rafId !== null) {
+        window.cancelAnimationFrame(rafId);
+      }
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", scheduleUpdate);
+    };
+  }, [hydratedItems.length, subtotal, vat, total, selectedPayment, isQuickCheckout]);
+
   function handleCityChange(value: string) {
     setCity(value);
     setAddressVerification((prev) => ({ ...prev, confirmed: false, formattedAddress: "", coords: "", postalCode: "" }));
@@ -310,7 +373,13 @@ export function CheckoutPage() {
     const formData = new FormData(event.currentTarget);
     const contactName = `${formData.get("first_name") ?? ""} ${formData.get("last_name") ?? ""}`.trim();
     const contactPhone = String(formData.get("phone") ?? "").trim();
+    const contactEmail = String(formData.get("email") ?? "").trim();
     const deliveryAddress = addressLine.trim() || addressVerification.formattedAddress;
+
+    if (isQuickCheckout && !contactEmail) {
+      setSubmitError("Укажите email для быстрого оформления.");
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -323,6 +392,7 @@ export function CheckoutPage() {
       await createOrder({
         contactName: contactName || undefined,
         contactPhone: contactPhone || undefined,
+        email: isQuickCheckout ? contactEmail || undefined : undefined,
         deliveryAddress: deliveryAddress || undefined,
         deliveryMethod: addressVerification.coords
           ? `Курьерская доставка (${addressVerification.coords})`
@@ -371,7 +441,7 @@ export function CheckoutPage() {
               Пожалуйста, заполните данные для доставки и оплаты вашей системы ВостокСтройЭксперт.
             </p>
 
-            <form className="mt-10 md:mt-20" onSubmit={handleSubmit}>
+            <form id="checkout-form" className="mt-10 md:mt-20" onSubmit={handleSubmit}>
               <div className="flex items-center gap-5 text-[#111]">
                 <span className="text-[clamp(0.8rem,0.7vw,1rem)] uppercase tracking-[1.5px] text-[#7b7b75] [font-family:Jaldi,'JetBrains_Mono',monospace]">01</span>
                 <h2 className="text-[clamp(1.4rem,2vw,2rem)] uppercase tracking-[2px] [font-family:'Cormorant_Garamond',serif]">Контактные данные</h2>
@@ -405,6 +475,18 @@ export function CheckoutPage() {
                   className="mt-3 h-14 w-full border-b border-[#e8e3db] bg-transparent outline-none placeholder:text-[#b4b0a8]"
                 />
               </label>
+              {isQuickCheckout ? (
+                <label className="mt-8 block md:mt-10">
+                  <span className="text-[clamp(0.8rem,0.7vw,1rem)] uppercase tracking-[1.4px] text-[#7b7b75] [font-family:Jaldi,'JetBrains_Mono',monospace]">Email</span>
+                  <input
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="name@example.com"
+                    className="mt-3 h-14 w-full border-b border-[#e8e3db] bg-transparent outline-none placeholder:text-[#b4b0a8]"
+                  />
+                </label>
+              ) : null}
             
 
             <div className="mt-10 md:mt-20">
@@ -468,60 +550,6 @@ export function CheckoutPage() {
               </div>
             </div>
 
-            <div className="mt-10 md:mt-20">
-              <div className="flex items-center gap-5 text-[#111]">
-                <span className="text-[clamp(0.8rem,0.7vw,1rem)] uppercase tracking-[1.5px] text-[#7b7b75] [font-family:Jaldi,'JetBrains_Mono',monospace]">03</span>
-                <h2 className="text-[clamp(1.4rem,2vw,2rem)] uppercase tracking-[2px] [font-family:'Cormorant_Garamond',serif]">Способ оплаты</h2>
-              </div>
-              <div className="mt-8 space-y-4 md:mt-12 md:space-y-5">
-                {paymentOptions.map(([id, title, note, icon], index) => (
-                  <label
-                    key={title as string}
-                    htmlFor={id as string}
-                    className="flex min-h-[92px] cursor-pointer items-center justify-between border border-[#e8e3db] px-7 py-6"
-                  >
-                    <span className="flex items-center gap-5">
-                      <input
-                        id={id as string}
-                        type="radio"
-                        name="payment"
-                        checked={selectedPayment === id}
-                        onChange={() => setSelectedPayment(id as string)}
-                        disabled={Boolean(note)}
-                        className="peer sr-only"
-                      />
-                      <span
-                        aria-hidden="true"
-                        className={`flex h-7 w-7 items-center justify-center rounded-full border ${
-                          selectedPayment === id ? "border-[#111]" : "border-[#d7d2ca]"
-                        }`}
-                      >
-                        <span className={`h-3.5 w-3.5 rounded-full ${selectedPayment === id ? "bg-[#111]" : "bg-transparent"}`} />
-                      </span>
-                      <span className="flex flex-wrap items-center gap-6">
-                        <span className="text-[clamp(1rem,1.1vw,1.25rem)] uppercase tracking-[1px] [font-family:Jaldi,'JetBrains_Mono',monospace]">{title}</span>
-                        {note ? (
-                          <span className="text-[clamp(0.9rem,1vw,1.1rem)] uppercase tracking-[1px] text-[#a6a6a1] [font-family:Jaldi,'JetBrains_Mono',monospace]">
-                            {note}
-                          </span>
-                        ) : null}
-                      </span>
-                    </span>
-                    <img
-                      src={icon as string}
-                      alt=""
-                      aria-hidden="true"
-                      width="28"
-                      height="28"
-                      loading="lazy"
-                      decoding="async"
-                      className="h-7 w-7 opacity-70"
-                    />
-                  </label>
-                ))}
-              </div>
-            </div>
-
             <div className="mt-10 max-w-[860px] md:mt-20">
               {submitError ? (
                 <p className="mb-6 text-[clamp(0.75rem,0.6vw,0.9rem)] uppercase tracking-[2px] text-[#b24a3a] [font-family:Jaldi,'JetBrains_Mono',monospace]">
@@ -533,26 +561,21 @@ export function CheckoutPage() {
                   {submitSuccess}
                 </p>
               ) : null}
-              <button
-                type="submit"
-                disabled={isSubmitting || cartLoading || Boolean(cartError) || !isAddressConfirmed}
-                className="inline-flex h-20 w-full items-center justify-center bg-[#111] px-8 text-[clamp(1rem,1.2vw,1.4rem)] uppercase tracking-[4px] text-white transition-opacity [font-family:Jaldi,'JetBrains_Mono',monospace] disabled:opacity-60"
-              >
-                подтвердить заказ
-              </button>
-              <p className="mt-8 text-center text-[clamp(0.68rem,0.5vw,0.85rem)] uppercase tracking-[3px] text-[#8c8c86] [font-family:Jaldi,'JetBrains_Mono',monospace] md:mt-10">
-                нажимая кнопку, вы соглашаетесь с условиями оферты
-              </p>
+              <div className="min-h-[20px]" />
             </div>
             </form>
           </div>
 
-          <aside className="self-start border border-[#e8e3db] p-8 md:p-12">
+          <aside
+            ref={orderSummaryRef}
+            style={{ top: `${orderSummaryTop}px` }}
+            className="self-start border border-[#e8e3db] p-8 md:p-12 xl:sticky xl:max-h-[calc(100svh-var(--site-header-offset,76px)-24px)] xl:overflow-y-auto"
+          >
             <h2 className="text-[clamp(1.2rem,1.6vw,1.75rem)] uppercase tracking-[3px] [font-family:'Cormorant_Garamond',serif]">Ваш заказ</h2>
 
             {hydratedItems.length > 0 ? (
               <div className="mt-12 space-y-6">
-                {hydratedItems.map((item, index) => (
+                {visibleItems.map((item, index) => (
                   <div
                     key={`${item.kind}-${item.slug}-${index}`}
                     className={index === 0 ? "flex items-center gap-5" : "flex items-center gap-5 border-t border-[#e8e3db] pt-6"}
@@ -584,6 +607,21 @@ export function CheckoutPage() {
                     </div>
                   </div>
                 ))}
+                {hiddenItemsCount > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllItems((current) => !current)}
+                    className="inline-flex items-center gap-3 pt-1 text-[clamp(0.82rem,0.9vw,1rem)] uppercase tracking-[1.4px] text-[#7b7b75] transition-colors hover:text-[#111] [font-family:Jaldi,'JetBrains_Mono',monospace]"
+                  >
+                    <span
+                      className={`text-[1rem] leading-none transition-transform ${showAllItems ? "rotate-180" : ""}`}
+                      aria-hidden="true"
+                    >
+                      ↓
+                    </span>
+                    {showAllItems ? "Свернуть список" : `Показать еще ${hiddenItemsCount}`}
+                  </button>
+                ) : null}
               </div>
             ) : null}
 
@@ -607,9 +645,83 @@ export function CheckoutPage() {
               </div>
             </div>
 
-            <div className="mt-10 bg-[#f7f5f1] px-8 py-8">
-              <p className="max-w-[320px] text-[clamp(0.75rem,0.6vw,0.9rem)] uppercase leading-[1.8] tracking-[1.6px] text-[#7b7b75] [font-family:Jaldi,'JetBrains_Mono',monospace]">
-                В стоимость включена расширенная гарантия 5 лет и сезонное обслуживание в первый год эксплуатации.
+            <div className="mt-10 border-t border-[#e8e3db] pt-8">
+              <div className="flex items-center gap-4 text-[#111]">
+                <span className="text-[clamp(0.8rem,0.7vw,1rem)] uppercase tracking-[1.5px] text-[#7b7b75] [font-family:Jaldi,'JetBrains_Mono',monospace]">03</span>
+                <h2 className="text-[clamp(1.2rem,1.6vw,1.75rem)] uppercase tracking-[2px] [font-family:'Cormorant_Garamond',serif]">Способ оплаты</h2>
+              </div>
+              <div className="mt-6 space-y-4">
+                {paymentOptions.map(([id, title, note, icon]) => (
+                  <label
+                    key={title as string}
+                    htmlFor={id as string}
+                    className="flex min-h-[86px] cursor-pointer items-center justify-between border border-[#e8e3db] px-6 py-5 transition-colors hover:border-[#d8c7a6]"
+                  >
+                    <span className="flex min-w-0 items-center gap-4">
+                      <input
+                        id={id as string}
+                        type="radio"
+                        name="payment"
+                        checked={selectedPayment === id}
+                        onChange={() => setSelectedPayment(id as string)}
+                        disabled={Boolean(note)}
+                        className="sr-only"
+                      />
+                      <span
+                        aria-hidden="true"
+                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border ${
+                          selectedPayment === id ? "border-[#111]" : "border-[#d7d2ca]"
+                        }`}
+                      >
+                        <span className={`h-3.5 w-3.5 rounded-full ${selectedPayment === id ? "bg-[#111]" : "bg-transparent"}`} />
+                      </span>
+                      <span className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
+                        <span className="text-[clamp(0.95rem,1vw,1.15rem)] uppercase tracking-[1px] [font-family:Jaldi,'JetBrains_Mono',monospace]">
+                          {title}
+                        </span>
+                        {note ? (
+                          <span className="text-[clamp(0.82rem,0.9vw,1rem)] uppercase tracking-[1px] text-[#a6a6a1] [font-family:Jaldi,'JetBrains_Mono',monospace]">
+                            {note}
+                          </span>
+                        ) : null}
+                      </span>
+                    </span>
+                    <img
+                      src={icon as string}
+                      alt=""
+                      aria-hidden="true"
+                      width="28"
+                      height="28"
+                      loading="lazy"
+                      decoding="async"
+                      className="ml-4 h-7 w-7 shrink-0 opacity-70"
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-10 border-t border-[#e8e3db] pt-8">
+              {submitError ? (
+                <p className="mb-6 text-[clamp(0.75rem,0.6vw,0.9rem)] uppercase tracking-[2px] text-[#b24a3a] [font-family:Jaldi,'JetBrains_Mono',monospace]">
+                  {submitError}
+                </p>
+              ) : null}
+              {submitSuccess ? (
+                <p className="mb-6 text-[clamp(0.75rem,0.6vw,0.9rem)] uppercase tracking-[2px] text-[#2f7a52] [font-family:Jaldi,'JetBrains_Mono',monospace]">
+                  {submitSuccess}
+                </p>
+              ) : null}
+              <button
+                type="submit"
+                form="checkout-form"
+                disabled={isSubmitting || cartLoading || Boolean(cartError) || !isAddressConfirmed}
+                className="inline-flex h-20 w-full items-center justify-center bg-[#111] px-8 text-[clamp(1rem,1.2vw,1.35rem)] uppercase tracking-[4px] text-white transition-opacity [font-family:Jaldi,'JetBrains_Mono',monospace] disabled:opacity-60"
+              >
+                подтвердить заказ
+              </button>
+              <p className="mt-8 text-center text-[clamp(0.68rem,0.5vw,0.85rem)] uppercase tracking-[3px] text-[#8c8c86] [font-family:Jaldi,'JetBrains_Mono',monospace]">
+                нажимая кнопку, вы соглашаетесь с условиями оферты
               </p>
             </div>
           </aside>

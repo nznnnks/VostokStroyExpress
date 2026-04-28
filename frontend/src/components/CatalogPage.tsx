@@ -424,7 +424,45 @@ export function CatalogPage({
 
       setProducts((current) => (mode === "append" ? [...current, ...response.items] : response.items));
       if (response.meta) {
-        setCatalogMeta(response.meta);
+        setCatalogMeta((current) => ({
+          ...response.meta,
+          brands: selectedBrands.length > 0 ? current.brands : response.meta.brands,
+          countries: selectedCountries.length > 0 ? current.countries : response.meta.countries,
+          dynamicFilters: response.meta.dynamicFilters.map((nextFilter) => {
+            const currentFilter = current.dynamicFilters.find((item) => item.id === nextFilter.id);
+            if (!currentFilter) return nextFilter;
+
+            if (nextFilter.parameterType === "TEXT") {
+              const selectedValues = selectedTextFilters[nextFilter.id] ?? [];
+              if (selectedValues.length > 0) {
+                return {
+                  ...nextFilter,
+                  values: currentFilter.values,
+                };
+              }
+              return nextFilter;
+            }
+
+            const currentSelectedRange = selectedNumericFilters[nextFilter.id];
+            if (!currentSelectedRange) {
+              return nextFilter;
+            }
+
+            const currentRangeIsDefault =
+              currentSelectedRange[0] === currentFilter.min && currentSelectedRange[1] === currentFilter.max;
+
+            if (currentRangeIsDefault) {
+              return nextFilter;
+            }
+
+            return {
+              ...nextFilter,
+              min: currentFilter.min,
+              max: currentFilter.max,
+              numericValues: currentFilter.numericValues,
+            };
+          }),
+        }));
       }
       setCatalogTotal(response.total);
       setCatalogTotalAll(response.totalAll);
@@ -823,9 +861,8 @@ export function CatalogPage({
 
         {isOverlay || (isLanding && mode === "compact") ? null : (
           <section>
-          <div className="flex items-center justify-between gap-4 text-[16px] uppercase tracking-[1.4px] 2xl:text-[18px] [font-family:Jaldi,'JetBrains_Mono',monospace]">
+          <div className="text-[16px] uppercase tracking-[1.4px] 2xl:text-[18px] [font-family:Jaldi,'JetBrains_Mono',monospace]">
             <span>Цена</span>
-            <span className="text-right text-[#8a8a85]">{visiblePercent}%</span>
           </div>
           <div className="mt-4 border-t border-[#e7e1d9] pt-5">
             <div className="grid grid-cols-2 gap-4">
@@ -1242,7 +1279,7 @@ export function CatalogPage({
             {isCategoryPage ? initialCategory : "Каталог оборудования"}
           </h1>
           <p className="mt-4 text-[clamp(0.9rem,3.8vw,1.5rem)] uppercase tracking-[1.3px] text-[#7a7a75] md:mt-8 md:tracking-[1.6px] 2xl:text-[24px] [font-family:Jaldi,'JetBrains_Mono',monospace]">
-            Более <span className="inline-block tabular-nums align-baseline">{catalogTotal}</span> товаров в наличии
+            Более <span className="relative -top-[0.03em] tabular-nums leading-none">{catalogTotal}</span> товаров в наличии
           </p>
 
           <div className="mt-8 flex flex-col gap-8 md:mt-12 md:gap-10 xl:flex-row 2xl:gap-14">
@@ -1332,9 +1369,16 @@ export function CatalogPage({
                 }`}
               >
                 <div className="mb-8 flex items-center justify-between border-b border-[#e7e1d9] pb-4">
-                  <p className="text-[22px] uppercase tracking-[1.6px] [font-family:Jaldi,'JetBrains_Mono',monospace]">Фильтры</p>
-                  <button type="button" onClick={closeFiltersOverlays} className="text-[32px] leading-none text-[#111]" aria-label="Закрыть фильтры">
-                    x
+                  <p className="text-[22px] uppercase leading-none tracking-[1.6px] [font-family:Jaldi,'JetBrains_Mono',monospace]">Фильтры</p>
+                  <button
+                    type="button"
+                    onClick={closeFiltersOverlays}
+                    className="flex h-12 w-12 shrink-0 items-center justify-center self-center rounded-full text-[#111] transition-colors hover:text-[#7a7a75]"
+                    aria-label="Закрыть фильтры"
+                  >
+                    <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" className="block">
+                      <path d="M7 7l10 10m0-10L7 17" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
                   </button>
                 </div>
                 {renderFilters("mobile", "full")}
@@ -1366,7 +1410,8 @@ export function CatalogPage({
                     Популярные товары
                   </h2>
                   <p className="mt-2 text-[14px] uppercase tracking-[1.4px] text-[#7a7a75] [font-family:Jaldi,'JetBrains_Mono',monospace]">
-                    Показано {pageProducts.length} из {catalogTotal}
+                    Показано <span className="relative -top-[0.03em] tabular-nums leading-none">{pageProducts.length}</span> из{" "}
+                    <span className="relative -top-[0.03em] tabular-nums leading-none">{catalogTotal}</span>
                   </p>
                 </div>
               ) : null}
@@ -1402,12 +1447,12 @@ export function CatalogPage({
                                 setQuery("");
                                 setPage(1);
                               }}
-                              className="ml-2 flex h-8 w-8 items-center justify-center text-[#7a7a75]"
+                              className="ml-2 flex h-9 w-9 items-center justify-center text-[#7a7a75]"
                               aria-label="Очистить поиск"
                             >
-                              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
                                 <circle cx="12" cy="12" r="10" fill="currentColor" opacity="0.12" />
-                                <path d="M8.5 8.5l7 7m0-7l-7 7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                                <path d="M8.5 8.5l7 7m0-7l-7 7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
                               </svg>
                             </button>
                           ) : null}
@@ -1700,13 +1745,13 @@ export function CatalogPage({
                               <div className="flex min-w-0 items-center justify-center px-1 md:px-2">
                                 <span
                                   key={`${product.slug}-${cartQuantities[product.slug] ?? 0}`}
-                                  className="inline-flex min-w-0 items-center justify-center gap-1 animate-[cartQtyPop_380ms_cubic-bezier(0.22,1,0.36,1)] text-[9px] uppercase tracking-[1px] md:gap-2 md:text-[13px] md:tracking-[1.6px] 2xl:text-[15px] [font-family:Jaldi,'JetBrains_Mono',monospace]"
+                                  className="inline-flex min-w-0 items-baseline justify-center gap-1.5 leading-none animate-[cartQtyPop_380ms_cubic-bezier(0.22,1,0.36,1)] text-[9px] uppercase tracking-[1px] md:gap-2.5 md:text-[13px] md:tracking-[1.6px] 2xl:text-[15px] [font-family:Jaldi,'JetBrains_Mono',monospace]"
                                 >
-                                  <span className="shrink-0 text-[16px] leading-none tabular-nums md:text-[22px] 2xl:text-[26px]">
+                                  <span className="shrink-0 self-center text-[16px] leading-none tabular-nums md:text-[22px] 2xl:text-[26px]">
                                     {cartQuantities[product.slug] ?? 0}
                                   </span>
                                   {!isLanding ? (
-                                    <span className="hidden min-w-0 truncate whitespace-nowrap lg:inline">в корзине</span>
+                                    <span className="hidden min-w-0 self-center translate-y-[1px] truncate whitespace-nowrap leading-none md:translate-y-[2px] lg:inline">в корзине</span>
                                   ) : null}
                                 </span>
                               </div>
@@ -1731,7 +1776,7 @@ export function CatalogPage({
                             </button>
                           )}
                           <a
-                            href={`/checkout?buy=${product.slug}`}
+                            href={`/checkout?product=${product.slug}`}
                             className="inline-flex min-h-[44px] items-center justify-center border border-[#111] px-2 py-2 text-center text-[10px] uppercase tracking-[1.1px] text-[#111] transition-all duration-300 hover:border-[#d3b46a] hover:text-[#7f6522] md:h-14 md:min-h-0 md:text-[16px] md:tracking-[2px] 2xl:h-16 2xl:text-[17px] [font-family:Jaldi,'JetBrains_Mono',monospace]"
                           >
                             купить в 1 клик
