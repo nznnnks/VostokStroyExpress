@@ -788,13 +788,35 @@ export async function resolveProductIdsBySlugs(slugs: string[]) {
     return new Map<string, string>();
   }
 
-  const data = await loadPublicProductsRaw();
   const map = new Map<string, string>();
+
+  // Fast path: try resolving from the generic public products listing.
+  // Note: the endpoint is paginated/limited, so we may not see every product.
+  const data = await loadPublicProductsRaw().catch(() => [] as ApiProduct[]);
 
   for (const product of data) {
     if (uniqueSlugs.includes(product.slug)) {
       map.set(product.slug, product.id);
     }
+  }
+
+  // Fallback: resolve missing slugs individually via the stable slug endpoint.
+  const missing = uniqueSlugs.filter((slug) => !map.has(slug));
+
+  if (missing.length === 0) {
+    return map;
+  }
+
+  const resolved = await Promise.allSettled(
+    missing.map(async (slug) => {
+      const product = await apiRequest<ApiProduct>(`/api/products/slug/${encodeURIComponent(slug)}`);
+      return { slug, id: product.id };
+    }),
+  );
+
+  for (const entry of resolved) {
+    if (entry.status !== "fulfilled") continue;
+    map.set(entry.value.slug, entry.value.id);
   }
 
   return map;
