@@ -5,6 +5,11 @@ import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { CatalogQueryDto } from './dto/catalog-query.dto';
 import { CreateProductDto } from './dto/create-product.dto';
+import {
+  HIDDEN_CATEGORY_NAME_KEYWORDS,
+  HIDDEN_CATEGORY_ROOT_NAMES,
+  SHOWCASE_CATEGORY_DEFINITIONS,
+} from './showcase-category.config';
 import { UpdateProductDto } from './dto/update-product.dto';
 
 const productInclude = {
@@ -69,7 +74,7 @@ type CatalogMetadata = {
     count: number;
     types: Array<{ type: string; count: number }>;
   }>;
-  currentCategoryTypes: Array<{ type: string; count: number }>;
+  currentCategoryTypes: Array<{ type: string; slug: string; count: number }>;
   dynamicFilters: Array<{
     id: string;
     groupId: string;
@@ -97,130 +102,12 @@ type LandingCategoryDefinition = {
   name: string;
   slug: string;
   includeNames: string[];
+  fallbackRootNames?: string[];
+  fallbackIncludeNames?: string[];
 };
-
-const LANDING_CATEGORY_DEFINITIONS: LandingCategoryDefinition[] = [
-  {
-    name: 'Дизайн-радиаторы',
-    slug: 'dizayn-radiatory',
-    includeNames: ['Радиаторы стальные трубчатые'],
-  },
-  {
-    name: 'Мобильные кондиционеры',
-    slug: 'mobilnye-konditsionery',
-    includeNames: ['Мобильные кондиционеры'],
-  },
-  {
-    name: 'Осушители воздуха',
-    slug: 'osushiteli-vozdukha',
-    includeNames: ['Бытовые осушители воздуха', 'Полупромышленные осушители воздуха', 'Промышленные осушители воздуха'],
-  },
-  {
-    name: 'Увлажнители и очистители воздуха',
-    slug: 'uvlazhniteli-i-ochistiteli-vozdukha',
-    includeNames: [
-      'Бытовые увлажнители воздуха',
-      'Промышленные увлажнители воздуха',
-      'Увлажнители воздуха',
-      'Бытовые очистители воздуха',
-      'Очистители воздуха',
-      'Приточные очистители воздуха',
-    ],
-  },
-  {
-    name: 'Водонагреватели',
-    slug: 'vodonagrevateli',
-    includeNames: ['Водонагреватели накопительные', 'Водонагреватели проточные электрические', 'Водонагреватели проточные газовые'],
-  },
-  {
-    name: 'Бытовая приточная вентиляция',
-    slug: 'bytovaya-pritochnaya-ventilyatsiya',
-    includeNames: ['Бытовая приточная вентиляция'],
-  },
-  {
-    name: 'Сплит-системы',
-    slug: 'split-sistemy',
-    includeNames: [
-      'Сплит-системы настенного типа',
-      'Сплит-системы свободной компоновки',
-      'Полупромышленные сплит-системы',
-      'Мульти сплит-системы',
-      'Мульти сплит-системы свободной компоновки',
-    ],
-  },
-  {
-    name: 'Радиаторы отопления',
-    slug: 'radiatory-otopleniya',
-    includeNames: [
-      'Радиаторы стальные панельные',
-      'Радиаторы биметаллические секционные',
-      'Радиаторы алюминиевые секционные',
-      'Радиаторы чугунные',
-    ],
-  },
-  {
-    name: 'Тепловые пушки',
-    slug: 'teplovye-pushki',
-    includeNames: ['Электрические тепловые пушки', 'Дизельные тепловые пушки', 'Газовые тепловые пушки'],
-  },
-  {
-    name: 'Конвекторы',
-    slug: 'konvektory',
-    includeNames: [
-      'Электрические конвекторы',
-      'Конвекторы напольные',
-      'Конвекторы внутрипольные с вентилятором',
-      'Конвекторы внутрипольные без вентилятора',
-    ],
-  },
-  {
-    name: 'Камины',
-    slug: 'kaminy',
-    includeNames: ['Электрические камины', 'Электрические камины портального типа', 'Биокамины', 'Печи камины'],
-  },
-  {
-    name: 'Теплые полы электрические',
-    slug: 'teplye-poly-elektricheskie',
-    includeNames: [
-      'Нагревательные маты для теплого пола',
-      'Нагревательный кабель для теплого пола',
-      'Нагревательная инфракрасная пленка для теплого пола',
-      'Терморегуляторы для теплого пола',
-      'Подложки для монтажа теплого пола',
-      'Комплектующие для теплых полов',
-    ],
-  },
-  {
-    name: 'Промышленные вентиляторы',
-    slug: 'promyshlennye-ventilyatory',
-    includeNames: ['Промышленные вентиляторы'],
-  },
-  {
-    name: 'Газовые обогреватели',
-    slug: 'gazovye-obogrevateli',
-    includeNames: ['Газовые инфракрасные обогреватели'],
-  },
-  {
-    name: 'Умный дом',
-    slug: 'umnyy-dom',
-    includeNames: ['Устройства систем Умного дома'],
-  },
-  {
-    name: 'Тепловентиляторы',
-    slug: 'teploventilyatory',
-    includeNames: ['Тепловентиляторы', 'Водяные тепловентиляторы'],
-  },
-  {
-    name: 'Вытяжные бытовые вентиляторы',
-    slug: 'vytyazhnye-bytovye-ventilyatory',
-    includeNames: ['Вентиляторы вытяжные бытовые'],
-  },
-  {
-    name: 'Сушилки для рук',
-    slug: 'sushilki-dlya-ruk',
-    includeNames: ['Сушилки для рук'],
-  },
-];
+const LANDING_CATEGORY_DEFINITIONS: LandingCategoryDefinition[] = SHOWCASE_CATEGORY_DEFINITIONS;
+const HIDDEN_CATEGORY_ROOT_NAME_SET = new Set(HIDDEN_CATEGORY_ROOT_NAMES.map((item) => item.trim().toLowerCase()));
+const HIDDEN_CATEGORY_KEYWORD_SET = HIDDEN_CATEGORY_NAME_KEYWORDS.map((item) => item.trim().toLowerCase());
 
 @Injectable()
 export class ProductsService {
@@ -624,6 +511,12 @@ export class ProductsService {
     const maxPrice = products.reduce((max, product) => Math.max(max, product.price.toNumber()), 0);
 
     const categoryMap = new Map(categories.map((item) => [item.id, item]));
+    const childrenByParentId = new Map<string | null, CategoryTreeNode[]>();
+    for (const category of categories) {
+      const bucket = childrenByParentId.get(category.parentId) ?? [];
+      bucket.push(category);
+      childrenByParentId.set(category.parentId, bucket);
+    }
     const definitionBySlug = new Map(LANDING_CATEGORY_DEFINITIONS.map((item) => [item.slug, item]));
     const definitionByName = new Map(LANDING_CATEGORY_DEFINITIONS.map((item) => [item.name, item]));
     const categoryCardsMap = new Map(
@@ -639,21 +532,24 @@ export class ProductsService {
       ]),
     );
 
-    const resolveCategoryNames = (categoryId: string | null | undefined) => {
-      const names: string[] = [];
+    const resolveCategoryPath = (categoryId: string | null | undefined) => {
+      const path: CategoryTreeNode[] = [];
       let currentId: string | null | undefined = categoryId;
       while (currentId) {
         const current = categoryMap.get(currentId);
         if (!current) break;
-        names.unshift(current.name);
+        path.unshift(current);
         currentId = current.parentId;
       }
-      return names;
+      return path;
     };
 
-    const matchLandingCategory = (categoryNames: string[]) => {
+    const matchLandingCategory = (categoryPath: CategoryTreeNode[]) => {
+      const categoryNames = categoryPath.map((item) => item.name);
       for (const definition of LANDING_CATEGORY_DEFINITIONS) {
-        const matchedType = definition.includeNames.find((item) => categoryNames.includes(item));
+        const matchedType = [...definition.includeNames]
+          .reverse()
+          .find((item) => categoryNames.includes(item));
         if (matchedType) {
           return { definition, matchedType };
         }
@@ -662,9 +558,47 @@ export class ProductsService {
       return null;
     };
 
+    const isHiddenCategoryName = (name: string, { allowRoot = false }: { allowRoot?: boolean } = {}) => {
+      const normalized = name.trim().toLowerCase();
+      if (!allowRoot && HIDDEN_CATEGORY_ROOT_NAME_SET.has(normalized)) {
+        return true;
+      }
+
+      return HIDDEN_CATEGORY_KEYWORD_SET.some((keyword) => normalized.includes(keyword));
+    };
+
+    const resolveFallbackLandingGroup = (categoryPath: CategoryTreeNode[]) => {
+      if (categoryPath.length === 0) {
+        return null;
+      }
+
+      const normalizedNames = categoryPath.map((item) => item.name.trim().toLowerCase());
+      const deepestVisibleNode =
+        [...categoryPath].reverse().find((node) => !isHiddenCategoryName(node.name, { allowRoot: true })) ??
+        categoryPath[categoryPath.length - 1];
+
+      for (const definition of LANDING_CATEGORY_DEFINITIONS) {
+        const includeNames = (definition.fallbackIncludeNames ?? []).map((item) => item.trim().toLowerCase());
+        const rootNames = (definition.fallbackRootNames ?? []).map((item) => item.trim().toLowerCase());
+
+        if (
+          !includeNames.some((item) => normalizedNames.includes(item)) &&
+          !rootNames.some((item) => normalizedNames[0] === item)
+        ) {
+          continue;
+        }
+
+        return {
+          definition,
+          matchedType: deepestVisibleNode.name,
+        };
+      }
+      return null;
+    };
+
     for (const product of products) {
-      const categoryNames = resolveCategoryNames(product.category?.id);
-      const match = matchLandingCategory(categoryNames);
+      const categoryPath = resolveCategoryPath(product.category?.id);
+      const match = matchLandingCategory(categoryPath) ?? resolveFallbackLandingGroup(categoryPath);
       if (!match) continue;
 
       const categoryImage = product.images[0] ?? undefined;
@@ -697,12 +631,112 @@ export class ProductsService {
           .sort((left, right) => right.count - left.count || left.type.localeCompare(right.type, 'ru')),
       }));
 
+    const collectDescendantIds = (ids: string[]) => {
+      const resolved = new Set<string>(ids);
+      let changed = true;
+
+      while (changed) {
+        changed = false;
+        for (const category of categories) {
+          if (category.parentId && resolved.has(category.parentId) && !resolved.has(category.id)) {
+            resolved.add(category.id);
+            changed = true;
+          }
+        }
+      }
+
+      return resolved;
+    };
+
+    const resolveSelectedCategoryNodes = (value: string | undefined) => {
+      const trimmed = value?.trim();
+      if (!trimmed) return [] as CategoryTreeNode[];
+
+      const selectedDefinition = definitionBySlug.get(trimmed) ?? definitionByName.get(trimmed);
+      if (selectedDefinition) {
+        return categories.filter((item) => selectedDefinition.includeNames.includes(item.name));
+      }
+
+      return categories.filter((item) => item.name === trimmed || item.slug === trimmed);
+    };
+
+    const currentCategoryTypesByName = new Map<string, { type: string; slug: string; count: number }>();
     const selectedDefinition = selectedCategory
-      ? definitionBySlug.get(selectedCategory) ?? definitionByName.get(selectedCategory)
-      : null;
-    const currentCategoryTypes = selectedDefinition
-      ? categoryTypeTree.find((item) => item.slug === selectedDefinition.slug)?.types ?? []
-      : [];
+      ? definitionBySlug.get(selectedCategory.trim()) ?? definitionByName.get(selectedCategory.trim())
+      : undefined;
+
+    if (selectedDefinition) {
+      for (const product of products) {
+        const categoryPath = resolveCategoryPath(product.category?.id);
+        const matchedType = [...selectedDefinition.includeNames]
+          .reverse()
+          .find((item) => categoryPath.some((node) => node.name === item));
+        if (!matchedType) {
+          continue;
+        }
+
+        const matchedNode = [...categoryPath].reverse().find((node) => node.name === matchedType);
+        if (!matchedNode) {
+          continue;
+        }
+
+        const normalizedName = matchedType.trim().toLowerCase();
+        const existing = currentCategoryTypesByName.get(normalizedName);
+        if (!existing) {
+          currentCategoryTypesByName.set(normalizedName, {
+            type: matchedType,
+            slug: matchedNode.slug,
+            count: 1,
+          });
+          continue;
+        }
+
+        existing.count += 1;
+      }
+    } else {
+      const selectedCategoryNodes = resolveSelectedCategoryNodes(selectedCategory);
+      const currentCategoryTypeCandidates = new Map<string, CategoryTreeNode>();
+
+      for (const category of selectedCategoryNodes) {
+        const directChildren = childrenByParentId.get(category.id) ?? [];
+        const sourceNodes = directChildren.length > 0 ? directChildren : [category];
+
+        for (const sourceNode of sourceNodes) {
+          const existing = currentCategoryTypeCandidates.get(sourceNode.slug);
+          if (!existing) {
+            currentCategoryTypeCandidates.set(sourceNode.slug, sourceNode);
+          }
+        }
+      }
+
+      for (const category of Array.from(currentCategoryTypeCandidates.values())) {
+        const normalizedName = category.name.trim().toLowerCase();
+        const subtreeIds = collectDescendantIds([category.id]);
+        const count = products.filter((product) => product.category?.id && subtreeIds.has(product.category.id)).length;
+        if (count <= 0) continue;
+
+        const existing = currentCategoryTypesByName.get(normalizedName);
+        if (!existing) {
+          currentCategoryTypesByName.set(normalizedName, {
+            type: category.name,
+            slug: category.slug,
+            count,
+          });
+          continue;
+        }
+
+        existing.count += count;
+      }
+    }
+
+    const currentCategoryTypes = Array.from(currentCategoryTypesByName.values())
+      .map((item) => ({
+        type: item.type,
+        slug: item.slug,
+        count: item.count,
+      }))
+      .filter((item) => item.count > 0)
+      .sort((left, right) => right.count - left.count || left.type.localeCompare(right.type, 'ru'));
 
     const filtersMap = new Map<
       string,

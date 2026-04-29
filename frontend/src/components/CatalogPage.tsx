@@ -710,6 +710,17 @@ export function CatalogPage({
     return [selectedTypes, setSelectedTypes] as const;
   }
 
+  function handleCategoryTypeSelect(categorySlug: string) {
+    setSelectedCategory(categorySlug);
+    setExpandedCategory(categorySlug);
+    setPage(1);
+  }
+
+  function handleCategoryTypeReset() {
+    setSelectedCategory(initialCategory ?? "all");
+    setPage(1);
+  }
+
   function renderFilters(idPrefix: string, mode: "compact" | "full", variant: "default" | "overlay" = "default") {
     const isOverlay = variant === "overlay";
     const isLandingCategoryFilters = isLanding && !isOverlay;
@@ -719,15 +730,28 @@ export function CatalogPage({
         {isCategoryTypeFilters ? (
           <section>
             <h2 className="text-[20px] uppercase tracking-[1.6px] 2xl:text-[22px] [font-family:Jaldi,'JetBrains_Mono',monospace]">
-              Тип товара
+              Подкатегории
             </h2>
             <div className="mt-3 border-t border-[#e7e1d9] pt-5 space-y-4">
-              {currentCategoryTypeOptions.map(({ type, count }) => (
-                <label key={type} className="flex items-center gap-4 text-[18px] text-[#6f6f69] 2xl:text-[20px]">
+              <label className="flex items-center gap-4 text-[18px] text-[#6f6f69] 2xl:text-[20px]">
+                <input
+                  type="radio"
+                  name={`${idPrefix}-category-children`}
+                  checked={selectedCategory === (initialCategory ?? "all")}
+                  onChange={handleCategoryTypeReset}
+                  className="catalog-checkbox h-6 w-6 border border-[#e1dbd2] transition-all duration-200"
+                />
+                <span className="min-w-0">
+                  <span className="block">Все товары раздела</span>
+                </span>
+              </label>
+              {currentCategoryTypeOptions.map(({ type, slug, count }) => (
+                <label key={slug} className="flex items-center gap-4 text-[18px] text-[#6f6f69] 2xl:text-[20px]">
                   <input
-                    type="checkbox"
-                    checked={selectedTypes.includes(type)}
-                    onChange={() => toggleValue(type, selectedTypes, setSelectedTypes)}
+                    type="radio"
+                    name={`${idPrefix}-category-children`}
+                    checked={selectedCategory === slug}
+                    onChange={() => handleCategoryTypeSelect(slug)}
                     className="catalog-checkbox h-6 w-6 border border-[#e1dbd2] transition-all duration-200"
                   />
                   <span className="min-w-0">
