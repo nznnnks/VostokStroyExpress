@@ -7,13 +7,15 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 
 import { AdminAccess } from '../auth/decorators/admin-access.decorator';
 import { AuthenticatedAccess } from '../auth/decorators/authenticated-access.decorator';
 import { CurrentAuth } from '../auth/decorators/current-auth.decorator';
-import { AuthPrincipal } from '../auth/interfaces/auth-principal.interface';
+import { OptionalAuthenticatedGuard } from '../auth/guards/optional-authenticated.guard';
+import { AuthPrincipal, OptionalAuthPrincipal } from '../auth/interfaces/auth-principal.interface';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
@@ -36,8 +38,8 @@ export class OrdersController {
   }
 
   @Post()
-  @AuthenticatedAccess()
-  create(@Body() dto: CreateOrderDto, @CurrentAuth() auth: AuthPrincipal) {
+  @UseGuards(OptionalAuthenticatedGuard)
+  create(@Body() dto: CreateOrderDto, @CurrentAuth() auth: OptionalAuthPrincipal) {
     return this.ordersService.create(dto, auth);
   }
 

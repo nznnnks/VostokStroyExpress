@@ -1,8 +1,8 @@
-import { AuthPrincipal } from './auth-principal.interface';
+import { OptionalAuthPrincipal } from './auth-principal.interface';
 
 export interface AuthRequest {
   headers: {
     authorization?: string;
   };
-  auth?: AuthPrincipal;
+  auth?: OptionalAuthPrincipal;
 }

@@ -22,8 +22,13 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const requestedPath = `${pathname}${search}`;
   const accessToken = context.cookies.get(AUTH_TOKEN_COOKIE_KEY)?.value;
   const authType = context.cookies.get(AUTH_TYPE_COOKIE_KEY)?.value;
+  const isQuickCheckout = pathname === CHECKOUT_ROUTE_PREFIX && context.url.searchParams.has("product");
 
   if (pathname === CHECKOUT_ROUTE_PREFIX || pathname.startsWith(`${CHECKOUT_ROUTE_PREFIX}/`)) {
+    if (isQuickCheckout) {
+      return next();
+    }
+
     if (!accessToken || authType !== "user") {
       return context.redirect(`/login?next=${encodeURIComponent(requestedPath)}`);
     }

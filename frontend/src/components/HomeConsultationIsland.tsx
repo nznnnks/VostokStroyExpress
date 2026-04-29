@@ -39,7 +39,7 @@ export default function HomeConsultationIsland() {
             <svg viewBox="0 0 24 24" className="h-8 w-8 text-[#8c6732] md:h-10 md:w-10" aria-hidden="true"><path d="M5 12.5 9.2 16.7 19 7.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </div>
           <p className="relative mt-6 text-[12px] uppercase tracking-[0.34em] text-[#8f887c] [font-family:'JetBrains_Mono',monospace]">заявка отправлена</p>
-          <h3 id="consultation-success-title" className="relative mt-4 text-[clamp(32px,2.2vw,48px)] leading-[0.94] text-[#171511] [font-family:'Cormorant_Garamond',serif]">Спасибо за отзыв</h3>
+          <h3 id="consultation-success-title" className="relative mt-4 text-[clamp(32px,2.2vw,48px)] leading-[0.94] text-[#171511] [font-family:'Cormorant_Garamond',serif]">Спасибо за заявку</h3>
           <p className="relative mt-4 text-[clamp(16px,0.8vw+13px,22px)] leading-[1.55] text-[#4d473f]">В ближайшее время свяжемся с вами и уточним детали заявки.</p>
           <button type="button" onClick={() => setConsultationModalOpen(false)} className="relative mt-8 inline-flex h-14 min-w-[220px] items-center justify-center rounded-[18px] bg-[#111] px-8 text-[13px] uppercase tracking-[0.28em] text-white transition duration-300 ease-out hover:-translate-y-0.5 hover:bg-[#25211b] md:h-16 md:min-w-[240px]">закрыть</button>
         </div>

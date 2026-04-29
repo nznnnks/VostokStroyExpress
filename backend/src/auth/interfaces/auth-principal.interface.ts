@@ -15,6 +15,7 @@ export interface AuthenticatedAdmin {
 }
 
 export type AuthPrincipal = AuthenticatedUser | AuthenticatedAdmin;
+export type OptionalAuthPrincipal = AuthPrincipal | undefined;
 
 export interface AuthTokenPayload {
   sub: string;

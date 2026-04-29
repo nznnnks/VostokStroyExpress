@@ -7,6 +7,7 @@ import { PasswordService } from './password.service';
 import { AdminAuthGuard } from './guards/admin-auth.guard';
 import { AdminRolesGuard } from './guards/admin-roles.guard';
 import { AuthenticatedGuard } from './guards/authenticated.guard';
+import { OptionalAuthenticatedGuard } from './guards/optional-authenticated.guard';
 import { UserAuthGuard } from './guards/user-auth.guard';
 
 @Global()
@@ -17,6 +18,7 @@ import { UserAuthGuard } from './guards/user-auth.guard';
     AuthService,
     PasswordService,
     AuthenticatedGuard,
+    OptionalAuthenticatedGuard,
     UserAuthGuard,
     AdminAuthGuard,
     AdminRolesGuard,
@@ -25,6 +27,7 @@ import { UserAuthGuard } from './guards/user-auth.guard';
     AuthService,
     PasswordService,
     AuthenticatedGuard,
+    OptionalAuthenticatedGuard,
     UserAuthGuard,
     AdminAuthGuard,
     AdminRolesGuard,

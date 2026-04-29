@@ -1,5 +1,5 @@
 import type { Product } from "../data/products";
-import { loadCatalogProducts, resolveProductIdsBySlugs, type CartView } from "./backend-api";
+import { loadCatalogProductBySlug, loadCatalogProducts, resolveProductIdsBySlugs, type CartView } from "./backend-api";
 
 type StoredCartItem = {
   slug: string;
@@ -162,6 +162,36 @@ function mapCart(products: Product[], items: StoredCartItem[]): CartView {
   };
 }
 
+function canBuildCartFromSnapshots(items: StoredCartItem[]) {
+  return items.every((item) => item.snapshot);
+}
+
+function buildCartFromSnapshots(items: StoredCartItem[]) {
+  const normalizedItems: CartView["items"] = items
+    .filter((item): item is StoredCartItem & { snapshot: NonNullable<StoredCartItem["snapshot"]> } => Boolean(item.snapshot))
+    .map((item) => ({
+      id: item.slug,
+      slug: item.slug,
+      title: item.snapshot.title,
+      article: item.snapshot.article,
+      image: item.snapshot.image,
+      qty: item.quantity,
+      totalPrice: item.snapshot.price * item.quantity,
+      kind: "product" as const,
+      brandLabel: item.snapshot.brandLabel,
+    }));
+
+  const subtotal = normalizedItems.reduce((sum, item) => sum + item.totalPrice, 0);
+
+  return {
+    id: "session-cart",
+    items: normalizedItems,
+    subtotal,
+    discountTotal: 0,
+    total: subtotal,
+  };
+}
+
 async function buildCartFromCookie() {
   const storedItems = readStoredCartItems();
   const products = await loadCatalogProducts();
@@ -185,12 +215,32 @@ export async function addProductToSessionCartBySlug(slug: string) {
 
   if (existing) {
     existing.quantity += 1;
+    if (existing.snapshot) {
+      writeStoredCartItems(nextItems);
+      return buildCartFromSnapshots(normalizeItems(nextItems));
+    }
   } else {
     nextItems.push({ slug, quantity: 1 });
   }
 
+  const result = await loadCatalogProductBySlug(slug);
+  const product = result.product;
+  const snapshot = {
+    slug: product.slug,
+    title: product.title,
+    article: product.article,
+    image: product.image,
+    price: product.price,
+    brandLabel: product.brandLabel,
+  } satisfies StoredCartItem["snapshot"];
+
+  const target = nextItems.find((item) => item.slug === slug);
+  if (target) {
+    target.snapshot = snapshot;
+  }
+
   writeStoredCartItems(nextItems);
-  return buildCartFromCookie();
+  return buildCartFromSnapshots(normalizeItems(nextItems));
 }
 
 export async function addProductToSessionCart(product: Product) {
@@ -214,7 +264,7 @@ export async function addProductToSessionCart(product: Product) {
   }
 
   writeStoredCartItems(nextItems);
-  return buildCartFromCookie();
+  return buildCartFromSnapshots(normalizeItems(nextItems));
 }
 
 export async function updateSessionCartItem(itemId: string, quantity: number) {
@@ -225,12 +275,20 @@ export async function updateSessionCartItem(itemId: string, quantity: number) {
       : items.map((item) => (item.slug === itemId ? { ...item, quantity } : item));
 
   writeStoredCartItems(nextItems);
+  const normalizedItems = normalizeItems(nextItems);
+  if (canBuildCartFromSnapshots(normalizedItems)) {
+    return buildCartFromSnapshots(normalizedItems);
+  }
   return buildCartFromCookie();
 }
 
 export async function removeSessionCartItem(itemId: string) {
   const items = readStoredCartItems().filter((item) => item.slug !== itemId);
   writeStoredCartItems(items);
+  const normalizedItems = normalizeItems(items);
+  if (canBuildCartFromSnapshots(normalizedItems)) {
+    return buildCartFromSnapshots(normalizedItems);
+  }
   return buildCartFromCookie();
 }
 

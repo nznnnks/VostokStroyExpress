@@ -592,7 +592,7 @@ export function StayseLandingTailwind() {
             id="consultation-success-title"
             className="relative mt-4 text-[clamp(32px,2.2vw,48px)] leading-[0.94] text-[#171511] [font-family:'Cormorant_Garamond',serif]"
           >
-            Спасибо за отзыв
+            Спасибо за заявку
           </h3>
           <p className="relative mt-4 text-[clamp(16px,0.8vw+13px,22px)] leading-[1.55] text-[#4d473f]">
             В ближайшее время свяжемся с вами и уточним детали заявки.

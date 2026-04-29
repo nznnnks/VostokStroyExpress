@@ -1799,6 +1799,7 @@ export async function deleteAdminOrder(id: string) {
 export async function createOrder(payload: {
   contactName?: string;
   contactPhone?: string;
+  email?: string;
   deliveryAddress?: string;
   deliveryMethod?: string;
   comment?: string;
@@ -1813,13 +1814,9 @@ export async function createOrder(payload: {
 }) {
   const authToken = getStoredAccessToken("user");
 
-  if (!authToken) {
-    throw new ApiError("Требуется авторизация пользователя.", 401);
-  }
-
   return apiRequest<ApiOrder>("/api/orders", {
     method: "POST",
-    authToken,
+    authToken: authToken ?? undefined,
     body: payload,
   });
 }

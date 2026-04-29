@@ -6,7 +6,8 @@ import {
 } from '@nestjs/common';
 import { DiscountType, ItemKind, Prisma } from '@prisma/client';
 
-import { AuthPrincipal } from '../auth/interfaces/auth-principal.interface';
+import { OptionalAuthPrincipal, AuthPrincipal } from '../auth/interfaces/auth-principal.interface';
+import { PasswordService } from '../auth/password.service';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -34,6 +35,7 @@ export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mailService: MailService,
+    private readonly passwordService: PasswordService,
   ) {}
 
   async findAll(query: PaginationQueryDto, auth: AuthPrincipal) {
@@ -90,17 +92,8 @@ export class OrdersService {
     return this.toOrderResponse(order);
   }
 
-  async create(dto: CreateOrderDto, auth: AuthPrincipal) {
-    const userId =
-      auth.type === 'admin'
-        ? dto.userId
-        : auth.userId;
-
-    if (!userId) {
-      throw new BadRequestException('userId is required when an admin creates an order.');
-    }
-
-    await this.ensureUserExists(userId);
+  async create(dto: CreateOrderDto, auth?: OptionalAuthPrincipal) {
+    const userId = await this.resolveOrderUserId(dto, auth);
 
     if (dto.templateId) {
       await this.ensureTemplateExists(dto.templateId, userId);
@@ -255,6 +248,62 @@ export class OrdersService {
     if (!user) {
       throw new NotFoundException(`User ${id} not found.`);
     }
+  }
+
+  private async resolveOrderUserId(dto: CreateOrderDto, auth?: OptionalAuthPrincipal) {
+    if (auth?.type === 'admin') {
+      if (!dto.userId) {
+        throw new BadRequestException('userId is required when an admin creates an order.');
+      }
+      await this.ensureUserExists(dto.userId);
+      return dto.userId;
+    }
+
+    if (auth?.type === 'user') {
+      await this.ensureUserExists(auth.userId);
+      return auth.userId;
+    }
+
+    if (!dto.email) {
+      throw new BadRequestException('email is required for guest checkout.');
+    }
+
+    const normalizedEmail = dto.email.trim().toLowerCase();
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email: normalizedEmail },
+      select: { id: true },
+    });
+
+    if (existingUser) {
+      return existingUser.id;
+    }
+
+    const contactName = dto.contactName?.trim() || 'Гость';
+    const [firstName, ...rest] = contactName.split(/\s+/).filter(Boolean);
+    const lastName = rest.length > 0 ? rest.join(' ') : undefined;
+    const passwordHash = await this.passwordService.hashPassword(
+      `guest-${normalizedEmail}-${Date.now()}`,
+    );
+
+    const user = await this.prisma.user.create({
+      data: {
+        email: normalizedEmail,
+        phone: dto.contactPhone?.trim() || null,
+        passwordHash,
+        firstName: firstName || contactName,
+        lastName,
+        clientProfile: {
+          create: {
+            firstName: firstName || contactName,
+            lastName,
+            contactPhone: dto.contactPhone?.trim() || null,
+          },
+        },
+      },
+      select: { id: true },
+    });
+
+    return user.id;
   }
 
   private async ensureTemplateExists(id: string, userId?: string) {
