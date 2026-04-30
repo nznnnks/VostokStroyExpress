@@ -59,21 +59,21 @@ export const trustLogoDesktopBottomRow = [
 export const services = [
   {
     poster: "/image/restaurant.jpg",
-    video: "/video/about-trust.mp4",
+    video: "/video/ventilator.mp4",
     title: "Проект вентиляции в\u00A0ресторане",
     text: "Учитываем кухню и зал, запахи и санитарные требования. Проектируем так, чтобы гостям было комфортно, а персоналу — удобно работать.",
     accentClassName: "bg-[#ecd693]",
   },
   {
     poster: "/image/house.jpg",
-    video: "/video/about-trust.mp4",
+    video: "/video/ventilator.mp4",
     title: "Проект вентиляции в\u00A0загородном доме",
     text: "Проектируем тихую и эффективную вентиляцию для круглогодичного проживания: приток/вытяжка, рекуперация и увлажнение — под задачу.",
     accentClassName: "bg-[#9fd6f0]",
   },
   {
     poster: "/image/apartments.jpg",
-    video: "/video/about-trust.mp4",
+    video: "/video/ventilator.mp4",
     title: "Проект вентиляции в\u00A0квартире",
     text: "Интегрируем вентиляцию в интерьер без лишних коробов: прорабатываем трассы и шахты, размещение оборудования и акустику.",
     accentClassName: "bg-[#ead79d]",

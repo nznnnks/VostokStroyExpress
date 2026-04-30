@@ -332,7 +332,7 @@ export function AboutPage({ newsPosts: _newsPosts = [] }: AboutPageProps) {
                 preload="metadata"
                 poster="/image/hero-desktop-bg.jpeg"
               >
-                <source src="/video/about-trust.mp4" type="video/mp4" />
+                <source src="/video/ventilator.mp4" type="video/mp4" />
               </video>
               <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,10,15,0.18)_0%,rgba(8,11,16,0.22)_24%,rgba(8,11,16,0.3)_50%,rgba(8,11,16,0.46)_100%)] md:bg-[linear-gradient(180deg,rgba(7,10,15,0.58)_0%,rgba(8,11,16,0.56)_18%,rgba(8,11,16,0.66)_44%,rgba(8,11,16,0.76)_70%,rgba(8,11,16,0.86)_100%)]" />
             </div>

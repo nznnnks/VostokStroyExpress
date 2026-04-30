@@ -127,21 +127,21 @@ const trustLogoDesktopBottomRow = [
 const services = [
   {
     poster: "/image/services-preview-2026.png",
-    video: "/video/about-trust.mp4",
+    video: "/video/ventilator.mp4",
     title: "Тепловой контроль",
     text: "Настраиваем стабильную температуру и корректную работу систем в резиденциях, бутиках и инженерно сложных интерьерах.",
     accentClassName: "bg-[#9fd6f0]",
   },
   {
     poster: "/image/services-preview-2026.png",
-    video: "/video/about-trust.mp4",
+    video: "/video/ventilator.mp4",
     title: "Очистка воздуха",
     text: "Подбираем фильтрацию, влажность и воздухообмен так, чтобы система работала незаметно и ощущалась как комфорт.",
     accentClassName: "bg-[#ecd693]",
   },
   {
     poster: "/image/services-preview-2026.png",
-    video: "/video/about-trust.mp4",
+    video: "/video/ventilator.mp4",
     title: "Акустическая настройка",
     text: "Снижаем шум, убираем лишние вибрации и интегрируем оборудование без конфликта с архитектурой пространства.",
     accentClassName: "bg-[#ead79d]",
@@ -720,7 +720,7 @@ export function StayseLandingTailwind() {
               poster="/image/about-trust-mobile.png"
               aria-hidden="true"
             >
-              <source src="/video/about-trust.mp4" type="video/mp4" />
+              <source src="/video/ventilator.mp4" type="video/mp4" />
             </video>
             <img
               src="/image/hero-desktop-bg.jpeg"
@@ -739,7 +739,7 @@ export function StayseLandingTailwind() {
               preload="auto"
               poster="/image/hero-desktop-bg.jpeg"
             >
-              <source src="/video/about-trust.mp4" type="video/mp4" />
+              <source src="/video/ventilator.mp4" type="video/mp4" />
             </video>
             <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,10,15,0.08)_0%,rgba(8,11,16,0.08)_18%,rgba(8,11,16,0.14)_46%,rgba(8,11,16,0.24)_100%)] md:bg-[linear-gradient(180deg,rgba(7,10,15,0.56)_0%,rgba(8,11,16,0.52)_16%,rgba(8,11,16,0.62)_42%,rgba(8,11,16,0.72)_72%,rgba(8,11,16,0.84)_100%)]" />
           </div>
