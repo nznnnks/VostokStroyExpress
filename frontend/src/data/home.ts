@@ -58,32 +58,32 @@ export const trustLogoDesktopBottomRow = [
 
 export const services = [
   {
-    poster: "/image/services-preview-2026.png",
+    poster: "/image/restaurant.jpg",
     video: "/video/about-trust.mp4",
-    title: "Тепловой контроль",
-    text: "Настраиваем стабильную температуру и корректную работу систем в резиденциях, бутиках и инженерно сложных интерьерах.",
-    accentClassName: "bg-[#9fd6f0]",
-  },
-  {
-    poster: "/image/services-preview-2026.png",
-    video: "/video/about-trust.mp4",
-    title: "Очистка воздуха",
-    text: "Подбираем фильтрацию, влажность и воздухообмен так, чтобы система работала незаметно и ощущалась как комфорт.",
+    title: "Проект вентиляции в\u00A0ресторане",
+    text: "Учитываем кухню и зал, запахи и санитарные требования. Проектируем так, чтобы гостям было комфортно, а персоналу — удобно работать.",
     accentClassName: "bg-[#ecd693]",
   },
   {
-    poster: "/image/services-preview-2026.png",
+    poster: "/image/house.jpg",
     video: "/video/about-trust.mp4",
-    title: "Акустическая настройка",
-    text: "Снижаем шум, убираем лишние вибрации и интегрируем оборудование без конфликта с архитектурой пространства.",
+    title: "Проект вентиляции в\u00A0загородном доме",
+    text: "Проектируем тихую и эффективную вентиляцию для круглогодичного проживания: приток/вытяжка, рекуперация и увлажнение — под задачу.",
+    accentClassName: "bg-[#9fd6f0]",
+  },
+  {
+    poster: "/image/apartments.jpg",
+    video: "/video/about-trust.mp4",
+    title: "Проект вентиляции в\u00A0квартире",
+    text: "Интегрируем вентиляцию в интерьер без лишних коробов: прорабатываем трассы и шахты, размещение оборудования и акустику.",
     accentClassName: "bg-[#ead79d]",
   },
 ] as const;
 
 export const serviceHrefByTitle: Record<string, string> = {
-  "Тепловой контроль": "/services/thermal-control",
-  "Очистка воздуха": "/services/air-cleaning",
-  "Акустическая настройка": "/services/acoustic-tuning",
+  "Проект вентиляции в\u00A0ресторане": "/services/restaurant",
+  "Проект вентиляции в\u00A0загородном доме": "/services/country-house",
+  "Проект вентиляции в\u00A0квартире": "/services/apartment",
 };
 
 export const steps = [

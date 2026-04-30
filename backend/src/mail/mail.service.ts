@@ -35,6 +35,26 @@ export class MailService {
     return Number(process.env.MAIL_SMTP_PORT ?? 465);
   }
 
+  private get smtpSecure() {
+    if (process.env.MAIL_SMTP_SECURE !== undefined) {
+      return ['1', 'true', 'yes', 'on'].includes(String(process.env.MAIL_SMTP_SECURE).toLowerCase());
+    }
+
+    return this.smtpPort === 465;
+  }
+
+  private get smtpConnectionTimeoutMs() {
+    return Number(process.env.MAIL_SMTP_CONNECTION_TIMEOUT_MS ?? 8000);
+  }
+
+  private get smtpGreetingTimeoutMs() {
+    return Number(process.env.MAIL_SMTP_GREETING_TIMEOUT_MS ?? 8000);
+  }
+
+  private get smtpSocketTimeoutMs() {
+    return Number(process.env.MAIL_SMTP_SOCKET_TIMEOUT_MS ?? 10000);
+  }
+
   private get mailUser() {
     return process.env.MAIL_USER;
   }
@@ -131,15 +151,20 @@ export class MailService {
     const transporter = nodemailer.createTransport({
       host: this.smtpHost,
       port: this.smtpPort,
-      secure: this.smtpPort === 465,
+      secure: this.smtpSecure,
       auth: {
         user: this.mailUser!,
         pass: this.mailPass!,
       },
+      connectionTimeout: this.smtpConnectionTimeoutMs,
+      greetingTimeout: this.smtpGreetingTimeoutMs,
+      socketTimeout: this.smtpSocketTimeoutMs,
+      tls: {
+        servername: this.smtpHost,
+      },
     });
 
     try {
-      await transporter.verify();
       const info = await transporter.sendMail({
         from: this.mailFrom,
         to: options.to,
@@ -181,8 +206,14 @@ export class MailService {
     const transporter = nodemailer.createTransport({
       host: this.smtpHost,
       port: this.smtpPort,
-      secure: this.smtpPort === 465,
+      secure: this.smtpSecure,
       auth: { user: this.mailUser!, pass: this.mailPass! },
+      connectionTimeout: this.smtpConnectionTimeoutMs,
+      greetingTimeout: this.smtpGreetingTimeoutMs,
+      socketTimeout: this.smtpSocketTimeoutMs,
+      tls: {
+        servername: this.smtpHost,
+      },
     });
 
     try {
