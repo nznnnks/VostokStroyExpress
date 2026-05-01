@@ -19,6 +19,42 @@ try {
 } catch {
   return Astro.redirect("/catalog");
 }
+
+function normalizeText(value: string) {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function buildAutoDescription() {
+  const descriptionParts = Array.isArray(product.description) ? product.description : [];
+  const base =
+    descriptionParts.find((item) => normalizeText(item).length > 0) ??
+    [product.title, product.brandLabel, product.category, product.type].filter(Boolean).join(". ");
+  const normalized = normalizeText(base);
+
+  if (normalized.length <= 170) {
+    return normalized;
+  }
+
+  return `${normalized.slice(0, 167).trimEnd()}...`;
+}
+
+function buildAutoKeywords() {
+  const values = [
+    product.title,
+    product.category,
+    product.type,
+    product.brandLabel,
+    product.article,
+  ]
+    .map((item) => normalizeText(item ?? ""))
+    .filter(Boolean);
+
+  return Array.from(new Set(values)).join(", ");
+}
+
+const pageTitle = normalizeText(product.metaTitle ?? product.title);
+const pageDescription = normalizeText(product.metaDescription ?? buildAutoDescription());
+const pageKeywords = normalizeText(product.metaKeywords ?? buildAutoKeywords());
 ---
 
 <!doctype html>
@@ -26,10 +62,12 @@ try {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{product.metaTitle ?? product.title}</title>
+    <title>{pageTitle}</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="description" content={product.metaDescription ?? `${product.title}. ${product.brandLabel}. ${product.category}.`} />
-    {product.metaKeywords ? <meta name="keywords" content={product.metaKeywords} /> : null}
+    <meta name="description" content={pageDescription} />
+    <meta name="keywords" content={pageKeywords} />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={pageDescription} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

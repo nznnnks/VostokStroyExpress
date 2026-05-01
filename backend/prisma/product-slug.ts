@@ -53,9 +53,15 @@ function shortHash(value: string) {
   return createHash("sha1").update(value).digest("hex").slice(0, 8);
 }
 
+function joinSlugSegments(...segments: Array<string | null | undefined>) {
+  return segments.filter(Boolean).join("--");
+}
+
 export async function buildUniqueProductSlug(
   prisma: PrismaClient,
   options: {
+    categoryName: string | null;
+    type: string | null;
     name: string;
     sku: string;
     nsCode: string | null;
@@ -63,15 +69,27 @@ export async function buildUniqueProductSlug(
     productId?: string;
   },
 ) {
+  const baseFromCategory = slugifyProductValue(options.categoryName ?? "");
+  const baseFromType = slugifyProductValue(options.type ?? "");
   const baseFromName = slugifyProductValue(options.name);
   const baseFromSku = slugifyProductValue(options.sku);
+  const structuredBase = joinSlugSegments(baseFromCategory, baseFromType, baseFromName);
+  const categoryAndNameBase = joinSlugSegments(baseFromCategory, baseFromName);
 
   const candidates = [
+    structuredBase,
+    categoryAndNameBase,
     baseFromName,
+    structuredBase && baseFromSku ? joinSlugSegments(structuredBase, baseFromSku) : null,
+    categoryAndNameBase && baseFromSku ? joinSlugSegments(categoryAndNameBase, baseFromSku) : null,
     baseFromName && baseFromSku ? `${baseFromName}-${baseFromSku}` : null,
+    options.nsCode && structuredBase ? joinSlugSegments(structuredBase, slugifyProductValue(options.nsCode)) : null,
+    options.barcode && structuredBase ? joinSlugSegments(structuredBase, slugifyProductValue(options.barcode)) : null,
     options.nsCode && baseFromName ? `${baseFromName}-${slugifyProductValue(options.nsCode)}` : null,
     options.barcode && baseFromName ? `${baseFromName}-${slugifyProductValue(options.barcode)}` : null,
     baseFromSku,
+    structuredBase ? joinSlugSegments(structuredBase, shortHash(options.sku)) : null,
+    categoryAndNameBase ? joinSlugSegments(categoryAndNameBase, shortHash(options.sku)) : null,
     baseFromName ? `${baseFromName}-${shortHash(options.sku)}` : null,
     baseFromSku ? `${baseFromSku}-${shortHash(options.sku)}` : null,
   ].filter((item): item is string => Boolean(item));
@@ -87,9 +105,9 @@ export async function buildUniqueProductSlug(
     }
   }
 
-  const fallbackBase = baseFromName || baseFromSku || shortHash(options.sku);
+  const fallbackBase = structuredBase || categoryAndNameBase || baseFromName || baseFromSku || shortHash(options.sku);
   for (let index = 2; index < 50; index += 1) {
-    const candidate = `${fallbackBase}-${index}-${shortHash(options.sku)}`;
+    const candidate = joinSlugSegments(fallbackBase, `${index}-${shortHash(options.sku)}`);
     const existing = await prisma.product.findUnique({
       where: { slug: candidate },
       select: { id: true, sku: true },

@@ -434,6 +434,8 @@ async function main() {
       });
 
       const nextSlug = await buildUniqueProductSlug(prisma, {
+        categoryName: leafCategoryName,
+        type,
         name: parsedRow.data.name,
         sku: parsedRow.data.sku,
         nsCode: parsedRow.data.nsCode,

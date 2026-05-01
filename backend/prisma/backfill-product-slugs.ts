@@ -10,8 +10,14 @@ async function main() {
       select: {
         id: true,
         slug: true,
+        type: true,
         name: true,
         sku: true,
+        category: {
+          select: {
+            name: true,
+          },
+        },
       },
       orderBy: { createdAt: "asc" },
     });
@@ -20,6 +26,8 @@ async function main() {
 
     for (const product of products) {
       const nextSlug = await buildUniqueProductSlug(prisma, {
+        categoryName: product.category?.name ?? null,
+        type: product.type,
         name: product.name,
         sku: product.sku,
         nsCode: null,
