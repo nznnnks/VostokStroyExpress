@@ -300,13 +300,11 @@ export function CheckoutPage() {
   const visibleItems = showAllItems ? hydratedItems : hydratedItems.slice(0, collapsedItemsLimit);
   const hiddenItemsCount = Math.max(hydratedItems.length - collapsedItemsLimit, 0);
   const subtotal = cart?.subtotal ?? 0;
-  const vat = Math.round(subtotal * 0.2);
-  const total = cart?.total ?? subtotal + vat;
+  const total = cart?.total ?? subtotal;
   const isAddressConfirmed = addressVerification.confirmed;
   const summaryRows = [
     ["Стоимость товара", formatPrice(subtotal)],
-    ["Доставка", subtotal > 0 ? "Рассчитывается далее" : "0 ₽"],
-    ["НДС (20%)", formatPrice(vat)],
+    ["Доставка", subtotal > 0 ? "Рассчитывается после оплаты" : "0 ₽"],
   ];
 
   useEffect(() => {
@@ -463,7 +461,7 @@ export function CheckoutPage() {
       resizeObserver?.disconnect();
       window.removeEventListener("resize", scheduleUpdate);
     };
-  }, [hydratedItems.length, subtotal, vat, total, selectedPayment, isQuickCheckout]);
+  }, [hydratedItems.length, subtotal, total, selectedPayment, isQuickCheckout]);
 
   function handleAddressChange(value: string) {
     setAddressLine(value);
@@ -846,11 +844,41 @@ export function CheckoutPage() {
             <div className="mt-10 border-t border-[#e8e3db] pt-8">
               <div className="space-y-6">
                 {summaryRows.map(([label, value]) => (
-                  <div key={label} className="flex items-center justify-between gap-6">
+                  <div key={label} className="flex items-start justify-between gap-6">
                     <span className="text-[clamp(0.9rem,1vw,1.1rem)] uppercase tracking-[1.2px] text-[#7b7b75] [font-family:Jaldi,'JetBrains_Mono',monospace]">
                       {label}
                     </span>
-                    <span className="text-[clamp(0.9rem,1vw,1.1rem)] uppercase tracking-[1.2px] [font-family:Jaldi,'JetBrains_Mono',monospace]">{value}</span>
+                    {label === "Доставка" ? (
+                      <div className="w-full max-w-[920px]">
+                        <span className="block text-right text-[clamp(0.78rem,0.85vw,0.94rem)] uppercase tracking-[1.2px] leading-[1.2] text-[#111] [font-family:Jaldi,'JetBrains_Mono',monospace]">
+                          {value}
+                        </span>
+                        <div className="mt-3 rounded-[32px] border border-[#ece4d8] bg-[rgba(255,255,255,0.92)] p-5 shadow-[0_14px_34px_rgba(17,17,17,0.05)]">
+                          <div className="grid grid-cols-[minmax(0,1.8fr)_minmax(280px,1fr)] gap-4">
+                            <span className="inline-flex h-16 w-full items-center justify-center rounded-full border border-[#111] bg-[#111] px-8 shadow-[0_10px_24px_rgba(17,17,17,0.18)]">
+                              <img
+                                src="/checkout/yandex-delivery.svg"
+                                alt="Яндекс Доставка"
+                                className="h-[20px] w-auto max-w-full object-contain"
+                                loading="lazy"
+                                decoding="async"
+                              />
+                            </span>
+                            <span className="inline-flex h-16 w-full items-center justify-center rounded-full border border-[#efe7db] bg-[#faf6ef] px-8">
+                              <img
+                                src="/checkout/cdek.svg"
+                                alt="CDEK"
+                                className="h-[24px] w-auto max-w-full object-contain"
+                                loading="lazy"
+                                decoding="async"
+                              />
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-[clamp(0.9rem,1vw,1.1rem)] uppercase tracking-[1.2px] [font-family:Jaldi,'JetBrains_Mono',monospace]">{value}</span>
+                    )}
                   </div>
                 ))}
               </div>
