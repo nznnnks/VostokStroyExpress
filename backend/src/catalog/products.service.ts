@@ -140,6 +140,14 @@ export class ProductsService {
           )
         : null;
 
+    const metadataPromise: Promise<CatalogMetadata | null> = !query.includeMeta
+      ? Promise.resolve(null)
+      : cachedMetadata
+        ? Promise.resolve(cachedMetadata)
+        : metadataSqlWhere
+          ? this.getOrBuildCatalogMetadataLite(query, metadataSqlWhere)
+          : Promise.resolve(this.getEmptyCatalogMetadata());
+
     const [totalAll, total, pagedProducts, metadata] = await Promise.all([
       this.prisma.product.count({
         where: { status: ProductStatus.ACTIVE },
@@ -154,9 +162,7 @@ export class ProductsService {
         skip: (page - 1) * limit,
         take: limit,
       }),
-      query.includeMeta && metadataSqlWhere
-        ? cachedMetadata ?? this.getOrBuildCatalogMetadataLite(query, metadataSqlWhere)
-        : Promise.resolve(null),
+      metadataPromise,
     ]);
 
     const items = pagedProducts.map((product) => this.toProductResponse(product));
@@ -169,6 +175,19 @@ export class ProductsService {
       totalAll,
       hasMore: page * limit < total,
       meta: metadata,
+    };
+  }
+
+  private getEmptyCatalogMetadata(): CatalogMetadata {
+    return {
+      brands: [],
+      countries: [],
+      types: [],
+      maxPrice: 0,
+      categoryCards: [],
+      categoryTypeTree: [],
+      currentCategoryTypes: [],
+      dynamicFilters: [],
     };
   }
 
