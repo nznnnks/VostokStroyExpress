@@ -844,42 +844,47 @@ export function CheckoutPage() {
             <div className="mt-10 border-t border-[#e8e3db] pt-8">
               <div className="space-y-6">
                 {summaryRows.map(([label, value]) => (
-                  <div key={label} className="flex items-start justify-between gap-6">
-                    <span className="text-[clamp(0.9rem,1vw,1.1rem)] uppercase tracking-[1.2px] text-[#7b7b75] [font-family:Jaldi,'JetBrains_Mono',monospace]">
-                      {label}
-                    </span>
-                    {label === "Доставка" ? (
-                      <div className="w-full max-w-[920px]">
-                        <span className="block text-right text-[clamp(0.78rem,0.85vw,0.94rem)] uppercase tracking-[1.2px] leading-[1.2] text-[#111] [font-family:Jaldi,'JetBrains_Mono',monospace]">
+                  label === "Доставка" ? (
+                    <div key={label} className="space-y-4">
+                      <div className="flex items-start justify-between gap-6">
+                        <span className="text-[clamp(0.9rem,1vw,1.1rem)] uppercase tracking-[1.2px] text-[#7b7b75] [font-family:Jaldi,'JetBrains_Mono',monospace]">
+                          {label}
+                        </span>
+                        <span className="text-right text-[clamp(0.78rem,0.85vw,0.94rem)] uppercase tracking-[1.2px] leading-[1.2] text-[#111] [font-family:Jaldi,'JetBrains_Mono',monospace]">
                           {value}
                         </span>
-                        <div className="mt-3 rounded-[32px] border border-[#ece4d8] bg-[rgba(255,255,255,0.92)] p-5 shadow-[0_14px_34px_rgba(17,17,17,0.05)]">
-                          <div className="grid grid-cols-[minmax(0,1.8fr)_minmax(280px,1fr)] gap-4">
-                            <span className="inline-flex h-16 w-full items-center justify-center rounded-full border border-[#111] bg-[#111] px-8 shadow-[0_10px_24px_rgba(17,17,17,0.18)]">
-                              <img
-                                src="/checkout/yandex-delivery.svg"
-                                alt="Яндекс Доставка"
-                                className="h-[20px] w-auto max-w-full object-contain"
-                                loading="lazy"
-                                decoding="async"
-                              />
-                            </span>
-                            <span className="inline-flex h-16 w-full items-center justify-center rounded-full border border-[#efe7db] bg-[#faf6ef] px-8">
-                              <img
-                                src="/checkout/cdek.svg"
-                                alt="CDEK"
-                                className="h-[24px] w-auto max-w-full object-contain"
-                                loading="lazy"
-                                decoding="async"
-                              />
-                            </span>
-                          </div>
+                      </div>
+                      <div className="mt-1 rounded-[32px] border border-[#eee4d4] bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(252,248,242,0.95))] px-4 py-3 shadow-[0_18px_36px_rgba(17,17,17,0.055)]">
+                        <div className="flex items-center gap-3 rounded-[26px] bg-[rgba(255,255,255,0.78)] px-2.5 py-2">
+                          <span className="inline-flex h-11 min-w-0 flex-[1.65] items-center justify-center rounded-full border border-[#111] bg-[#111] px-6 shadow-[0_10px_20px_rgba(17,17,17,0.15)]">
+                            <img
+                              src="/checkout/yandex-delivery.svg"
+                              alt="Яндекс Доставка"
+                              className="h-[16px] w-auto max-w-full object-contain"
+                              loading="lazy"
+                              decoding="async"
+                            />
+                          </span>
+                          <span className="inline-flex h-11 min-w-0 flex-1 items-center justify-center rounded-full border border-[#eadfcd] bg-[#fbf6ee] px-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
+                            <img
+                              src="/checkout/cdek.svg"
+                              alt="CDEK"
+                              className="h-[19px] w-auto max-w-full object-contain"
+                              loading="lazy"
+                              decoding="async"
+                            />
+                          </span>
                         </div>
                       </div>
-                    ) : (
+                    </div>
+                  ) : (
+                    <div key={label} className="flex items-start justify-between gap-6">
+                      <span className="text-[clamp(0.9rem,1vw,1.1rem)] uppercase tracking-[1.2px] text-[#7b7b75] [font-family:Jaldi,'JetBrains_Mono',monospace]">
+                        {label}
+                      </span>
                       <span className="text-[clamp(0.9rem,1vw,1.1rem)] uppercase tracking-[1.2px] [font-family:Jaldi,'JetBrains_Mono',monospace]">{value}</span>
-                    )}
-                  </div>
+                    </div>
+                  )
                 ))}
               </div>
             </div>
