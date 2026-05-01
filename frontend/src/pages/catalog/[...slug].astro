@@ -6,7 +6,8 @@ import "../../styles/global.css";
 
 export const prerender = false;
 
-const slug = Astro.params.slug ?? "";
+const slugParam = Astro.params.slug;
+const slug = Array.isArray(slugParam) ? slugParam.join("/") : slugParam ?? "";
 let product;
 let relatedProducts = [];
 let allProducts = [];

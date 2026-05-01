@@ -901,7 +901,9 @@ export async function loadCatalogCategories(): Promise<CatalogCategoryView[]> {
 }
 
 export async function loadCatalogProductBySlug(slug: string) {
-  const current = await apiRequest<ApiProduct>(`/api/products/slug/${encodeURIComponent(slug)}`);
+  const current = await apiRequest<ApiProduct>("/api/products/by-slug", {
+    query: { slug },
+  });
   const mappedCurrent = mapApiProduct(current);
   const relatedFetchLimit = 24;
 

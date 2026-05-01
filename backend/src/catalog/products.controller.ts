@@ -49,6 +49,11 @@ export class ProductsController {
     return this.productsService.findAll(query);
   }
 
+  @Get('by-slug')
+  findOneBySlugQuery(@Query('slug') slug: string) {
+    return this.productsService.findOneBySlug(slug);
+  }
+
   @Get('slug/:slug')
   findOneBySlug(@Param('slug') slug: string) {
     return this.productsService.findOneBySlug(slug);

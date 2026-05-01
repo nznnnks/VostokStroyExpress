@@ -54,7 +54,7 @@ function shortHash(value: string) {
 }
 
 function joinSlugSegments(...segments: Array<string | null | undefined>) {
-  return segments.filter(Boolean).join("--");
+  return segments.filter(Boolean).join("/");
 }
 
 export async function buildUniqueProductSlug(
