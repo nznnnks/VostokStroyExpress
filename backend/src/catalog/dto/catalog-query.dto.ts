@@ -152,4 +152,9 @@ export class CatalogQueryDto {
   @Transform(({ value }) => value === true || value === 'true' || value === '1')
   @IsBoolean()
   includeMeta = true;
+
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true' || value === '1')
+  @IsBoolean()
+  includeTotals = true;
 }

@@ -715,6 +715,7 @@ export type CatalogListingQuery = {
   textFilters?: Record<string, string[]>;
   numericFilters?: Record<string, [number, number]>;
   includeMeta?: boolean;
+  includeTotals?: boolean;
 };
 
 export type CatalogListingResponse = {
@@ -876,6 +877,7 @@ export async function loadCatalogListing(query: CatalogListingQuery = {}): Promi
           ? JSON.stringify(query.numericFilters)
           : undefined,
       includeMeta: query.includeMeta ?? true,
+      includeTotals: query.includeTotals ?? true,
     },
   });
 

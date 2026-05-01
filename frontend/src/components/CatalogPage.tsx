@@ -70,6 +70,12 @@ export function CatalogPage({
   const searchDebounceTimeoutRef = useRef<number | null>(null);
   const suppressCatalogReloadRef = useRef(false);
   const lastMetaRequestKeyRef = useRef<string | null>(null);
+  const prefetchRequestIdRef = useRef(0);
+  const prefetchedPageRef = useRef<{
+    signature: string;
+    page: number;
+    response: CatalogListingResponse;
+  } | null>(null);
   const cartQuantitiesRef = useRef<Record<string, number>>({});
   const cartSyncInFlightRef = useRef<Set<string>>(new Set());
   const pendingCartQuantityRef = useRef<Record<string, number>>({});
@@ -394,8 +400,7 @@ export function CatalogPage({
     JSON.stringify(selectedTextFilters),
   ].join("|");
 
-  async function loadCatalogPage(nextPage: number, mode: "replace" | "append") {
-    const requestId = ++requestIdRef.current;
+  function buildCatalogRequestPayload() {
     const selectedTextFiltersPayload = Object.fromEntries(
       Object.entries(selectedTextFilters).filter(([, values]) => values.length > 0),
     );
@@ -409,6 +414,75 @@ export function CatalogPage({
           return entry[1][0] !== filter.min || entry[1][1] !== filter.max;
         }),
     );
+    const signature = JSON.stringify({
+      search: query.trim(),
+      category: selectedCategory !== "all" ? selectedCategory : "",
+      minPrice: priceRange[0] > 0 ? priceRange[0] : null,
+      maxPrice: priceRange[1] < maxProductPrice ? priceRange[1] : null,
+      brands: [...selectedBrands].sort(),
+      countries: [...selectedCountries].sort(),
+      types: [...selectedTypes].sort(),
+      sort: sortMode,
+      textFilters: selectedTextFiltersPayload,
+      numericFilters: selectedNumericFiltersPayload,
+    });
+
+    return {
+      signature,
+      queryPayload: {
+        limit: itemsPerPage,
+        search: query.trim() || undefined,
+        category: selectedCategory !== "all" ? selectedCategory : undefined,
+        minPrice: priceRange[0] > 0 ? priceRange[0] : undefined,
+        maxPrice: priceRange[1] < maxProductPrice ? priceRange[1] : undefined,
+        brands: selectedBrands,
+        countries: selectedCountries,
+        types: selectedTypes,
+        sort: sortMode,
+        textFilters: selectedTextFiltersPayload,
+        numericFilters: selectedNumericFiltersPayload,
+      },
+      selectedTextFiltersPayload,
+      selectedNumericFiltersPayload,
+    };
+  }
+
+  async function prefetchCatalogPage(nextPage: number, signature: string, queryPayload: ReturnType<typeof buildCatalogRequestPayload>["queryPayload"]) {
+    const prefetchRequestId = ++prefetchRequestIdRef.current;
+
+    try {
+      const response = await loadCatalogListing({
+        page: nextPage,
+        ...queryPayload,
+        includeMeta: false,
+        includeTotals: false,
+      });
+
+      if (prefetchRequestId !== prefetchRequestIdRef.current) {
+        return;
+      }
+
+      prefetchedPageRef.current = {
+        signature,
+        page: nextPage,
+        response,
+      };
+    } catch {
+      if (prefetchRequestId !== prefetchRequestIdRef.current) {
+        return;
+      }
+      prefetchedPageRef.current = null;
+    }
+  }
+
+  async function loadCatalogPage(nextPage: number, mode: "replace" | "append") {
+    const requestId = ++requestIdRef.current;
+    const {
+      signature,
+      queryPayload,
+      selectedTextFiltersPayload,
+      selectedNumericFiltersPayload,
+    } = buildCatalogRequestPayload();
     const metaRequestKey = JSON.stringify({
       search: query.trim(),
       category: selectedCategory !== "all" ? selectedCategory : "",
@@ -421,6 +495,13 @@ export function CatalogPage({
       numericFilters: selectedNumericFiltersPayload,
     });
     const shouldIncludeMeta = mode === "replace" && lastMetaRequestKeyRef.current !== metaRequestKey;
+    const shouldIncludeTotals = mode === "replace";
+    const prefetched =
+      mode === "append" &&
+      prefetchedPageRef.current?.signature === signature &&
+      prefetchedPageRef.current.page === nextPage
+        ? prefetchedPageRef.current.response
+        : null;
 
     if (mode === "append") {
       setIsFetchingMore(true);
@@ -429,23 +510,17 @@ export function CatalogPage({
     }
 
     try {
-      const response = await loadCatalogListing({
-        page: nextPage,
-        limit: itemsPerPage,
-        search: query.trim() || undefined,
-        category: selectedCategory !== "all" ? selectedCategory : undefined,
-        minPrice: priceRange[0] > 0 ? priceRange[0] : undefined,
-        maxPrice: priceRange[1] < maxProductPrice ? priceRange[1] : undefined,
-        brands: selectedBrands,
-        countries: selectedCountries,
-        types: selectedTypes,
-        sort: sortMode,
-        textFilters: selectedTextFiltersPayload,
-        numericFilters: selectedNumericFiltersPayload,
-        includeMeta: shouldIncludeMeta,
-      });
+      const response =
+        prefetched ??
+        (await loadCatalogListing({
+          page: nextPage,
+          ...queryPayload,
+          includeMeta: shouldIncludeMeta,
+          includeTotals: shouldIncludeTotals,
+        }));
 
       if (requestId !== requestIdRef.current) return;
+      prefetchedPageRef.current = null;
 
       setProducts((current) => (mode === "append" ? [...current, ...response.items] : response.items));
       if (response.meta) {
@@ -490,9 +565,15 @@ export function CatalogPage({
           }),
         }));
       }
-      setCatalogTotal(response.total);
-      setCatalogTotalAll(response.totalAll);
+      if (shouldIncludeTotals) {
+        setCatalogTotal(response.total);
+        setCatalogTotalAll(response.totalAll);
+      }
       setHasMore(response.hasMore);
+
+      if (response.hasMore) {
+        void prefetchCatalogPage(nextPage + 1, signature, queryPayload);
+      }
     } finally {
       if (requestId === requestIdRef.current) {
         setIsFetchingMore(false);

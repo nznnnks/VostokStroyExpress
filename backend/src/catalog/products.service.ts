@@ -147,33 +147,40 @@ export class ProductsService {
         : metadataSqlWhere
           ? this.getOrBuildCatalogMetadataLite(query, metadataSqlWhere)
           : Promise.resolve(this.getEmptyCatalogMetadata());
+    const take = query.includeTotals ? limit : limit + 1;
 
-    const [totalAll, total, pagedProducts, metadata] = await Promise.all([
-      this.prisma.product.count({
-        where: { status: ProductStatus.ACTIVE },
-      }),
-      this.prisma.product.count({
-        where: publicWhere,
-      }),
+    const [totalAll, total, pagedProductsRaw, metadata] = await Promise.all([
+      query.includeTotals
+        ? this.prisma.product.count({
+            where: { status: ProductStatus.ACTIVE },
+          })
+        : Promise.resolve(null),
+      query.includeTotals
+        ? this.prisma.product.count({
+            where: publicWhere,
+          })
+        : Promise.resolve(null),
       this.prisma.product.findMany({
         where: publicWhere,
         include: productInclude,
         orderBy: this.getCatalogOrderBy(query.sort),
         skip: (page - 1) * limit,
-        take: limit,
+        take,
       }),
       metadataPromise,
     ]);
 
+    const hasMore = query.includeTotals ? page * limit < (total ?? 0) : pagedProductsRaw.length > limit;
+    const pagedProducts = query.includeTotals ? pagedProductsRaw : pagedProductsRaw.slice(0, limit);
     const items = pagedProducts.map((product) => this.toProductResponse(product));
 
     return {
       items,
       page,
       limit,
-      total,
-      totalAll,
-      hasMore: page * limit < total,
+      total: total ?? 0,
+      totalAll: totalAll ?? 0,
+      hasMore,
       meta: metadata,
     };
   }
