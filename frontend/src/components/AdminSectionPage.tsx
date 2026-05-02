@@ -1403,7 +1403,9 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
   }
 
   async function handleClientDelete() {
-    if (!clientForm.id) {
+    const userId = clientForm.userId.trim();
+
+    if (!userId) {
       return;
     }
 
@@ -1411,7 +1413,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
     setActionError(null);
 
     try {
-      await deleteAdminClientProfile(clientForm.id);
+      await deleteUser(userId);
       await refreshAdminData();
       setClientForm(emptyClientForm);
     } catch (nextError) {
@@ -2574,7 +2576,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
                       >
                         Очистить
                       </button>
-                      {clientForm.id ? (
+                      {clientForm.userId ? (
                         <button className="admin-action-btn admin-action-btn--ghost" type="button" onClick={handleClientDelete} disabled={actionLoading}>
                           Удалить
                         </button>
@@ -2587,7 +2589,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
                       columns={["Клиент", "Сегмент", "Менеджер", "Заказы", "Сумма выкупа", "Статус"]}
                       rows={filteredClients.map((item) => [
                         <button
-                          key={item.id}
+                          key={item.userId ?? item.id}
                           type="button"
                           className="text-left underline-offset-4 hover:underline"
                           onClick={() => handleSelectClient(item)}
@@ -2598,7 +2600,11 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
                         item.manager,
                         item.orders,
                         item.totalSpent ?? "0 ₽",
-                        <StatusBadge key={item.id} tone={item.status === "Активен" ? "green" : "gray"} label={item.status} />,
+                        <StatusBadge
+                          key={item.userId ?? item.id}
+                          tone={item.status === "Активен" ? "green" : "gray"}
+                          label={item.status}
+                        />,
                       ])}
                     />
                   </div>

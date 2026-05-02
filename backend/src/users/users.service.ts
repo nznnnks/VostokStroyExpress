@@ -1,7 +1,11 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
-import { ADMIN_USER_ROLES, isAdminUserRole } from '../auth/constants/auth.constants';
+import {
+  CLIENT_LIST_EXCLUDED_ROLES,
+  isAdminUserRole,
+  isClientListExcludedRole,
+} from '../auth/constants/auth.constants';
 import { PasswordService } from '../auth/password.service';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -25,7 +29,7 @@ export class UsersService {
     const where: Prisma.UserWhereInput | undefined = query.search
       ? {
           AND: [
-            { role: { notIn: [...ADMIN_USER_ROLES] } },
+            { role: { notIn: [...CLIENT_LIST_EXCLUDED_ROLES] } },
             {
               OR: [
                 { email: { contains: query.search, mode: 'insensitive' } },
@@ -36,7 +40,7 @@ export class UsersService {
             },
           ],
         }
-      : { role: { notIn: [...ADMIN_USER_ROLES] } };
+      : { role: { notIn: [...CLIENT_LIST_EXCLUDED_ROLES] } };
 
     const users = await this.prisma.user.findMany({
       where,
@@ -55,7 +59,7 @@ export class UsersService {
       include: userInclude,
     });
 
-    if (!user || isAdminUserRole(user.role)) {
+    if (!user || isClientListExcludedRole(user.role)) {
       throw new NotFoundException(`User ${id} not found.`);
     }
 
@@ -149,6 +153,17 @@ export class UsersService {
 
   async remove(id: string) {
     await this.ensureRegularUserExists(id);
+
+    const ordersCount = await this.prisma.order.count({
+      where: { userId: id },
+    });
+
+    if (ordersCount > 0) {
+      throw new BadRequestException(
+        'Cannot delete a user with existing orders. Block the user instead to preserve order history.',
+      );
+    }
+
     await this.prisma.user.delete({ where: { id } });
     return { deleted: true, id };
   }
@@ -267,7 +282,7 @@ export class UsersService {
       select: { id: true, role: true },
     });
 
-    if (!exists || isAdminUserRole(exists.role)) {
+    if (!exists || isClientListExcludedRole(exists.role)) {
       throw new NotFoundException(`User ${id} not found.`);
     }
   }

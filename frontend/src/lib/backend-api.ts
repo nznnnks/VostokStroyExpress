@@ -223,12 +223,9 @@ type ApiUser = {
   id: string;
   email: string;
   phone?: string | null;
-  role: "CLIENT" | "MANAGER";
+  role: "CLIENT" | "SUPERADMIN" | "MANAGER" | "EDITOR";
   status: "ACTIVE" | "BLOCKED";
-  clientProfile?: {
-    firstName?: string | null;
-    lastName?: string | null;
-  } | null;
+  clientProfile?: ApiClientProfile | null;
 };
 
 type ApiPayment = {
@@ -1203,7 +1200,7 @@ export async function loadAdminSectionData() {
   }
 
   const [clients, orders, news, catalog] = await Promise.all([
-    apiRequest<Array<ApiClientProfile & { user?: { id: string; email?: string | null; status?: "ACTIVE" | "BLOCKED" } | null }>>("/api/client-profiles", {
+    apiRequest<ApiUser[]>("/api/users", {
       authToken,
       query: { limit: 50 },
     }),
@@ -1236,32 +1233,33 @@ export async function loadAdminSectionData() {
     ordersByUserId.set(userId, current);
   }
 
-  const mappedClients = clients.map((item) => {
-    const stats = ordersByUserId.get(item.userId) ?? { count: 0, total: 0 };
+  const mappedClients = clients.map((user) => {
+    const profile = user.clientProfile ?? null;
+    const stats = ordersByUserId.get(user.id) ?? { count: 0, total: 0 };
 
       return {
-        id: item.id,
-        userId: item.userId,
-        name: profileName(item, item.user?.email ?? null),
-        email: item.user?.email ?? "",
-      firstName: item.firstName,
-      lastName: item.lastName ?? "",
-      companyName: item.companyName ?? "",
-      inn: item.inn ?? "",
-      contactPhone: item.contactPhone ?? "",
-      addressLine1: item.addressLine1 ?? "",
-      city: item.city ?? "",
-      postalCode: item.postalCode ?? "",
-      comment: item.comment ?? "",
+        id: profile?.id ?? "",
+        userId: user.id,
+        name: profileName(profile, user.email ?? null),
+        email: user.email ?? "",
+        firstName: profile?.firstName ?? "",
+        lastName: profile?.lastName ?? "",
+        companyName: profile?.companyName ?? "",
+        inn: profile?.inn ?? "",
+        contactPhone: profile?.contactPhone ?? "",
+        addressLine1: profile?.addressLine1 ?? "",
+        city: profile?.city ?? "",
+        postalCode: profile?.postalCode ?? "",
+        comment: profile?.comment ?? "",
         personalDiscountPercent:
-          toNumber(item.personalDiscountPercent) !== null
-            ? String(toNumber(item.personalDiscountPercent))
+          toNumber(profile?.personalDiscountPercent ?? null) !== null
+            ? String(toNumber(profile?.personalDiscountPercent ?? null))
             : "",
-        segment: item.companyName ?? "Частный клиент",
+        segment: profile?.companyName ?? "Частный клиент",
         manager: "—",
         orders: String(stats.count),
         totalSpent: formatPrice(stats.total),
-        status: item.user?.status === "BLOCKED" ? "Заблокирован" : "Активен",
+        status: user.status === "BLOCKED" ? "Заблокирован" : "Активен",
       };
     }) satisfies AdminClientView[];
 
@@ -1292,28 +1290,8 @@ export async function loadAdminSectionData() {
   })) satisfies AdminOrderView[];
 
   return {
-    clients: clients.map((item) => ({
-      id: item.id,
-      name: profileName(item, item.user?.email ?? null),
-      email: item.user?.email ?? "",
-      segment: item.companyName ?? "Частный клиент",
-      manager: "—",
-      orders: "—",
-      status: "Активен",
-    })) satisfies AdminClientView[],
-    orders: orders.map((item) => ({
-      id: item.id,
-      orderNumber: item.orderNumber,
-      client: profileName(item.user?.clientProfile, item.user?.email ?? null),
-      items: `${item.summary.itemsCount} поз.`,
-      amount: formatPrice(item.summary.total),
-      status: mapOrderStatus(item.status)[0],
-      date: formatDate(item.placedAt ?? item.createdAt),
-    })) satisfies AdminOrderView[],
-    ...{
-      clients: mappedClients,
-      orders: mappedOrders,
-    },
+    clients: mappedClients,
+    orders: mappedOrders,
     news: news.map((item) => ({
       id: item.id,
       title: item.title,

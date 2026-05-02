@@ -138,13 +138,22 @@ export class AuthService {
   }
 
   async registerUser(dto: RegisterUserDto) {
+    const email = dto.email.trim();
     const existingUser = await this.prisma.user.findUnique({
-      where: { email: dto.email },
+      where: { email },
     });
 
     if (existingUser) {
+      if (isAdminUserRole(existingUser.role)) {
+        throw new BadRequestException(
+          'User with this email already exists (admin account). Use another email.',
+        );
+      }
+
       if (existingUser.status !== UserStatus.ACTIVE) {
-        throw new BadRequestException('User with this email already exists.');
+        throw new BadRequestException(
+          'User with this email already exists (account is blocked). Contact support.',
+        );
       }
 
       if (!existingUser.emailVerifiedAt) {
@@ -161,7 +170,7 @@ export class AuthService {
 
         return {
           requiresEmailVerification: true,
-          email: existingUser.email,
+          email,
         };
       }
 
@@ -175,7 +184,7 @@ export class AuthService {
 
     const user = await this.prisma.user.create({
       data: {
-        email: dto.email,
+        email,
         phone: dto.phone ?? null,
         passwordHash,
         firstName,
