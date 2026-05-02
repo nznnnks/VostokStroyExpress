@@ -25,7 +25,9 @@ export class AdminRolesGuard implements CanActivate {
     }
 
     if (!roles.includes(request.auth.role)) {
-      throw new ForbiddenException('Insufficient admin permissions.');
+      throw new ForbiddenException(
+        `Insufficient admin permissions. Required: ${roles.join(', ')}. Current: ${request.auth.role ?? 'unknown'}.`,
+      );
     }
 
     return true;

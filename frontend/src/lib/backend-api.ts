@@ -1,6 +1,6 @@
 import { formatPrice, type Product, type ProductFilter } from "../data/products";
 import { ApiError, apiRequest } from "./api-client";
-import { getStoredAccessToken } from "./auth";
+import { getStoredAccessToken, getStoredAuthSession } from "./auth";
 
 type ApiCategory = {
   id: string;
@@ -1233,7 +1233,11 @@ export async function removeCurrentCartItem(itemId: string) {
 
 export async function loadAdminSectionData(options?: { adminRole?: string | null }) {
   const authToken = getStoredAccessToken("admin");
-  const adminRole = options?.adminRole ?? null;
+  const storedSession = getStoredAuthSession();
+  const adminRole =
+    options?.adminRole ??
+    (storedSession?.type === "admin" ? storedSession.admin?.role ?? null : null) ??
+    null;
 
   if (!authToken) {
     throw new ApiError("Требуется авторизация администратора.", 401);

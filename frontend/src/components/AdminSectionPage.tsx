@@ -1856,6 +1856,10 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
   }
 
   useEffect(() => {
+    if (!session) {
+      return;
+    }
+
     if (!["clients", "orders", "news", "catalog", "requests", "settings", "seo"].includes(activeKey)) {
       setLoading(false);
       return;
@@ -1950,7 +1954,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
     return () => {
       active = false;
     };
-  }, [activeKey]);
+  }, [activeKey, session]);
 
   useEffect(() => {
     setSecondaryFilter("all");
