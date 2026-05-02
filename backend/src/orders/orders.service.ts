@@ -354,8 +354,17 @@ export class OrdersService {
   }
 
   private toOrderResponse(order: Prisma.OrderGetPayload<{ include: typeof orderInclude }>) {
+    const latestPayment = order.payments[0] ?? null;
+    const canRetryPayment =
+      latestPayment?.provider === 'yookassa' &&
+      (latestPayment.status === 'PENDING' || latestPayment.status === 'FAILED') &&
+      order.status !== 'PAID' &&
+      order.status !== 'DELIVERED' &&
+      order.status !== 'CANCELLED';
+
     return {
       ...order,
+      canRetryPayment,
       user: order.user
         ? {
             ...order.user,
@@ -382,12 +391,28 @@ export class OrdersService {
   }
 
   private get notifyEmail() {
-    return process.env.ORDERS_NOTIFY_EMAIL ?? null;
+    return process.env.ORDERS_NOTIFY_EMAIL?.trim() || 'climatrade@mail.ru';
+  }
+
+  private buildNotificationRecipients(customerEmail?: string | null) {
+    const recipients = new Set<string>();
+
+    if (customerEmail?.trim()) {
+      recipients.add(customerEmail.trim());
+    }
+
+    if (this.notifyEmail?.trim()) {
+      recipients.add(this.notifyEmail.trim());
+    }
+
+    return Array.from(recipients).join(', ');
   }
 
   private async sendOrderCreatedEmail(order: Prisma.OrderGetPayload<{ include: typeof orderInclude }>) {
     const customerEmail = order.user?.email;
-    if (!customerEmail) {
+    const recipients = this.buildNotificationRecipients(customerEmail);
+
+    if (!recipients) {
       return;
     }
 
@@ -399,7 +424,7 @@ export class OrdersService {
 
     try {
       await this.mailService.sendMail({
-        to: this.notifyEmail ? `${customerEmail}, ${this.notifyEmail}` : customerEmail,
+        to: recipients,
         subject,
         text: body,
       });
@@ -413,7 +438,9 @@ export class OrdersService {
     previousStatus: string,
   ) {
     const customerEmail = order.user?.email;
-    if (!customerEmail) {
+    const recipients = this.buildNotificationRecipients(customerEmail);
+
+    if (!recipients) {
       return;
     }
 
@@ -425,7 +452,7 @@ export class OrdersService {
 
     try {
       await this.mailService.sendMail({
-        to: this.notifyEmail ? `${customerEmail}, ${this.notifyEmail}` : customerEmail,
+        to: recipients,
         subject,
         text: body,
       });

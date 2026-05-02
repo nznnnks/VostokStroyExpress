@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ApiError } from "../lib/api-client";
-import { loadAccountOrder, type AccountOrderView } from "../lib/backend-api";
+import { createYooKassaPayment, loadAccountOrder, type AccountOrderView } from "../lib/backend-api";
 import { AccountLayout } from "./AccountLayout";
 
 type Props = {
@@ -23,6 +23,7 @@ export function AccountOrderDetailPage({ orderId }: Props) {
   const [order, setOrder] = useState<AccountOrderView | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [retryingPayment, setRetryingPayment] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isFloatingBarVisible, setIsFloatingBarVisible] = useState(false);
   const [floatingBarHeight, setFloatingBarHeight] = useState(0);
@@ -149,6 +150,30 @@ export function AccountOrderDetailPage({ orderId }: Props) {
     return order.items.length;
   }, [order]);
 
+  async function handleRetryPayment() {
+    if (!order) {
+      return;
+    }
+
+    try {
+      setRetryingPayment(true);
+      const payment = await createYooKassaPayment({
+        orderId: order.id,
+        returnUrl: `${window.location.origin}/checkout?payment=return`,
+      });
+
+      if (!payment.confirmationUrl) {
+        throw new Error("Не удалось получить ссылку на оплату.");
+      }
+
+      window.location.href = payment.confirmationUrl;
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError : new Error("Не удалось создать повторную оплату."));
+    } finally {
+      setRetryingPayment(false);
+    }
+  }
+
   function OrderInfoPanel({ className }: { className?: string }) {
     if (!order) {
       return null;
@@ -177,6 +202,19 @@ export function AccountOrderDetailPage({ orderId }: Props) {
             <p className="text-[11px] uppercase tracking-[2px] text-[#8b8b86] [font-family:Jaldi,'JetBrains_Mono',monospace]">Дата оформления</p>
             <p className="mt-1 text-[18px] tabular-nums [font-family:DM_Sans,Manrope,sans-serif]">{order.date}</p>
           </div>
+          {order.canRetryPayment ? (
+            <div className="pt-2">
+              <p className="text-[11px] uppercase tracking-[2px] text-[#8b8b86] [font-family:Jaldi,'JetBrains_Mono',monospace]">Оплата</p>
+              <button
+                type="button"
+                onClick={handleRetryPayment}
+                disabled={retryingPayment}
+                className="mt-2 inline-flex h-10 w-full items-center justify-center border border-[#111] px-4 text-[12px] uppercase tracking-[1.2px] text-[#111] transition-colors duration-200 hover:bg-[#111] hover:text-white disabled:cursor-wait disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#111] [font-family:Jaldi,'JetBrains_Mono',monospace]"
+              >
+                {retryingPayment ? "Переход к оплате..." : "Оплатить заказ"}
+              </button>
+            </div>
+          ) : null}
 
           <div className="pt-2">
             <p className="text-[11px] uppercase tracking-[2px] text-[#8b8b86] [font-family:Jaldi,'JetBrains_Mono',monospace]">Поддержка</p>

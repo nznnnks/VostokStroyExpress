@@ -279,6 +279,8 @@ type ApiOrderItem = {
 type ApiOrderPayment = {
   status: "PENDING" | "PAID" | "FAILED" | "REFUNDED";
   method: "CARD" | "SBP" | "INVOICE" | "CASH";
+  provider?: string | null;
+  transactionId?: string | null;
 };
 
 type ApiOrder = {
@@ -294,6 +296,7 @@ type ApiOrder = {
   createdAt: string;
   items: ApiOrderItem[];
   payments: ApiOrderPayment[];
+  canRetryPayment?: boolean;
   summary: {
     itemsCount: number;
     subtotal: number;
@@ -413,6 +416,7 @@ export type AccountOrderView = {
   statusColor: string;
   delivery: string;
   payment: string;
+  canRetryPayment: boolean;
   address: string;
   total: string;
   items: Array<{
@@ -762,6 +766,7 @@ function mapOrder(order: ApiOrder): AccountOrderView {
     statusColor,
     delivery: order.deliveryMethod ?? "Не указана",
     payment: mapPaymentStatus(order.payments),
+    canRetryPayment: order.canRetryPayment === true,
     address: order.deliveryAddress ?? "Не указан",
     total: formatPrice(order.summary.total),
     items: order.items.map((item) => ({
