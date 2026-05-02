@@ -6,6 +6,9 @@
   "scripts": {
     "build": "npm run prisma:generate && node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\" && nest build",
     "admin:create": "ts-node prisma/create-admin.ts",
+    "manager:create": "ts-node prisma/create-manager.ts",
+    "services:seed-ventilation": "ts-node prisma/seed-ventilation-services.ts",
+    "requests:clear": "ts-node prisma/clear-requests.ts",
     "dev": "npm run start:dev",
     "catalog:import": "ts-node prisma/import-catalog.ts",
     "catalog:backfill-showcase": "ts-node prisma/backfill-showcase-category-slugs.ts",

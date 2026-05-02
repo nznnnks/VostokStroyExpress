@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { formatPhone } from "../data/home";
+import { createRequest } from "../lib/backend-api";
 
 export default function HomeConsultationIsland() {
   const [consultationModalOpen, setConsultationModalOpen] = useState(false);
@@ -63,6 +64,10 @@ export default function HomeConsultationIsland() {
             onSubmit={(event) => {
               event.preventDefault();
               if (!event.currentTarget.reportValidity()) return;
+              const data = new FormData(event.currentTarget);
+              const name = String(data.get("name") ?? "").trim();
+              const phone = String(data.get("phone") ?? "").trim();
+              createRequest({ name, phone, contactMethods: ["Telegram"] }).catch(() => null);
               event.currentTarget.reset();
               setConsultationModalOpen(true);
             }}

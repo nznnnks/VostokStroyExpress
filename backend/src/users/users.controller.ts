@@ -36,31 +36,31 @@ export class UsersController {
   }
 
   @Get()
-  @AdminAccess(UserRole.SUPERADMIN, UserRole.MANAGER)
+  @AdminAccess(UserRole.SUPERADMIN)
   findAll(@Query() query: PaginationQueryDto) {
     return this.usersService.findAll(query);
   }
 
   @Get(':id')
-  @AdminAccess(UserRole.SUPERADMIN, UserRole.MANAGER)
+  @AdminAccess(UserRole.SUPERADMIN)
   findOne(@Param('id') id: string) {
     return this.usersService.findOne(id);
   }
 
   @Post()
-  @AdminAccess(UserRole.SUPERADMIN, UserRole.MANAGER)
+  @AdminAccess(UserRole.SUPERADMIN)
   create(@Body() dto: CreateUserDto) {
     return this.usersService.create(dto);
   }
 
   @Patch(':id')
-  @AdminAccess(UserRole.SUPERADMIN, UserRole.MANAGER)
+  @AdminAccess(UserRole.SUPERADMIN)
   update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
     return this.usersService.update(id, dto);
   }
 
   @Delete(':id')
-  @AdminAccess(UserRole.SUPERADMIN, UserRole.MANAGER)
+  @AdminAccess(UserRole.SUPERADMIN)
   remove(@Param('id') id: string) {
     return this.usersService.remove(id);
   }

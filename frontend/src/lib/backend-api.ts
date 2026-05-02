@@ -240,6 +240,19 @@ type ApiPayment = {
   paidAt?: string | null;
 };
 
+type ApiRequest = {
+  id: string;
+  name: string;
+  phone: string;
+  contactMethods: Array<"Telegram" | "MAX" | "WhatsApp">;
+  processed: boolean;
+  createdAt: string;
+};
+
+type ApiRequestsSummary = {
+  unprocessedCount: number;
+};
+
 type ApiYooKassaCreatePaymentResponse = {
   orderId: string;
   orderNumber: string;
@@ -509,12 +522,18 @@ export type AdminOrderView = {
   userId?: string;
   orderNumber: string;
   client: string;
+  clientEmail?: string;
+  clientCompanyName?: string;
+  clientInn?: string;
+  clientProfilePhone?: string;
+  clientProfileAddress?: string;
   items: string;
   itemLines?: string;
   amount: string;
   status: string;
   statusCode?: AdminOrderStatus;
   date: string;
+  dateIso?: string;
   deliveryMethod?: string;
   deliveryAddress?: string;
   contactName?: string;
@@ -973,6 +992,13 @@ export async function loadNewsPostBySlug(slug: string) {
   return posts.find((post) => post.slug === slug) ?? null;
 }
 
+export async function createRequest(payload: { name: string; phone: string; contactMethods: Array<"Telegram" | "MAX" | "WhatsApp"> }) {
+  return apiRequest<ApiRequest>("/api/requests", {
+    method: "POST",
+    body: payload,
+  });
+}
+
 export async function loadServices() {
   const services = await loadPublicServicesRaw();
   return services.filter((item) => item.isActive !== false).map(mapApiService);
@@ -1192,30 +1218,39 @@ export async function removeCurrentCartItem(itemId: string) {
   return mapCartResponse(cart);
 }
 
-export async function loadAdminSectionData() {
+export async function loadAdminSectionData(options?: { adminRole?: string | null }) {
   const authToken = getStoredAccessToken("admin");
+  const adminRole = options?.adminRole ?? null;
 
   if (!authToken) {
     throw new ApiError("Требуется авторизация администратора.", 401);
   }
 
+  const isManager = adminRole === "MANAGER";
+
   const [clients, orders, news, catalog] = await Promise.all([
-    apiRequest<ApiUser[]>("/api/users", {
-      authToken,
-      query: { limit: 50 },
-    }),
+    isManager
+      ? Promise.resolve([] as ApiUser[])
+      : apiRequest<ApiUser[]>("/api/users", {
+          authToken,
+          query: { limit: 50 },
+        }),
     apiRequest<ApiOrder[]>("/api/orders", {
       authToken,
       query: { limit: 50 },
     }),
-    apiRequest<ApiNews[]>("/api/news", {
-      authToken,
-      query: { limit: 50 },
-    }),
-    apiRequest<ApiProduct[]>("/api/products", {
-      authToken,
-      query: { limit: 50 },
-    }),
+    isManager
+      ? Promise.resolve([] as ApiNews[])
+      : apiRequest<ApiNews[]>("/api/news", {
+          authToken,
+          query: { limit: 50 },
+        }),
+    isManager
+      ? Promise.resolve([] as ApiProduct[])
+      : apiRequest<ApiProduct[]>("/api/products", {
+          authToken,
+          query: { limit: 50 },
+        }),
   ]);
 
   const ordersByUserId = new Map<string, { count: number; total: number }>();
@@ -1268,20 +1303,21 @@ export async function loadAdminSectionData() {
     userId: item.user?.id ?? "",
     orderNumber: item.orderNumber,
     client: profileName(item.user?.clientProfile, item.user?.email ?? null),
+    clientEmail: item.user?.email ?? "",
+    clientCompanyName: item.user?.clientProfile?.companyName ?? "",
+    clientInn: item.user?.clientProfile?.inn ?? "",
+    clientProfilePhone: item.user?.clientProfile?.contactPhone ?? "",
+    clientProfileAddress: [item.user?.clientProfile?.city, item.user?.clientProfile?.addressLine1].filter(Boolean).join(", "),
     items: `${item.summary.itemsCount} поз.`,
     itemLines: item.items
-      .map((orderItem) => {
-        const kind = orderItem.productId ? "product" : "service";
-        const entityId = orderItem.productId ?? orderItem.serviceId;
-
-        return entityId ? `${kind}:${entityId}:${orderItem.quantity}` : "";
-      })
+      .map((orderItem) => `${orderItem.title} × ${orderItem.quantity}`)
       .filter(Boolean)
       .join("\n"),
     amount: formatPrice(item.summary.total),
     status: mapOrderStatus(item.status)[0],
     statusCode: item.status,
     date: formatDate(item.placedAt ?? item.createdAt),
+    dateIso: item.placedAt ?? item.createdAt,
     deliveryMethod: item.deliveryMethod ?? "",
     deliveryAddress: item.deliveryAddress ?? "",
     contactName: item.contactName ?? "",
@@ -1383,6 +1419,43 @@ export async function loadAdminPayments() {
   return apiRequest<ApiPayment[]>("/api/payments", {
     authToken,
     query: { limit: 50 },
+  });
+}
+
+export async function loadAdminRequests() {
+  const authToken = getStoredAccessToken("admin");
+
+  if (!authToken) {
+    throw new ApiError("РўСЂРµР±СѓРµС‚СЃСЏ Р°РІС‚РѕСЂРёР·Р°С†РёСЏ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР°.", 401);
+  }
+
+  return apiRequest<ApiRequest[]>("/api/requests", {
+    authToken,
+    query: { limit: 100 },
+  });
+}
+
+export async function loadAdminRequestsSummary() {
+  const authToken = getStoredAccessToken("admin");
+
+  if (!authToken) {
+    throw new ApiError("РўСЂРµР±СѓРµС‚СЃСЏ Р°РІС‚РѕСЂРёР·Р°С†РёСЏ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР°.", 401);
+  }
+
+  return apiRequest<ApiRequestsSummary>("/api/requests/summary", { authToken });
+}
+
+export async function updateAdminRequest(id: string, payload: { processed: boolean }) {
+  const authToken = getStoredAccessToken("admin");
+
+  if (!authToken) {
+    throw new ApiError("РўСЂРµР±СѓРµС‚СЃСЏ Р°РІС‚РѕСЂРёР·Р°С†РёСЏ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР°.", 401);
+  }
+
+  return apiRequest<ApiRequest>(`/api/requests/${id}`.replace(/\/+/g, "/"), {
+    method: "PATCH",
+    authToken,
+    body: payload,
   });
 }
 

@@ -110,6 +110,8 @@ type LandingCategoryDefinition = {
   fallbackIncludeNames?: string[];
 };
 const LANDING_CATEGORY_DEFINITIONS: LandingCategoryDefinition[] = SHOWCASE_CATEGORY_DEFINITIONS;
+export const UNCATEGORIZED_SHOWCASE_SLUG = 'uncategorized';
+export const KNOWN_SHOWCASE_SLUGS = SHOWCASE_CATEGORY_DEFINITIONS.map((item) => item.slug);
 
 @Injectable()
 export class ProductsService {
@@ -224,8 +226,18 @@ export class ProductsService {
     // NOTE:
     // Some Prisma Query Engine versions can panic on complex `findMany`/`include` queries at scale.
     // We compute catalog metadata via raw SQL aggregations to keep the query engine in the "simple" path.
-    const [priceAgg, brands, countries, types, categoryCounts, categoryTypeCounts, dynamicFilters, legacyPower, legacyVolume] =
-      await Promise.all([
+    const [
+      priceAgg,
+      brands,
+      countries,
+      types,
+      categoryCounts,
+      categoryTypeCounts,
+      dynamicFilters,
+      legacyPower,
+      legacyVolume,
+      uncategorizedCount,
+    ] = await Promise.all([
         this.prisma.$queryRaw<Array<{ maxPrice: number | null }>>`
           select max(p.price)::double precision as "maxPrice"
           from "Product" p
@@ -324,11 +336,18 @@ export class ProductsService {
           ${sqlWhere}
             and p.volume is not null and p.volume > 0
         `,
+        this.prisma.$queryRaw<Array<{ count: number }>>`
+          select count(*)::int as count
+          from "Product" p
+          ${sqlWhere}
+            and p."showcaseCategorySlug" is null
+        `,
       ]);
 
     const maxPrice = priceAgg[0]?.maxPrice ?? 0;
     const categoryCountMap = new Map(categoryCounts.map((row) => [row.slug, row]));
     const categoryTypeMap = new Map<string, Array<{ type: string; slug: string; count: number }>>();
+    const knownSlugSet = new Set(KNOWN_SHOWCASE_SLUGS);
 
     for (const row of categoryTypeCounts) {
       const bucket = categoryTypeMap.get(row.showcaseSlug) ?? [];
@@ -339,6 +358,11 @@ export class ProductsService {
       });
       categoryTypeMap.set(row.showcaseSlug, bucket);
     }
+
+    const unknownShowcaseCount = categoryCounts.reduce((acc, row) => {
+      return knownSlugSet.has(row.slug) ? acc : acc + row.count;
+    }, 0);
+    const unassignedShowcaseCount = (uncategorizedCount[0]?.count ?? 0) + unknownShowcaseCount;
 
     const categoryCards = SHOWCASE_CATEGORY_DEFINITIONS.map((definition) => {
       const row = categoryCountMap.get(definition.slug);
@@ -359,9 +383,25 @@ export class ProductsService {
       ),
     }));
 
-    const selectedDefinition = selectedCategory
-      ? findShowcaseCategoryDefinition(selectedCategory.trim())
-      : undefined;
+    if (unassignedShowcaseCount > 0) {
+      categoryCards.push({
+        name: 'Прочее',
+        slug: UNCATEGORIZED_SHOWCASE_SLUG,
+        count: unassignedShowcaseCount,
+        image: undefined,
+      });
+      categoryTypeTree.push({
+        category: 'Прочее',
+        slug: UNCATEGORIZED_SHOWCASE_SLUG,
+        count: unassignedShowcaseCount,
+        types: [],
+      });
+    }
+
+    const selectedDefinition =
+      selectedCategory && selectedCategory.trim() !== UNCATEGORIZED_SHOWCASE_SLUG
+        ? findShowcaseCategoryDefinition(selectedCategory.trim())
+        : undefined;
     const currentCategoryTypes = selectedDefinition
       ? (categoryTypeMap.get(selectedDefinition.slug) ?? []).sort(
           (left, right) => right.count - left.count || left.type.localeCompare(right.type, 'ru'),
@@ -660,6 +700,13 @@ export class ProductsService {
 
     if (landingDefinition) {
       and.push({ showcaseCategorySlug: landingDefinition.slug });
+    } else if (query.category === UNCATEGORIZED_SHOWCASE_SLUG) {
+      and.push({
+        OR: [
+          { showcaseCategorySlug: null },
+          { showcaseCategorySlug: { notIn: [...KNOWN_SHOWCASE_SLUGS] } },
+        ],
+      });
     } else if (categoryIds.length > 0) {
       and.push({
         categoryId: { in: categoryIds },
@@ -782,6 +829,10 @@ export class ProductsService {
     const landingDefinition = findShowcaseCategoryDefinition(query.category);
     if (landingDefinition) {
       conditions.push(Prisma.sql`p."showcaseCategorySlug" = ${landingDefinition.slug}`);
+    } else if (query.category === UNCATEGORIZED_SHOWCASE_SLUG) {
+      conditions.push(
+        Prisma.sql`(p."showcaseCategorySlug" is null or p."showcaseCategorySlug" not in (${Prisma.join(KNOWN_SHOWCASE_SLUGS)}))`,
+      );
     } else if (categoryIds.length > 0) {
       conditions.push(Prisma.sql`p."categoryId" in (${Prisma.join(categoryIds)})`);
     }

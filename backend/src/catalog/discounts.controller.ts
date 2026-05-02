@@ -21,31 +21,31 @@ export class DiscountsController {
   constructor(private readonly discountsService: DiscountsService) {}
 
   @Get()
-  @AdminAccess(UserRole.SUPERADMIN, UserRole.MANAGER)
+  @AdminAccess(UserRole.SUPERADMIN)
   findAll(@Query() query: PaginationQueryDto) {
     return this.discountsService.findAll(query);
   }
 
   @Get(':id')
-  @AdminAccess(UserRole.SUPERADMIN, UserRole.MANAGER)
+  @AdminAccess(UserRole.SUPERADMIN)
   findOne(@Param('id') id: string) {
     return this.discountsService.findOne(id);
   }
 
   @Post()
-  @AdminAccess(UserRole.SUPERADMIN, UserRole.MANAGER)
+  @AdminAccess(UserRole.SUPERADMIN)
   create(@Body() dto: CreateDiscountDto) {
     return this.discountsService.create(dto);
   }
 
   @Patch(':id')
-  @AdminAccess(UserRole.SUPERADMIN, UserRole.MANAGER)
+  @AdminAccess(UserRole.SUPERADMIN)
   update(@Param('id') id: string, @Body() dto: UpdateDiscountDto) {
     return this.discountsService.update(id, dto);
   }
 
   @Delete(':id')
-  @AdminAccess(UserRole.SUPERADMIN, UserRole.MANAGER)
+  @AdminAccess(UserRole.SUPERADMIN)
   remove(@Param('id') id: string) {
     return this.discountsService.remove(id);
   }

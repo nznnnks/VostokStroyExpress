@@ -31,19 +31,19 @@ export class CategoriesController {
   }
 
   @Post()
-  @AdminAccess(UserRole.SUPERADMIN, UserRole.MANAGER)
+  @AdminAccess(UserRole.SUPERADMIN)
   create(@Body() dto: CreateCategoryDto) {
     return this.categoriesService.create(dto);
   }
 
   @Patch(':id')
-  @AdminAccess(UserRole.SUPERADMIN, UserRole.MANAGER)
+  @AdminAccess(UserRole.SUPERADMIN)
   update(@Param('id') id: string, @Body() dto: UpdateCategoryDto) {
     return this.categoriesService.update(id, dto);
   }
 
   @Delete(':id')
-  @AdminAccess(UserRole.SUPERADMIN, UserRole.MANAGER)
+  @AdminAccess(UserRole.SUPERADMIN)
   remove(@Param('id') id: string) {
     return this.categoriesService.remove(id);
   }

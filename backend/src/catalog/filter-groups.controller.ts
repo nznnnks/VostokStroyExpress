@@ -23,31 +23,31 @@ export class FilterGroupsController {
   }
 
   @Post()
-  @AdminAccess(UserRole.SUPERADMIN, UserRole.MANAGER)
+  @AdminAccess(UserRole.SUPERADMIN)
   create(@Body() dto: CreateFilterGroupDto) {
     return this.filterGroupsService.create(dto);
   }
 
   @Patch(':id')
-  @AdminAccess(UserRole.SUPERADMIN, UserRole.MANAGER)
+  @AdminAccess(UserRole.SUPERADMIN)
   update(@Param('id') id: string, @Body() dto: UpdateFilterGroupDto) {
     return this.filterGroupsService.update(id, dto);
   }
 
   @Delete(':id')
-  @AdminAccess(UserRole.SUPERADMIN, UserRole.MANAGER)
+  @AdminAccess(UserRole.SUPERADMIN)
   remove(@Param('id') id: string) {
     return this.filterGroupsService.remove(id);
   }
 
   @Post(':groupId/parameters')
-  @AdminAccess(UserRole.SUPERADMIN, UserRole.MANAGER)
+  @AdminAccess(UserRole.SUPERADMIN)
   createParameter(@Param('groupId') groupId: string, @Body() dto: CreateFilterParameterDto) {
     return this.filterGroupsService.createParameter(groupId, dto);
   }
 
   @Patch(':groupId/parameters/:parameterId')
-  @AdminAccess(UserRole.SUPERADMIN, UserRole.MANAGER)
+  @AdminAccess(UserRole.SUPERADMIN)
   updateParameter(
     @Param('groupId') groupId: string,
     @Param('parameterId') parameterId: string,
@@ -57,7 +57,7 @@ export class FilterGroupsController {
   }
 
   @Delete(':groupId/parameters/:parameterId')
-  @AdminAccess(UserRole.SUPERADMIN, UserRole.MANAGER)
+  @AdminAccess(UserRole.SUPERADMIN)
   removeParameter(@Param('groupId') groupId: string, @Param('parameterId') parameterId: string) {
     return this.filterGroupsService.removeParameter(groupId, parameterId);
   }

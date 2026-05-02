@@ -8,7 +8,7 @@ export type AdminNavItem = {
 
 export const adminNav: AdminNavItem[] = [
   { key: "dashboard", label: "Дашборд", href: "/admin", icon: "/admin/dashboard.svg" },
-  { key: "requests", label: "Заявки", href: "/admin/requests", icon: "/admin/requests-projects.svg", badge: "1" },
+  { key: "requests", label: "Заявки", href: "/admin/requests", icon: "/admin/requests-projects.svg" },
   { key: "orders", label: "Заказы", href: "/admin/orders", icon: "/admin/orders.svg", badge: "2" },
   { key: "clients", label: "Клиенты", href: "/admin/clients", icon: "/admin/client-news-catalog.svg" },
   { key: "news", label: "Новости", href: "/admin/news", icon: "/admin/client-news-catalog.svg" },

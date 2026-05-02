@@ -10,21 +10,17 @@ import {
   createAdminFilterParameter,
   createAdminCategory,
   createAdminClientProfile,
-  createAdminOrder,
   createAdminDiscount,
   createAdminUser,
-  createAdminPayment,
   createUser,
   deleteAdminCategory,
   deleteAdminClientProfile,
   deleteAdminNews,
-  deleteAdminOrder,
   deleteAdminProduct,
   deleteAdminFilterGroup,
   deleteAdminFilterParameter,
   deleteAdminDiscount,
   deleteAdminUser,
-  deleteAdminPayment,
   deleteUser,
   loadAdminCategoryById,
   loadAdminSectionData,
@@ -34,7 +30,9 @@ import {
   loadAdminDiscounts,
   loadAdminUsers,
   loadUsers,
-  loadAdminPayments,
+  loadAdminRequests,
+  loadAdminRequestsSummary,
+  updateAdminRequest,
   loadAdminNewsById,
   loadAdminProductById,
   type AdminCategoryView,
@@ -42,10 +40,9 @@ import {
   type AdminFilterGroupView,
   type AdminClientView,
   type AdminNewsView,
+  type AdminOrderStatus,
   type AdminOrderView,
   updateAdminNews,
-  updateAdminOrder,
-  updateAdminOrderStatus,
   updateAdminProduct,
   updateAdminFilterGroup,
   updateAdminFilterParameter,
@@ -53,8 +50,8 @@ import {
   updateAdminCategory,
   updateAdminDiscount,
   updateAdminUser,
-  updateAdminPayment,
   updateUser,
+  updateAdminOrderStatus,
   uploadAdminNewsImage,
   uploadAdminProductImage,
 } from "../lib/backend-api";
@@ -96,12 +93,14 @@ function AdminTable({
   );
 }
 
-function StatusBadge({ tone, label }: { tone: "green" | "gold" | "gray" | "amber"; label: string }) {
+function StatusBadge({ tone, label }: { tone: "green" | "gold" | "gray" | "amber" | "blue" | "red"; label: string }) {
   const toneClasses: Record<typeof tone, string> = {
     green: "bg-[#e7f6ee] text-[#2a7b4a]",
     gold: "bg-[#f8f0db] text-[#8a6a2a]",
     gray: "bg-[#f0efec] text-[#7f7a73]",
     amber: "bg-[#f5e9e2] text-[#8a4d2c]",
+    blue: "bg-[#e7f1f6] text-[#1f6c7c]",
+    red: "bg-[#fdecea] text-[#9b3d2f]",
   };
 
   return <span className={`inline-flex items-center rounded-full px-3 py-1 text-[13px] ${toneClasses[tone]}`}>{label}</span>;
@@ -200,6 +199,48 @@ function parseSpentAmount(value?: string | null) {
   return digits ? Number(digits) : 0;
 }
 
+function mapOrderStatusLabel(status?: AdminOrderStatus) {
+  switch (status) {
+    case "NEW":
+      return "Новый";
+    case "PENDING_PAYMENT":
+      return "Ожидает оплаты";
+    case "PAID":
+      return "Оплачен";
+    case "ASSEMBLY":
+      return "Сборка";
+    case "SHIPPING":
+      return "Доставка";
+    case "DELIVERED":
+      return "Доставлен";
+    case "CANCELLED":
+      return "Отменён";
+    default:
+      return status ?? "—";
+  }
+}
+
+function mapOrderStatusTone(status?: AdminOrderStatus): "gray" | "amber" | "green" | "gold" | "blue" | "red" {
+  switch (status) {
+    case "NEW":
+      return "gray";
+    case "PENDING_PAYMENT":
+      return "amber";
+    case "PAID":
+      return "green";
+    case "ASSEMBLY":
+      return "gold";
+    case "SHIPPING":
+      return "blue";
+    case "DELIVERED":
+      return "green";
+    case "CANCELLED":
+      return "red";
+    default:
+      return "gray";
+  }
+}
+
 const emptySeoFields = {
   metaTitle: "",
   metaDescription: "",
@@ -220,24 +261,6 @@ const emptyClientForm = {
   comment: "",
   personalDiscountPercent: "",
   totalSpent: "0 ₽",
-};
-
-const emptyOrderForm = {
-  id: "",
-  userId: "",
-  status: "NEW",
-  contactName: "",
-  contactPhone: "",
-  deliveryMethod: "",
-  deliveryAddress: "",
-  comment: "",
-  items: "",
-};
-
-const emptyOrderItemDraft = {
-  kind: "product",
-  entityId: "",
-  quantity: "1",
 };
 
 const emptyFilterGroupForm = {
@@ -312,7 +335,42 @@ function SeoFields({
 }
 
 export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPageProps) {
-  const session = getStoredAuthSession();
+  const [session, setSession] = useState<ReturnType<typeof getStoredAuthSession>>(null);
+  const [unprocessedRequestsCount, setUnprocessedRequestsCount] = useState(0);
+
+  useEffect(() => {
+    setSession(getStoredAuthSession());
+  }, []);
+
+  useEffect(() => {
+    if (!session || session.type !== "admin") {
+      return;
+    }
+
+    loadAdminRequestsSummary()
+      .then((data) => setUnprocessedRequestsCount(data.unprocessedCount ?? 0))
+      .catch(() => null);
+  }, [session]);
+  const navItems = useMemo(() => {
+    const role = session?.type === "admin" ? session.admin?.role : null;
+
+    const requestsBadge = unprocessedRequestsCount > 10 ? "9+" : unprocessedRequestsCount > 0 ? String(unprocessedRequestsCount) : undefined;
+    const withBadges = adminNav.map((item) =>
+      item.key === "requests"
+        ? {
+            ...item,
+            badge: requestsBadge,
+          }
+        : item,
+    );
+
+    if (role === "MANAGER") {
+      const forbidden = new Set(["clients", "news", "catalog"]);
+      return withBadges.filter((item) => !forbidden.has(item.key));
+    }
+
+    return withBadges;
+  }, [session, unprocessedRequestsCount]);
   const adminName =
     [session?.admin?.firstName, session?.admin?.lastName].filter(Boolean).join(" ").trim() ||
     session?.admin?.email ||
@@ -329,7 +387,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
   const [adminUsers, setAdminUsers] = useState<Array<{ id: string; name: string; email: string }>>([]);
   const [navOpen, setNavOpen] = useState(false);
   const [users, setUsers] = useState<Array<{ id: string; name: string; email: string; phone?: string; status: "ACTIVE" | "BLOCKED" }>>([]);
-  const [payments, setPayments] = useState<Array<{ id: string; orderId: string; amount: string }>>([]);
+  const [requests, setRequests] = useState<Array<{ id: string; name: string; phone: string; contactMethods: string[]; processed: boolean }>>([]);
   const [loading, setLoading] = useState(activeKey === "clients" || activeKey === "orders" || activeKey === "news" || activeKey === "catalog");
   const [error, setError] = useState<Error | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -339,6 +397,8 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
   const [catalogCategoryFilterId, setCatalogCategoryFilterId] = useState("");
   const [catalogPage, setCatalogPage] = useState(1);
   const [clientsSort, setClientsSort] = useState<"default" | "spent_desc">("spent_desc");
+  const [ordersDateFrom, setOrdersDateFrom] = useState("");
+  const [ordersDateTo, setOrdersDateTo] = useState("");
   const [newsForm, setNewsForm] = useState({
     id: "",
     title: "",
@@ -392,7 +452,8 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
     ...emptySeoFields,
   });
   const [clientForm, setClientForm] = useState(emptyClientForm);
-  const [orderForm, setOrderForm] = useState(emptyOrderForm);
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
+  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   const [filterGroupForm, setFilterGroupForm] = useState(emptyFilterGroupForm);
   const [filterParameterForm, setFilterParameterForm] = useState(emptyFilterParameterForm);
   const [catalogFilterParameterId, setCatalogFilterParameterId] = useState("");
@@ -426,19 +487,6 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
     passwordHash: "",
     status: "ACTIVE",
   });
-  const [paymentForm, setPaymentForm] = useState({
-    id: "",
-    orderId: "",
-    method: "CARD",
-    status: "PENDING",
-    amount: "",
-    provider: "",
-    transactionId: "",
-    currency: "RUB",
-    paidAt: "",
-  });
-  const [orderItemDraft, setOrderItemDraft] = useState(emptyOrderItemDraft);
-  const [orderEntityQuery, setOrderEntityQuery] = useState("");
   const [catalogDraggedIndex, setCatalogDraggedIndex] = useState<number | null>(null);
   const [catalogDragOverIndex, setCatalogDragOverIndex] = useState<number | null>(null);
   const [newsDraggedIndex, setNewsDraggedIndex] = useState<number | null>(null);
@@ -474,6 +522,33 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
   function handleAdminLogout() {
     clearStoredAuthSession();
     window.location.assign("/login");
+  }
+
+  async function handleOrderStatusUpdate(orderId: string, nextStatus: AdminOrderStatus) {
+    setUpdatingOrderId(orderId);
+    setActionError(null);
+
+    setOrders((prev) =>
+      prev.map((order) =>
+        order.id === orderId
+          ? {
+              ...order,
+              statusCode: nextStatus,
+              status: mapOrderStatusLabel(nextStatus),
+            }
+          : order,
+      ),
+    );
+
+    try {
+      await updateAdminOrderStatus(orderId, nextStatus);
+      await refreshAdminData();
+    } catch (nextError) {
+      setActionError(nextError instanceof Error ? nextError.message : "Не удалось обновить статус заказа.");
+      await refreshAdminData().catch(() => null);
+    } finally {
+      setUpdatingOrderId(null);
+    }
   }
 
   function fillUserFormFromUserId(userId?: string) {
@@ -789,12 +864,14 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
     }
 
     if (activeKey === "requests") {
-      const nextPayments = await loadAdminPayments();
-      setPayments(
-        nextPayments.map((item) => ({
+      const nextRequests = await loadAdminRequests();
+      setRequests(
+        nextRequests.map((item) => ({
           id: item.id,
-          orderId: item.orderId,
-          amount: `${item.amount} ${item.currency ?? "RUB"}`,
+          name: item.name,
+          phone: item.phone,
+          contactMethods: item.contactMethods,
+          processed: item.processed,
         })),
       );
     }
@@ -1423,137 +1500,6 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
     }
   }
 
-  async function handleOrderStatusSave() {
-    if (!orderForm.id) {
-      setActionError("Выберите заказ для изменения статуса.");
-      return;
-    }
-
-    setActionLoading(true);
-    setActionError(null);
-
-    try {
-      await updateAdminOrderStatus(orderForm.id, orderForm.status as "NEW" | "PENDING_PAYMENT" | "PAID" | "ASSEMBLY" | "SHIPPING" | "DELIVERED" | "CANCELLED");
-      await refreshAdminData();
-    } catch (nextError) {
-      setActionError(nextError instanceof Error ? nextError.message : "Не удалось обновить статус.");
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
-  function parseOrderItems(rawValue: string) {
-    return rawValue
-      .split("\n")
-      .map((item) => item.trim())
-      .filter(Boolean)
-      .map((line) => {
-        const [kind, entityId, quantityValue] = line.split(":").map((item) => item.trim());
-        const quantity = Number(quantityValue);
-
-        if (!(kind === "product" || kind === "service") || !entityId || !Number.isInteger(quantity) || quantity < 1) {
-          throw new Error('Каждая строка должна быть в формате "product:UUID:2" или "service:UUID:1".');
-        }
-
-        return kind === "product"
-          ? { productId: entityId, quantity }
-          : { serviceId: entityId, quantity };
-      });
-  }
-
-  async function handleOrderSubmit() {
-    const status = orderForm.status as "NEW" | "PENDING_PAYMENT" | "PAID" | "ASSEMBLY" | "SHIPPING" | "DELIVERED" | "CANCELLED";
-    const userId = orderForm.userId.trim();
-    const deliveryMethodValue = orderForm.deliveryMethod.trim();
-    const deliveryAddressValue = orderForm.deliveryAddress.trim();
-    let items: Array<{ productId: string; quantity: number } | { serviceId: string; quantity: number }> = [];
-
-    if (!orderForm.id && !userId) {
-      setActionError("Для нового заказа обязателен userId клиента.");
-      return;
-    }
-
-    if (orderForm.contactPhone && !isValidRussianPhone(orderForm.contactPhone)) {
-      setActionError("Телефон заказа должен быть в формате +7(999) 999-99-99.");
-      return;
-    }
-
-    if (!["Самовывоз", "Доставка"].includes(deliveryMethodValue)) {
-      setActionError("Выберите способ доставки: Самовывоз или Доставка.");
-      return;
-    }
-
-    if (deliveryMethodValue === "Доставка" && !deliveryAddressValue) {
-      setActionError("Для доставки укажите адрес.");
-      return;
-    }
-
-    setActionLoading(true);
-    setActionError(null);
-
-    try {
-      items = orderForm.id ? [] : parseOrderItems(orderForm.items);
-
-      if (!orderForm.id && items.length === 0) {
-        setActionError("Добавьте хотя бы одну позицию в заказ.");
-        return;
-      }
-
-      if (orderForm.id) {
-        await updateAdminOrder(orderForm.id, {
-          status,
-          contactName: orderForm.contactName.trim() || undefined,
-          contactPhone: orderForm.contactPhone || undefined,
-          deliveryMethod: deliveryMethodValue || undefined,
-          deliveryAddress: deliveryMethodValue === "Доставка" ? deliveryAddressValue : "",
-          comment: orderForm.comment.trim() || undefined,
-        });
-      } else {
-        const createdOrder = await createAdminOrder({
-          userId,
-          contactName: orderForm.contactName.trim() || undefined,
-          contactPhone: orderForm.contactPhone || undefined,
-          deliveryMethod: deliveryMethodValue || undefined,
-          deliveryAddress: deliveryMethodValue === "Доставка" ? deliveryAddressValue : undefined,
-          comment: orderForm.comment.trim() || undefined,
-          items,
-        });
-
-        if (status !== "NEW") {
-          await updateAdminOrderStatus(createdOrder.id, status);
-        }
-      }
-
-      await refreshAdminData();
-      setOrderForm(emptyOrderForm);
-      setOrderItemDraft(emptyOrderItemDraft);
-    } catch (nextError) {
-      setActionError(nextError instanceof Error ? nextError.message : "Не удалось сохранить заказ.");
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
-  async function handleOrderDelete() {
-    if (!orderForm.id) {
-      return;
-    }
-
-    setActionLoading(true);
-    setActionError(null);
-
-    try {
-      await deleteAdminOrder(orderForm.id);
-      await refreshAdminData();
-      setOrderForm(emptyOrderForm);
-      setOrderItemDraft(emptyOrderItemDraft);
-    } catch (nextError) {
-      setActionError(nextError instanceof Error ? nextError.message : "Не удалось удалить заказ.");
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
   async function handleDiscountSubmit() {
     const nameValue = discountForm.name.trim();
     const valueNumber = Number(discountForm.value);
@@ -1718,84 +1664,6 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
     }
   }
 
-  async function handlePaymentSubmit() {
-    const orderIdValue = paymentForm.orderId.trim();
-    const amountValue = Number(paymentForm.amount);
-
-    if (!orderIdValue || Number.isNaN(amountValue)) {
-      setActionError("Order ID и сумма обязательны.");
-      return;
-    }
-
-    setActionLoading(true);
-    setActionError(null);
-
-    try {
-      const payload = {
-        orderId: orderIdValue,
-        method: paymentForm.method as "CARD" | "SBP" | "INVOICE" | "CASH",
-        status: paymentForm.status as "PENDING" | "PAID" | "FAILED" | "REFUNDED",
-        amount: amountValue,
-        provider: paymentForm.provider.trim() || undefined,
-        transactionId: paymentForm.transactionId.trim() || undefined,
-        currency: paymentForm.currency.trim() || undefined,
-        paidAt: paymentForm.paidAt || undefined,
-      };
-
-      if (paymentForm.id) {
-        await updateAdminPayment(paymentForm.id, payload);
-      } else {
-        await createAdminPayment(payload);
-      }
-
-      await refreshAdminData();
-      setPaymentForm({
-        id: "",
-        orderId: "",
-        method: "CARD",
-        status: "PENDING",
-        amount: "",
-        provider: "",
-        transactionId: "",
-        currency: "RUB",
-        paidAt: "",
-      });
-    } catch (nextError) {
-      setActionError(nextError instanceof Error ? nextError.message : "Не удалось сохранить платеж.");
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
-  async function handlePaymentDelete() {
-    if (!paymentForm.id) {
-      return;
-    }
-
-    setActionLoading(true);
-    setActionError(null);
-
-    try {
-      await deleteAdminPayment(paymentForm.id);
-      await refreshAdminData();
-      setPaymentForm({
-        id: "",
-        orderId: "",
-        method: "CARD",
-        status: "PENDING",
-        amount: "",
-        provider: "",
-        transactionId: "",
-        currency: "RUB",
-        paidAt: "",
-      });
-    } catch (nextError) {
-      setActionError(nextError instanceof Error ? nextError.message : "Не удалось удалить платеж.");
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
   async function handleUserSubmit() {
     const emailValue = userForm.email.trim();
 
@@ -1871,75 +1739,6 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
     }
   }
 
-  function parseOrderItemLine(line: string) {
-    const [kind, entityId, quantityValue] = line.split(":").map((item) => item.trim());
-    const quantity = Number(quantityValue);
-
-    if (!(kind === "product" || kind === "service") || !entityId || !Number.isInteger(quantity) || quantity < 1) {
-      return null;
-    }
-
-    return { kind, entityId, quantity };
-  }
-
-  function describeOrderItemLine(line: string) {
-    const parsed = parseOrderItemLine(line);
-
-    if (!parsed) {
-      return line;
-    }
-
-    const entity =
-      parsed.kind === "product"
-        ? catalog.find((item) => item.id === parsed.entityId)
-        : services.find((item) => item.id === parsed.entityId);
-
-    const label = entity
-      ? parsed.kind === "product"
-        ? `${entity.title} (${entity.brand})`
-        : entity.name
-      : parsed.entityId;
-
-    return `${parsed.kind === "product" ? "Товар" : "Услуга"}: ${label} x ${parsed.quantity}`;
-  }
-
-  function handleAddOrderItem() {
-    const quantity = Number(orderItemDraft.quantity);
-
-    if (!orderItemDraft.entityId) {
-      setActionError("Выберите товар или услугу для заказа.");
-      return;
-    }
-
-    if (!Number.isInteger(quantity) || quantity < 1) {
-      setActionError("Количество должно быть целым числом больше нуля.");
-      return;
-    }
-
-    const nextLine = `${orderItemDraft.kind}:${orderItemDraft.entityId}:${quantity}`;
-
-    setOrderForm((prev) => ({
-      ...prev,
-      items: prev.items ? `${prev.items}\n${nextLine}` : nextLine,
-    }));
-    setOrderItemDraft((prev) => ({ ...prev, entityId: "", quantity: "1" }));
-    setActionError(null);
-  }
-
-  function handleRemoveOrderItem(index: number) {
-    const lines = orderForm.items
-      .split("\n")
-      .map((item) => item.trim())
-      .filter(Boolean);
-
-    lines.splice(index, 1);
-
-    setOrderForm((prev) => ({
-      ...prev,
-      items: lines.join("\n"),
-    }));
-  }
-
   function fillClientForm(item: AdminClientView) {
     const inferredFirstName = item.firstName?.trim() || item.name.split(" ")[0] || item.name;
     const inferredLastName = item.lastName?.trim() || item.name.split(" ").slice(1).join(" ");
@@ -1966,23 +1765,15 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
     fillUserFormFromUserId(item.userId);
   }
 
-  function fillOrderForm(item: AdminOrderView) {
-    setOrderItemDraft(emptyOrderItemDraft);
-    setOrderForm({
-      id: item.id,
-      userId: item.userId ?? "",
-      status: item.statusCode ?? "NEW",
-      contactName: item.contactName ?? "",
-      contactPhone: formatRussianPhone(item.contactPhone ?? ""),
-      deliveryMethod: item.deliveryMethod ?? "",
-      deliveryAddress: item.deliveryAddress ?? "",
-      comment: item.comment ?? "",
-      items: item.itemLines ?? "",
-    });
-  }
-
   useEffect(() => {
     if (!["clients", "orders", "news", "catalog", "requests", "settings"].includes(activeKey)) {
+      setLoading(false);
+      return;
+    }
+
+    const isManager = session?.type === "admin" && session.admin?.role === "MANAGER";
+    if (isManager && ["clients", "news", "catalog"].includes(activeKey)) {
+      setError(new Error("Недостаточно прав для доступа к этому разделу."));
       setLoading(false);
       return;
     }
@@ -1992,13 +1783,18 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
 
     async function run() {
       try {
-        const data = await loadAdminSectionData();
-        const nextCategories = activeKey === "catalog" ? await loadAdminCategories() : [];
-        const nextFilterGroups = activeKey === "catalog" || activeKey === "settings" ? await loadAdminFilterGroups() : [];
+        const adminRole = session?.type === "admin" ? session.admin?.role : null;
+        const data = await loadAdminSectionData({ adminRole });
+        const canManageCatalog = adminRole !== "MANAGER";
+        const nextCategories = activeKey === "catalog" && canManageCatalog ? await loadAdminCategories() : [];
+        const nextFilterGroups =
+          (activeKey === "catalog" || activeKey === "settings") && canManageCatalog
+            ? await loadAdminFilterGroups()
+            : [];
         const nextServices = activeKey === "orders" ? await loadAdminServices() : [];
-        const nextPayments = activeKey === "requests" ? await loadAdminPayments() : [];
-        const nextDiscounts = activeKey === "settings" ? await loadAdminDiscounts() : [];
-        const nextAdmins = activeKey === "settings" ? await loadAdminUsers() : [];
+        const nextRequests = activeKey === "requests" ? await loadAdminRequests() : [];
+        const nextDiscounts = activeKey === "settings" && canManageCatalog ? await loadAdminDiscounts() : [];
+        const nextAdmins = activeKey === "settings" && canManageCatalog ? await loadAdminUsers() : [];
         const nextUsers = activeKey === "clients" ? await loadUsers() : [];
 
         if (!active) {
@@ -2012,13 +1808,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
         setCategories(nextCategories);
         setFilterGroups(nextFilterGroups);
         setServices(nextServices.map((item) => ({ id: item.id, name: item.name, slug: item.slug })));
-        setPayments(
-          nextPayments.map((item) => ({
-            id: item.id,
-            orderId: item.orderId,
-            amount: `${item.amount} ${item.currency ?? "RUB"}`,
-          })),
-        );
+        setRequests(nextRequests.map((item) => ({ id: item.id, name: item.name, phone: item.phone, contactMethods: item.contactMethods, processed: item.processed })));
         setDiscounts(
           nextDiscounts
             .filter((item): item is NonNullable<typeof item> => Boolean(item))
@@ -2072,6 +1862,8 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
     setSecondaryFilter("all");
     setCatalogCategoryFilterId("");
     setCatalogPage(1);
+    setOrdersDateFrom("");
+    setOrdersDateTo("");
   }, [activeKey]);
 
 
@@ -2090,11 +1882,51 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
   }, [clients, query, clientsSort]);
 
   const filteredOrders = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const fromMs = ordersDateFrom
+      ? (() => {
+          const [y, m, d] = ordersDateFrom.split("-").map((part) => Number(part));
+          return new Date(y, m - 1, d, 0, 0, 0, 0).getTime();
+        })()
+      : null;
+    const toMs = ordersDateTo
+      ? (() => {
+          const [y, m, d] = ordersDateTo.split("-").map((part) => Number(part));
+          return new Date(y, m - 1, d, 23, 59, 59, 999).getTime();
+        })()
+      : null;
+
     return orders.filter((item) => {
       const haystack = `${item.orderNumber} ${item.client} ${item.items} ${item.status}`.toLowerCase();
-      return !query || haystack.includes(query.toLowerCase());
+      if (q && !haystack.includes(q)) {
+        return false;
+      }
+
+      if (fromMs === null && toMs === null) {
+        return true;
+      }
+
+      const orderIso = item.dateIso ?? null;
+      if (!orderIso) {
+        return true;
+      }
+
+      const orderMs = new Date(orderIso).getTime();
+      if (Number.isNaN(orderMs)) {
+        return true;
+      }
+
+      if (fromMs !== null && orderMs < fromMs) {
+        return false;
+      }
+
+      if (toMs !== null && orderMs > toMs) {
+        return false;
+      }
+
+      return true;
     });
-  }, [orders, query]);
+  }, [orders, query, ordersDateFrom, ordersDateTo]);
 
   const filteredNews = useMemo(() => {
     return news.filter((item) => {
@@ -2140,39 +1972,6 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
     return filteredCatalog.slice(startIndex, startIndex + CATALOG_PAGE_SIZE);
   }, [catalogPage, filteredCatalog]);
 
-  const availableOrderEntities = useMemo(() => {
-    return orderItemDraft.kind === "product"
-      ? catalog.map((item) => ({
-          id: item.id,
-          label: `${item.title} (${item.brand})`,
-        }))
-      : services.map((item) => ({
-          id: item.id,
-          label: item.name,
-        }));
-  }, [catalog, orderItemDraft.kind, services]);
-
-  const filteredOrderEntities = useMemo(() => {
-    const q = orderEntityQuery.trim().toLowerCase();
-    if (!q) {
-      return availableOrderEntities;
-    }
-
-    return availableOrderEntities.filter((item) => `${item.label} ${item.id}`.toLowerCase().includes(q));
-  }, [availableOrderEntities, orderEntityQuery]);
-
-  const orderItemDescriptions = useMemo(() => {
-    return orderForm.items
-      .split("\n")
-      .map((item) => item.trim())
-      .filter(Boolean)
-      .map((line, index) => ({
-        index,
-        line,
-        label: describeOrderItemLine(line),
-      }));
-  }, [catalog, orderForm.items, services]);
-
   const authRequired = error instanceof ApiError && error.status === 401;
 
   return (
@@ -2183,9 +1982,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
           <aside className="absolute left-0 top-0 flex h-full w-[85vw] max-w-[340px] flex-col bg-[#211d1a] text-white">
             <div className="border-b border-white/10 px-6 py-8">
               <div className="flex items-center justify-between">
-                <p className="max-w-full text-[20px] italic uppercase leading-none tracking-[-0.04em] text-white [font-family:'Cormorant_Garamond',serif]">
-                  ВОСТОКСТРОЙЭКСПЕРТ
-                </p>
+                  <img src="/logo.svg" alt="Climatrade" width="320" height="86" className="h-[48px] w-auto max-w-full object-contain [filter:invert(1)] sm:h-[56px]" />
                 <button type="button" aria-label="Закрыть меню" className="h-10 w-10 border border-white/20 text-white" onClick={() => setNavOpen(false)}>
                   ✕
                 </button>
@@ -2195,7 +1992,7 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
               </p>
             </div>
             <nav className="flex-1 overflow-auto pt-4">
-              {adminNav.map((item) => {
+              {navItems.map((item) => {
                 const active = item.key === activeKey;
                 return (
                   <div key={item.key}>
@@ -2248,16 +2045,14 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
       <div className="grid min-h-screen xl:grid-cols-[360px_1fr] 2xl:grid-cols-[400px_1fr]">
         <aside className="hidden min-h-screen flex-col bg-[#211d1a] text-white xl:flex">
           <div className="border-b border-white/10 px-8 py-12">
-            <p className="max-w-full text-[26px] italic uppercase leading-none tracking-[-0.04em] text-white 2xl:text-[30px] [font-family:'Cormorant_Garamond',serif]">
-              ВОСТОКСТРОЙЭКСПЕРТ
-            </p>
+              <img src="/logo.svg" alt="Climatrade" width="420" height="110" className="h-[64px] w-auto max-w-full object-contain [filter:invert(1)] 2xl:h-[74px]" />
             <p className="mt-6 text-[14px] uppercase tracking-[4px] text-white/50 2xl:text-[15px] [font-family:Jaldi,'JetBrains_Mono',monospace]">
               панель администратора
             </p>
           </div>
 
           <nav className="flex-1 overflow-auto pt-6">
-            {adminNav.map((item) => {
+            {navItems.map((item) => {
               const active = item.key === activeKey;
               return (
                 <div key={item.key}>
@@ -2330,6 +2125,18 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
                     Поиск
                     <input value={query} onChange={(event) => setQuery(event.target.value)} className="admin-input mt-2 w-full" placeholder="Поиск по разделу" />
                   </label>
+                  {activeKey === "orders" ? (
+                    <div className="flex flex-col gap-4 md:flex-row md:items-end">
+                      <label className="text-[14px] text-[#7a7a75]">
+                        Дата с
+                        <input type="date" className="admin-input mt-2" value={ordersDateFrom} onChange={(event) => setOrdersDateFrom(event.target.value)} />
+                      </label>
+                      <label className="text-[14px] text-[#7a7a75]">
+                        Дата по
+                        <input type="date" className="admin-input mt-2" value={ordersDateTo} onChange={(event) => setOrdersDateTo(event.target.value)} />
+                      </label>
+                    </div>
+                  ) : null}
                   {activeKey === "clients" ? (
                     <label className="text-[14px] text-[#7a7a75]">
                       Сортировка
@@ -2634,214 +2441,160 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
                 </div>
               ) : null}
 
+
               {!loading && !error && activeKey === "orders" ? (
                 <div className="mt-10">
-                  <div className="admin-form-card">
-                    <div className="admin-form-grid admin-form-grid--catalog">
-                      <label className="admin-toolbar__label">
-                        User ID
-                        <input
-                          className="admin-input mt-2"
-                          value={orderForm.userId}
-                          onChange={(event) => setOrderForm((prev) => ({ ...prev, userId: event.target.value }))}
-                          placeholder="UUID клиента"
-                          disabled={Boolean(orderForm.id)}
-                        />
-                      </label>
-                      <label className="admin-toolbar__label">
-                        Статус
-                        <select
-                          className="admin-input mt-2"
-                          value={orderForm.status}
-                          onChange={(event) => setOrderForm((prev) => ({ ...prev, status: event.target.value }))}
-                        >
-                          <option value="NEW">Новый</option>
-                          <option value="PENDING_PAYMENT">Ожидает оплату</option>
-                          <option value="PAID">Оплачен</option>
-                          <option value="ASSEMBLY">Сборка</option>
-                          <option value="SHIPPING">Доставка</option>
-                          <option value="DELIVERED">Доставлен</option>
-                          <option value="CANCELLED">Отменен</option>
-                        </select>
-                      </label>
-                      <label className="admin-toolbar__label">
-                        Контакт
-                        <input
-                          className="admin-input mt-2"
-                          value={orderForm.contactName}
-                          onChange={(event) => setOrderForm((prev) => ({ ...prev, contactName: event.target.value }))}
-                          placeholder="Имя получателя"
-                        />
-                      </label>
-                      <label className="admin-toolbar__label">
-                        Телефон
-                        <input
-                          className="admin-input mt-2"
-                          value={orderForm.contactPhone}
-                          onChange={(event) => setOrderForm((prev) => ({ ...prev, contactPhone: formatRussianPhone(event.target.value) }))}
-                          placeholder="+7(999) 999-99-99"
-                          inputMode="tel"
-                          maxLength={17}
-                        />
-                      </label>
-                      <label className="admin-toolbar__label">
-                        Способ доставки
-                        <select
-                          className="admin-input mt-2"
-                          value={orderForm.deliveryMethod}
-                          onChange={(event) =>
-                            setOrderForm((prev) => ({
-                              ...prev,
-                              deliveryMethod: event.target.value,
-                              deliveryAddress: event.target.value === "Самовывоз" ? "" : prev.deliveryAddress,
-                            }))
-                          }
-                        >
-                          <option value="">Выберите способ</option>
-                          <option value="Самовывоз">Самовывоз</option>
-                          <option value="Доставка">Доставка</option>
-                        </select>
-                      </label>
-                      <label className="admin-toolbar__label">
-                        Адрес
-                        <input
-                          className="admin-input mt-2"
-                          value={orderForm.deliveryAddress}
-                          onChange={(event) => setOrderForm((prev) => ({ ...prev, deliveryAddress: event.target.value }))}
-                          placeholder={orderForm.deliveryMethod === "Самовывоз" ? "Адрес не требуется" : "Москва, Калужская, 12"}
-                          disabled={orderForm.deliveryMethod === "Самовывоз"}
-                        />
-                      </label>
-                    </div>
-                    <label className="admin-toolbar__label mt-4">
-                      Позиции заказа
-                      <div className="mt-2 grid gap-3 md:grid-cols-[180px_minmax(0,1fr)_minmax(0,1fr)_120px_auto]">
-                        <select
-                          className="admin-input"
-                          value={orderItemDraft.kind}
-                          onChange={(event) => {
-                            setOrderEntityQuery("");
-                            setOrderItemDraft({
-                              kind: event.target.value,
-                              entityId: "",
-                              quantity: "1",
-                            });
-                          }}
-                          disabled={Boolean(orderForm.id)}
-                        >
-                          <option value="product">Товар</option>
-                          <option value="service">Услуга</option>
-                        </select>
-                        <input
-                          className="admin-input"
-                          value={orderEntityQuery}
-                          onChange={(event) => setOrderEntityQuery(event.target.value)}
-                          placeholder={orderItemDraft.kind === "product" ? "Поиск товара по названию/бренду/UUID" : "Поиск услуги по названию/UUID"}
-                          disabled={Boolean(orderForm.id)}
-                        />
-                        <select
-                          className="admin-input"
-                          value={orderItemDraft.entityId}
-                          onChange={(event) => setOrderItemDraft((prev) => ({ ...prev, entityId: event.target.value }))}
-                          disabled={Boolean(orderForm.id)}
-                        >
-                          <option value="">Выберите позицию</option>
-                          {filteredOrderEntities.map((item) => (
-                            <option key={item.id} value={item.id}>
-                              {item.label}
-                            </option>
-                          ))}
-                        </select>
-                        <input
-                          className="admin-input"
-                          value={orderItemDraft.quantity}
-                          onChange={(event) => setOrderItemDraft((prev) => ({ ...prev, quantity: event.target.value.replace(/\D/g, "").slice(0, 3) || "1" }))}
-                          placeholder="1"
-                          inputMode="numeric"
-                          disabled={Boolean(orderForm.id)}
-                        />
-                        <button className="admin-action-btn" type="button" onClick={handleAddOrderItem} disabled={Boolean(orderForm.id)}>
-                          Добавить
-                        </button>
-                      </div>
-                    </label>
-                    <p className="mt-2 text-[13px] text-[#7a7a75]">
-                      При редактировании уже созданного заказа состав доступен только для просмотра. Из админки можно менять статус и контактные данные.
-                    </p>
-                    <div className="mt-4 space-y-3">
-                      {orderItemDescriptions.length ? (
-                        orderItemDescriptions.map((item) => (
-                          <div key={`${item.index}-${item.line}`} className="flex items-center justify-between gap-4 border border-[#ece8e1] bg-[#faf8f4] px-4 py-3">
-                            <span className="text-[14px] text-[#2b2a27]">{item.label}</span>
-                            {!orderForm.id ? (
-                              <button className="admin-action-btn admin-action-btn--ghost" type="button" onClick={() => handleRemoveOrderItem(item.index)}>
-                                Удалить
-                              </button>
-                            ) : null}
-                          </div>
-                        ))
-                      ) : (
-                        <div className="border border-dashed border-[#d8d2c8] px-4 py-5 text-[14px] text-[#7a7a75]">
-                          Позиции заказа ещё не добавлены.
-                        </div>
-                      )}
-                    </div>
-                    <label className="admin-toolbar__label mt-4">
-                      Комментарий
-                      <textarea
-                        className="admin-input admin-textarea mt-2"
-                        value={orderForm.comment}
-                        onChange={(event) => setOrderForm((prev) => ({ ...prev, comment: event.target.value }))}
-                        placeholder="Комментарий менеджера"
-                      />
-                    </label>
-                    {actionError ? <p className="mt-3 text-[14px] text-[#9b3d2f]">{actionError}</p> : null}
-                    <div className="admin-form-actions">
-                      <button className="admin-action-btn" type="button" onClick={handleOrderSubmit} disabled={actionLoading}>
-                        {orderForm.id ? "Сохранить" : "Создать заказ"}
-                      </button>
-                      <button
-                        className="admin-action-btn admin-action-btn--ghost"
-                        type="button"
-                        onClick={() => {
-                          setOrderForm(emptyOrderForm);
-                          setOrderItemDraft(emptyOrderItemDraft);
-                        }}
-                        disabled={actionLoading}
-                      >
-                        Очистить
-                      </button>
-                      {orderForm.id ? (
-                        <button className="admin-action-btn admin-action-btn--ghost" type="button" onClick={handleOrderDelete} disabled={actionLoading}>
-                          Удалить заказ
-                        </button>
-                      ) : null}
-                    </div>
-                  </div>
+                  {filteredOrders.length === 0 ? <SectionMessage title="Пусто" description="Заказов пока нет." /> : null}
+                  <div className="mt-6 grid gap-4">
+                    {filteredOrders.map((item) => {
+                      const isOpen = expandedOrderId === item.id;
 
-                  <div className="mt-8">
-                    <AdminTable
-                      columns={["Номер", "Клиент", "Позиции", "Сумма", "Статус", "Дата"]}
-                      rows={filteredOrders.map((item) => [
-                        <button
-                          key={item.id}
-                          type="button"
-                          className="text-left underline-offset-4 hover:underline"
-                          onClick={() => fillOrderForm(item)}
-                        >
-                          {item.orderNumber}
-                        </button>,
-                        item.client,
-                        item.items,
-                        item.amount,
-                        <StatusBadge key={item.id} tone="gold" label={item.status} />,
-                        item.date,
-                      ])}
-                    />
+                      return (
+                        <div key={item.id} className="overflow-hidden rounded-[18px] border border-[#e8e3db] bg-white">
+                          <button
+                            type="button"
+                            className="flex w-full flex-col gap-3 px-6 py-5 text-left transition hover:bg-[#faf8f4] md:flex-row md:items-center md:justify-between"
+                            aria-expanded={isOpen}
+                            onClick={() => setExpandedOrderId((prev) => (prev === item.id ? null : item.id))}
+                          >
+                            <div className="min-w-0">
+                              <p className="text-[12px] uppercase tracking-[3px] text-[#b1ada6] [font-family:Jaldi,'JetBrains_Mono',monospace]">заказ</p>
+                              <h3 className="mt-2 truncate text-[22px] [font-family:'Cormorant_Garamond',serif]">{item.orderNumber}</h3>
+                              <p className="mt-1 truncate text-[14px] text-[#7a7a75]">{item.client}</p>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-3 md:justify-end">
+                              <StatusBadge tone={mapOrderStatusTone(item.statusCode)} label={item.status} />
+                              <span className="rounded-full bg-[#faf8f4] px-3 py-2 text-[14px] text-[#2b2a27]">{item.amount}</span>
+                              <span className="text-[13px] text-[#7a7a75]">{item.date}</span>
+                            </div>
+                          </button>
+
+                          <div className={`overflow-hidden transition-[max-height,opacity] duration-300 ease-out ${isOpen ? 'max-h-[900px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                            <div className="border-t border-[#ece8e1] px-6 py-6">
+                              <div className="grid gap-6 md:grid-cols-2">
+                                <div>
+                                  <p className="text-[12px] uppercase tracking-[3px] text-[#b1ada6] [font-family:Jaldi,'JetBrains_Mono',monospace]">Данные заказа</p>
+                                  <div className="mt-3 grid gap-2 text-[14px] text-[#2b2a27]">
+                                    <label className="grid gap-2 text-[14px] text-[#2b2a27]">
+                                      <span className="text-[12px] uppercase tracking-[2px] text-[#9b958b]">Статус</span>
+                                      <select
+                                        className="admin-input"
+                                        value={item.statusCode ?? "NEW"}
+                                        onChange={(event) => handleOrderStatusUpdate(item.id, event.target.value as AdminOrderStatus)}
+                                        disabled={updatingOrderId === item.id}
+                                      >
+                                        <option value="NEW">Новый</option>
+                                        <option value="PENDING_PAYMENT">Ожидает оплаты</option>
+                                        <option value="PAID">Оплачен</option>
+                                        <option value="ASSEMBLY">Сборка</option>
+                                        <option value="SHIPPING">Доставка</option>
+                                        <option value="DELIVERED">Доставлен</option>
+                                        <option value="CANCELLED">Отменён</option>
+                                      </select>
+                                    </label>
+                                    <p>
+                                      <span className="text-[#7a7a75]">Позиции: </span>
+                                      {item.items}
+                                    </p>
+                                    {item.deliveryMethod ? (
+                                      <p>
+                                        <span className="text-[#7a7a75]">Доставка: </span>
+                                        {item.deliveryMethod}
+                                      </p>
+                                    ) : null}
+                                    {item.deliveryAddress ? (
+                                      <p>
+                                        <span className="text-[#7a7a75]">Адрес: </span>
+                                        {item.deliveryAddress}
+                                      </p>
+                                    ) : null}
+                                    {item.contactName ? (
+                                      <p>
+                                        <span className="text-[#7a7a75]">Контакт: </span>
+                                        {item.contactName}
+                                      </p>
+                                    ) : null}
+                                    {item.contactPhone ? (
+                                      <p>
+                                        <span className="text-[#7a7a75]">Телефон: </span>
+                                        {item.contactPhone}
+                                      </p>
+                                    ) : null}
+                                    {item.comment ? (
+                                      <p>
+                                        <span className="text-[#7a7a75]">Комментарий: </span>
+                                        {item.comment}
+                                      </p>
+                                    ) : null}
+                                    {item.itemLines ? (
+                                      <div className="mt-1">
+                                        <p className="text-[12px] uppercase tracking-[2px] text-[#9b958b]">Состав заказа</p>
+                                        <ul className="mt-2 space-y-2">
+                                          {item.itemLines
+                                            .split(/\r?\n/)
+                                            .map((line) => line.trim())
+                                            .filter(Boolean)
+                                            .map((line, index) => (
+                                              <li key={`${item.id}-${index}-${line}`} className="rounded-md border border-[#e8e3db] bg-[#faf8f4] px-4 py-3 text-[13px] text-[#2b2a27]">
+                                                {line}
+                                              </li>
+                                            ))}
+                                        </ul>
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <p className="text-[12px] uppercase tracking-[3px] text-[#b1ada6] [font-family:Jaldi,'JetBrains_Mono',monospace]">Данные клиента</p>
+                                  <div className="mt-3 grid gap-2 text-[14px] text-[#2b2a27]">
+                                    {item.userId ? (
+                                      <p>
+                                        <span className="text-[#7a7a75]">User ID: </span>
+                                        {item.userId}
+                                      </p>
+                                    ) : null}
+                                    {item.clientEmail ? (
+                                      <p>
+                                        <span className="text-[#7a7a75]">Email: </span>
+                                        {item.clientEmail}
+                                      </p>
+                                    ) : null}
+                                    {item.clientCompanyName ? (
+                                      <p>
+                                        <span className="text-[#7a7a75]">Компания: </span>
+                                        {item.clientCompanyName}
+                                      </p>
+                                    ) : null}
+                                    {item.clientInn ? (
+                                      <p>
+                                        <span className="text-[#7a7a75]">ИНН: </span>
+                                        {item.clientInn}
+                                      </p>
+                                    ) : null}
+                                    {item.clientProfilePhone ? (
+                                      <p>
+                                        <span className="text-[#7a7a75]">Телефон (профиль): </span>
+                                        {item.clientProfilePhone}
+                                      </p>
+                                    ) : null}
+                                    {item.clientProfileAddress ? (
+                                      <p>
+                                        <span className="text-[#7a7a75]">Адрес (профиль): </span>
+                                        {item.clientProfileAddress}
+                                      </p>
+                                    ) : null}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               ) : null}
-
               {!loading && !error && activeKey === "news" ? (
                 <div className="mt-10">
                   <div className="admin-form-card">
@@ -3613,143 +3366,33 @@ export function AdminSectionPage({ activeKey, title, subtitle }: AdminSectionPag
 
               {!loading && !error && activeKey === "requests" ? (
                 <div className="mt-10">
-                  <div className="admin-form-card">
-                    <div className="admin-form-grid admin-form-grid--catalog">
-                      <label className="admin-toolbar__label">
-                        Order ID
+                  <AdminTable
+                    columns={["Имя", "Телефон", "Способ связи", "Обработано"]}
+                    rows={requests.map((item) => [
+                      item.name,
+                      item.phone,
+                      item.contactMethods.join(", "),
+                      <label className="inline-flex items-center gap-2 text-[14px] text-[#2b2a27]">
                         <input
-                          className="admin-input mt-2"
-                          value={paymentForm.orderId}
-                          onChange={(event) => setPaymentForm((prev) => ({ ...prev, orderId: event.target.value }))}
-                          placeholder="UUID заказа"
+                          type="checkbox"
+                          checked={item.processed}
+                          onChange={async (event) => {
+                            const nextProcessed = event.target.checked;
+                            setRequests((prev) => prev.map((entry) => (entry.id === item.id ? { ...entry, processed: nextProcessed } : entry)));
+                            try {
+                              await updateAdminRequest(item.id, { processed: nextProcessed });
+                              const summary = await loadAdminRequestsSummary().catch(() => null);
+                              if (summary) setUnprocessedRequestsCount(summary.unprocessedCount ?? 0);
+                            } catch {
+                              setRequests((prev) => prev.map((entry) => (entry.id === item.id ? { ...entry, processed: !nextProcessed } : entry)));
+                            }
+                          }}
                         />
-                      </label>
-                      <label className="admin-toolbar__label">
-                        Сумма
-                        <input
-                          className="admin-input mt-2"
-                          value={paymentForm.amount}
-                          onChange={(event) => setPaymentForm((prev) => ({ ...prev, amount: event.target.value }))}
-                          placeholder="250000"
-                        />
-                      </label>
-                      <label className="admin-toolbar__label">
-                        Метод
-                        <select
-                          className="admin-input mt-2"
-                          value={paymentForm.method}
-                          onChange={(event) => setPaymentForm((prev) => ({ ...prev, method: event.target.value }))}
-                        >
-                          <option value="CARD">Карта</option>
-                          <option value="SBP">СБП</option>
-                          <option value="INVOICE">Счет</option>
-                          <option value="CASH">Наличные</option>
-                        </select>
-                      </label>
-                      <label className="admin-toolbar__label">
-                        Статус
-                        <select
-                          className="admin-input mt-2"
-                          value={paymentForm.status}
-                          onChange={(event) => setPaymentForm((prev) => ({ ...prev, status: event.target.value }))}
-                        >
-                          <option value="PENDING">Ожидает</option>
-                          <option value="PAID">Оплачен</option>
-                          <option value="FAILED">Ошибка</option>
-                          <option value="REFUNDED">Возврат</option>
-                        </select>
-                      </label>
-                      <label className="admin-toolbar__label">
-                        Провайдер
-                        <input
-                          className="admin-input mt-2"
-                          value={paymentForm.provider}
-                          onChange={(event) => setPaymentForm((prev) => ({ ...prev, provider: event.target.value }))}
-                          placeholder="Stripe"
-                        />
-                      </label>
-                      <label className="admin-toolbar__label">
-                        Transaction ID
-                        <input
-                          className="admin-input mt-2"
-                          value={paymentForm.transactionId}
-                          onChange={(event) => setPaymentForm((prev) => ({ ...prev, transactionId: event.target.value }))}
-                          placeholder="abc-123"
-                        />
-                      </label>
-                      <label className="admin-toolbar__label">
-                        Валюта
-                        <input
-                          className="admin-input mt-2"
-                          value={paymentForm.currency}
-                          onChange={(event) => setPaymentForm((prev) => ({ ...prev, currency: event.target.value }))}
-                          placeholder="RUB"
-                        />
-                      </label>
-                      <label className="admin-toolbar__label">
-                        Дата оплаты
-                        <input
-                          className="admin-input mt-2"
-                          value={paymentForm.paidAt}
-                          onChange={(event) => setPaymentForm((prev) => ({ ...prev, paidAt: event.target.value }))}
-                          placeholder="2026-04-11"
-                        />
-                      </label>
-                    </div>
-                    {actionError ? <p className="mt-3 text-[14px] text-[#9b3d2f]">{actionError}</p> : null}
-                    <div className="admin-form-actions">
-                      <button className="admin-action-btn" type="button" onClick={handlePaymentSubmit} disabled={actionLoading}>
-                        {paymentForm.id ? "Сохранить" : "Создать"}
-                      </button>
-                      <button
-                        className="admin-action-btn admin-action-btn--ghost"
-                        type="button"
-                        onClick={() =>
-                          setPaymentForm({
-                            id: "",
-                            orderId: "",
-                            method: "CARD",
-                            status: "PENDING",
-                            amount: "",
-                            provider: "",
-                            transactionId: "",
-                            currency: "RUB",
-                            paidAt: "",
-                          })
-                        }
-                        disabled={actionLoading}
-                      >
-                        Очистить
-                      </button>
-                      {paymentForm.id ? (
-                        <button className="admin-action-btn admin-action-btn--ghost" type="button" onClick={handlePaymentDelete} disabled={actionLoading}>
-                          Удалить
-                        </button>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    {payments.map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        className="border border-[#e8e3db] bg-white p-6 text-left"
-                        onClick={() =>
-                          setPaymentForm((prev) => ({
-                            ...prev,
-                            id: item.id,
-                            orderId: item.orderId,
-                            amount: item.amount.replace(/\D/g, ""),
-                          }))
-                        }
-                      >
-                        <p className="text-[12px] uppercase tracking-[3px] text-[#b1ada6] [font-family:Jaldi,'JetBrains_Mono',monospace]">платеж</p>
-                        <h3 className="mt-3 text-[22px] [font-family:'Cormorant_Garamond',serif]">{item.amount}</h3>
-                        <p className="mt-2 text-[14px] text-[#7a7a75]">{item.orderId}</p>
-                      </button>
-                    ))}
-                  </div>
+                        Да
+                      </label>,
+                    ])}
+                  />
+                  {requests.length === 0 ? <SectionMessage title="Пусто" description="Заявок пока нет." /> : null}
                 </div>
               ) : null}
 

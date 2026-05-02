@@ -359,9 +359,15 @@ export function AboutPage({ newsPosts: _newsPosts = [] }: AboutPageProps) {
                 <p className="text-[clamp(10px,0.28vw+9px,13px)] uppercase tracking-[0.18em] text-[#7f8ea3] [font-family:'JetBrains_Mono',monospace]">
                   15 лет на российском рынке
                 </p>
-                <h1 className="mt-8 max-w-[12ch] text-[clamp(32px,8vw,46px)] leading-[0.9] tracking-[-0.035em] [font-family:'Cormorant_Garamond',serif] md:mt-0 md:max-w-[14ch] md:text-[clamp(30px,2.1vw,42px)] md:leading-[0.96] md:tracking-[-0.028em]">
-                  ВостокСтройЭксперт
-                </h1>
+                <img
+                  src="/logo.svg"
+                  alt="Climatrade"
+                  width="320"
+                  height="86"
+                  className="mt-8 h-[64px] w-auto max-w-none self-start object-contain md:mt-0 md:h-[82px]"
+                  loading="lazy"
+                  decoding="async"
+                />
               </div>
               <div className="flex min-h-[116px] items-center rounded-[18px] bg-white px-6 py-6 text-[#12120f] md:min-h-[124px] md:px-8 md:py-6 xl:min-h-[132px] xl:px-14 2xl:px-16">
                 <p className="max-w-[61ch] text-[clamp(24px,1.5vw,40px)] leading-[1.14] tracking-[-0.01em] [font-family:'Cormorant_Garamond',serif]">

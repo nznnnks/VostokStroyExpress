@@ -1,6 +1,8 @@
 import { useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
+import { createRequest } from "../lib/backend-api";
+
 const contactOptions = ["Telegram", "MAX", "WhatsApp"] as const;
 
 const formatPhone = (raw: string) => {
@@ -69,7 +71,7 @@ export function ServiceOrderModal({
     setSent(false);
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const validPhone = /^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/.test(phone);
@@ -86,8 +88,17 @@ export function ServiceOrderModal({
       return;
     }
 
-    setError("");
-    setSent(true);
+    try {
+      await createRequest({
+        name: name.trim(),
+        phone,
+        contactMethods: contacts as Array<"Telegram" | "MAX" | "WhatsApp">,
+      });
+      setError("");
+      setSent(true);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РїСЂР°РІРёС‚СЊ Р·Р°СЏРІРєСѓ.");
+    }
   };
 
   return (

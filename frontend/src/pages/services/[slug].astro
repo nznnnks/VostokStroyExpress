@@ -15,21 +15,6 @@ if (!service) {
   return Astro.redirect("/services");
 }
 
-const serviceGalleryImages = [
-  ...new Set([
-    ...service.detailImages,
-    service.image,
-    "/image/services-card-bg-2026.png",
-    "/image/services-1.png",
-    "/image/services-2.png",
-    "/image/services-3.png",
-    "/image/steps-1.png",
-    "/image/steps-2.png",
-    "/image/steps-3.png",
-    "/image/steps-4.png",
-  ]),
-].slice(0, 4);
-
 const serviceProcessSteps = service.bullets.map((bullet, index) => ({
   title: bullet,
   text:
@@ -41,6 +26,46 @@ const serviceProcessSteps = service.bullets.map((bullet, index) => ({
           ? "Подбираем тихие режимы работы, корректируем сценарии и проверяем комфорт в реальных условиях эксплуатации."
           : "Финально калибруем систему на объекте и передаем понятную логику дальнейшей эксплуатации.",
 }));
+
+const generatedServiceCopy: Record<string, { detailTitle: string; detailText: string }> = {
+  restaurant: {
+    detailTitle: "Проект вентиляции для ресторана",
+    detailText:
+      "Ресторан — это кухня с высокой тепловой нагрузкой, зал с требованиями к комфорту гостей и строгие нормы по воздухообмену. Мы проектируем вентиляцию так, чтобы запахи и избыточное тепло не попадали в зал, а микроклимат оставался стабильным в часы пик.\n\nВ проект включаем расчет приточно-вытяжной системы, балансировку зон (кухня, моечная, санузлы, зал), подбор оборудования и трассировку воздуховодов с учетом архитектуры. Закладываем решения по шуму и вибрациям, чтобы инженерия не конфликтовала с интерьером и акустикой.\n\nРезультат — понятный комплект документации для монтажников и согласований, с прогнозируемыми параметрами и запасом по производительности там, где он действительно нужен.",
+  },
+  "country-house": {
+    detailTitle: "Проект вентиляции для загородного дома",
+    detailText:
+      "В загородном доме важен стабильный воздухообмен круглый год: свежий воздух в жилых комнатах, удаление влаги из санузлов и кухни, отсутствие сквозняков и холодных зон.\n\nМы подбираем систему под планировку и режим проживания: постоянный или сезонный, с учетом теплопотерь, влажности и требований к уровню шума. Проектируем приток, вытяжку, размещение решеток и трасс, чтобы воздух распределялся равномерно.\n\nВ итоге вы получаете проект, который удобно монтировать и обслуживать, а также понятную схему работы системы с настройками для разных сезонов.",
+  },
+  apartment: {
+    detailTitle: "Проект вентиляции для квартиры",
+    detailText:
+      "В квартире вентиляция часто ограничена шахтами и возможностями по размещению оборудования, поэтому ключевое — грамотная компоновка и тихая работа. Мы проектируем решение, которое не съедает полезное пространство и не требует сложного обслуживания.\n\nУчитываем приток в жилые зоны, вытяжку из кухни и санузлов, сценарии работы по времени суток, а также требования к шуму и вибрации. Подбираем оборудование и продумываем трассы так, чтобы монтаж был аккуратным.\n\nРезультат — проект под ваш интерьер и ограничения по месту, с понятной логикой и предсказуемым комфортом.",
+  },
+  warehouse: {
+    detailTitle: "Проект вентиляции для склада",
+    detailText:
+      "Складские помещения требуют надежного воздухообмена с учетом объема, высоты, логистики и типа хранимых материалов. Мы проектируем вентиляцию так, чтобы поддерживать безопасные условия, снижать запыленность и обеспечивать комфорт персонала.\n\nУчитываем зоны погрузки, ворота, теплопритоки, возможные источники загрязнений и требования по кратности воздухообмена. Подбираем оборудование, трассы и точки распределения воздуха так, чтобы система была технологичной и экономичной.\n\nНа выходе — документация для монтажа и последующей настройки с учетом реальных сценариев работы склада.",
+  },
+  mall: {
+    detailTitle: "Проект вентиляции для торгового центра",
+    detailText:
+      "В торговом центре инженерия должна справляться с переменной нагрузкой: трафик посетителей, разные арендаторы, фуд-корты и большие общие пространства. Мы проектируем вентиляцию с управляемыми режимами и понятной зональностью.\n\nУчитываем распределение притока/вытяжки по этажам и зонам, требования по пожарной безопасности, уровню шума и комфортной температуре. Подбираем оборудование с учетом надежности и доступности обслуживания.\n\nРезультат — проект, который масштабируется под арендаторов, обеспечивает комфорт и помогает держать эксплуатационные затраты под контролем.",
+  },
+  "business-center": {
+    detailTitle: "Проект вентиляции для бизнес-центра",
+    detailText:
+      "Для офисных помещений важны комфорт, тишина и гибкость под смену планировок. Мы проектируем вентиляцию с учетом плотности размещения рабочих мест, переговорных и общих зон, чтобы система не требовала постоянных переделок.\n\nЗакладываем решения по управлению режимами, распределению воздуха и шумозащите. Учитываем требования по воздухообмену и согласованиям, подбираем оборудование и трассы так, чтобы монтаж был технологичным.\n\nВ итоге вы получаете проект, который обеспечивает комфорт сотрудников и остается управляемым и экономичным в эксплуатации.",
+  },
+};
+
+const generatedCopy = generatedServiceCopy[slug];
+const detailTitle = generatedCopy?.detailTitle ?? service.detailTitle;
+const detailTextParagraphs = (generatedCopy?.detailText ?? service.detailText)
+  .split("\n\n")
+  .map((paragraph) => paragraph.trim())
+  .filter(Boolean);
 ---
 
 <!doctype html>
@@ -74,16 +99,11 @@ const serviceProcessSteps = service.bullets.map((bullet, index) => ({
           </p>
           <div class="mt-6 grid gap-7 md:mt-6 md:gap-8 xl:grid-cols-[0.9fr_1.1fr] xl:items-center">
             <div class="mx-auto aspect-square w-full max-w-[470px] overflow-hidden rounded-[22px] bg-[#10100f] shadow-[0_18px_44px_rgba(0,0,0,0.14)] 2xl:max-w-[520px]">
-              <img src="/image/services-card-bg-2026.png" alt="" aria-hidden="true" width="1024" height="768" class="h-full w-full object-cover opacity-90" />
+              <img src={service.image || "/image/services-card-bg-2026.png"} alt={service.title} width="1024" height="768" class="h-full w-full object-cover opacity-95" />
             </div>
             <div>
               <h1 class="max-w-[920px] break-words text-[clamp(2.2rem,7vw,4.6rem)] leading-[0.92] [font-family:'Cormorant_Garamond',serif] 2xl:text-[clamp(3rem,4.35vw,6rem)]">{service.heroTitle}</h1>
               <p class="mt-4 max-w-[900px] border-l border-[#b99863]/55 pl-4 text-[clamp(1rem,3.9vw,1.42rem)] leading-[1.5] text-[#555550] md:mt-6 md:pl-6 md:leading-[1.58] 2xl:text-[clamp(1.18rem,1.1vw,1.75rem)]">{service.lead}</p>
-              <div class="mt-5 grid gap-2 md:mt-7 md:gap-3">
-                {service.bullets.map((bullet) => (
-                  <div class="border border-[#e8e3db] bg-[#e8e4dc]/35 px-4 py-3 text-[14px] leading-5 text-[#5f5f5a] md:px-5 md:py-4 md:text-[15px] md:leading-6 2xl:px-6 2xl:py-4 2xl:text-[18px] 2xl:leading-7">{bullet}</div>
-                ))}
-              </div>
               <div class="mt-5 flex flex-wrap gap-3 md:mt-7 md:gap-4">
                 <ServiceOrderModal client:load serviceTitle={service.title} />
                 <a href="/services" class="inline-flex h-12 items-center justify-center border border-[#111] px-6 text-[13px] uppercase tracking-[1.2px] text-[#111] md:h-14 md:px-8 md:text-[14px] md:tracking-[1.5px] [font-family:Jaldi,'JetBrains_Mono',monospace]">
@@ -93,14 +113,14 @@ const serviceProcessSteps = service.bullets.map((bullet, index) => ({
             </div>
           </div>
 
-          <div class="mt-8 grid gap-8 md:mt-10 md:gap-12 xl:grid-cols-[0.9fr_1.1fr] xl:items-stretch xl:gap-32 2xl:gap-40">
-            <div class="service-detail-copy">
+          <div class="mt-8 md:mt-10">
+            <div class="service-detail-copy w-full">
               <p class="text-[13px] uppercase tracking-[2px] text-[#9a9993] [font-family:Jaldi,'JetBrains_Mono',monospace]">Полное описание</p>
-              <h2 class="mt-3 text-[clamp(2rem,6vw,3.35rem)] leading-[1.03] [font-family:'Cormorant_Garamond',serif] 2xl:text-[clamp(2.8rem,3.2vw,4.4rem)]">{service.detailTitle}</h2>
-              <p class="mt-4 max-w-[820px] text-[16px] leading-[1.58] text-[#5f5f5a] md:mt-5 md:text-[18px] md:leading-[1.55] 2xl:text-[22px] 2xl:leading-[1.62]">{service.detailText}</p>
-              <p class="mt-4 max-w-[820px] text-[15px] leading-[1.6] text-[#6a6a65] md:text-[16px] 2xl:text-[19px] 2xl:leading-[1.7]">
+              <h2 class="mt-3 text-[clamp(2rem,6vw,3.35rem)] leading-[1.03] [font-family:'Cormorant_Garamond',serif] 2xl:text-[clamp(2.8rem,3.2vw,4.4rem)]">{detailTitle}</h2>
+              <div class="mt-4 space-y-4 text-[16px] leading-[1.58] text-[#5f5f5a] md:mt-5 md:text-[18px] md:leading-[1.55] 2xl:text-[22px] 2xl:leading-[1.62]">{detailTextParagraphs.map((paragraph) => <p class="max-w-none">{paragraph}</p>)}</div>
+              <!--
                 Работы ведем поэтапно: сначала находим источник шума и вибраций, затем корректируем инженерные узлы, проверяем режимы работы и доводим систему до спокойной эксплуатации на объекте.
-              </p>
+              -->
               <ul class="mt-5 space-y-2 text-[15px] leading-6 text-[#6a6a65] md:mt-6 md:text-[15px] md:leading-6 2xl:space-y-3 2xl:text-[18px] 2xl:leading-8">
                 {service.deliverables.map((item) => (
                   <li class="flex items-start gap-3">
@@ -119,130 +139,10 @@ const serviceProcessSteps = service.bullets.map((bullet, index) => ({
                 ))}
               </div>
             </div>
-            <div class="service-gallery-frame">
-              <div class="service-gallery">
-                {serviceGalleryImages.map((src, index) => (
-                  <div class={`service-gallery-item service-gallery-item-${index + 1}`}>
-                    <img src={src} alt="" aria-hidden="true" width="600" height="600" class="h-full w-full object-cover transition duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]" loading={index === 0 ? "eager" : "lazy"} />
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
         </div>
       </section>
       <SiteFooter />
     </main>
-    <style>
-      .service-gallery-frame {
-        position: relative;
-        width: 100%;
-        min-height: clamp(430px, 56vw, 650px);
-        justify-self: start;
-        align-self: stretch;
-        overflow: hidden;
-        min-width: 0;
-      }
-
-      .service-gallery {
-        position: absolute;
-        inset: 0;
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-        grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
-        gap: 18px;
-        height: auto;
-        max-height: none;
-        min-height: 0;
-        width: 100%;
-        min-width: 0;
-        overflow: hidden;
-        transition:
-          grid-template-columns 700ms cubic-bezier(0.22, 1, 0.36, 1),
-          grid-template-rows 700ms cubic-bezier(0.22, 1, 0.36, 1);
-      }
-
-      .service-gallery:has(.service-gallery-item-1:hover) {
-        grid-template-columns: minmax(0, 1.32fr) minmax(0, 0.68fr);
-        grid-template-rows: minmax(0, 1.32fr) minmax(0, 0.68fr);
-      }
-
-      .service-gallery:has(.service-gallery-item-2:hover) {
-        grid-template-columns: minmax(0, 0.68fr) minmax(0, 1.32fr);
-        grid-template-rows: minmax(0, 1.32fr) minmax(0, 0.68fr);
-      }
-
-      .service-gallery:has(.service-gallery-item-3:hover) {
-        grid-template-columns: minmax(0, 1.32fr) minmax(0, 0.68fr);
-        grid-template-rows: minmax(0, 0.68fr) minmax(0, 1.32fr);
-      }
-
-      .service-gallery:has(.service-gallery-item-4:hover) {
-        grid-template-columns: minmax(0, 0.68fr) minmax(0, 1.32fr);
-        grid-template-rows: minmax(0, 0.68fr) minmax(0, 1.32fr);
-      }
-
-      .service-gallery-item {
-        height: 100%;
-        min-height: 0;
-        min-width: 0;
-        overflow: hidden;
-        border: 1px solid #e8e3db;
-        border-radius: 22px;
-        background: #f7f5f1;
-        box-shadow: 0 16px 34px rgba(0, 0, 0, 0.08);
-      }
-
-      .service-gallery-item:hover img {
-        transform: scale(1.04);
-      }
-
-      .service-gallery-item img {
-        display: block;
-        min-height: 0;
-        min-width: 0;
-      }
-
-      @media (min-width: 768px) {
-        .service-gallery-frame {
-          width: 100%;
-          min-height: clamp(500px, 54vw, 700px);
-        }
-      }
-
-      @media (min-width: 1280px) {
-        .service-gallery-frame {
-          width: min(100%, 680px);
-          min-height: clamp(430px, 31vw, 520px);
-        }
-      }
-
-      @media (max-width: 639px) {
-        .service-gallery-frame {
-          position: static;
-          height: auto;
-          min-height: 0;
-          width: 100%;
-        }
-
-        .service-gallery {
-          position: static;
-          grid-template-rows: none;
-          grid-template-columns: 1fr;
-        }
-
-        .service-gallery:has(.service-gallery-item-1:hover),
-        .service-gallery:has(.service-gallery-item-2:hover),
-        .service-gallery:has(.service-gallery-item-3:hover),
-        .service-gallery:has(.service-gallery-item-4:hover) {
-          grid-template-columns: 1fr;
-          grid-template-rows: none;
-        }
-
-        .service-gallery-item {
-          aspect-ratio: 4 / 3;
-        }
-      }
-    </style>
   </body>
 </html>

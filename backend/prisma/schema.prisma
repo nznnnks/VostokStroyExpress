@@ -395,6 +395,17 @@ model Payment {
   order          Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
 
+model Request {
+  id            String   @id @default(uuid()) @db.Uuid
+  name          String
+  phone         String
+  contactMethods String[] @default([])
+  processed     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  @@index([createdAt])
+}
+
 model News {
   id            String      @id @default(uuid()) @db.Uuid
   slug          String      @unique

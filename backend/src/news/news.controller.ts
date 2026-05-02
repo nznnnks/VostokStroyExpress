@@ -51,13 +51,13 @@ export class NewsController {
   }
 
   @Post()
-  @AdminAccess(UserRole.SUPERADMIN, UserRole.MANAGER, UserRole.EDITOR)
+  @AdminAccess(UserRole.SUPERADMIN)
   create(@Body() dto: CreateNewsDto, @CurrentAdmin() admin: AuthenticatedAdmin) {
     return this.newsService.create(dto, admin.adminId);
   }
 
   @Post('upload-image')
-  @AdminAccess(UserRole.SUPERADMIN, UserRole.MANAGER, UserRole.EDITOR)
+  @AdminAccess(UserRole.SUPERADMIN)
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
@@ -101,13 +101,13 @@ export class NewsController {
   }
 
   @Patch(':id')
-  @AdminAccess(UserRole.SUPERADMIN, UserRole.MANAGER, UserRole.EDITOR)
+  @AdminAccess(UserRole.SUPERADMIN)
   update(@Param('id') id: string, @Body() dto: UpdateNewsDto) {
     return this.newsService.update(id, dto);
   }
 
   @Delete(':id')
-  @AdminAccess(UserRole.SUPERADMIN, UserRole.MANAGER, UserRole.EDITOR)
+  @AdminAccess(UserRole.SUPERADMIN)
   remove(@Param('id') id: string) {
     return this.newsService.remove(id);
   }

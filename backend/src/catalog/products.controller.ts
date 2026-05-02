@@ -65,13 +65,13 @@ export class ProductsController {
   }
 
   @Post()
-  @AdminAccess(UserRole.SUPERADMIN, UserRole.MANAGER)
+  @AdminAccess(UserRole.SUPERADMIN)
   create(@Body() dto: CreateProductDto) {
     return this.productsService.create(dto);
   }
 
   @Post('upload-image')
-  @AdminAccess(UserRole.SUPERADMIN, UserRole.MANAGER)
+  @AdminAccess(UserRole.SUPERADMIN)
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
@@ -115,13 +115,13 @@ export class ProductsController {
   }
 
   @Patch(':id')
-  @AdminAccess(UserRole.SUPERADMIN, UserRole.MANAGER)
+  @AdminAccess(UserRole.SUPERADMIN)
   update(@Param('id') id: string, @Body() dto: UpdateProductDto) {
     return this.productsService.update(id, dto);
   }
 
   @Delete(':id')
-  @AdminAccess(UserRole.SUPERADMIN, UserRole.MANAGER)
+  @AdminAccess(UserRole.SUPERADMIN)
   remove(@Param('id') id: string) {
     return this.productsService.remove(id);
   }

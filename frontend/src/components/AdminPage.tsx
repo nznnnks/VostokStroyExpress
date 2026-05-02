@@ -48,6 +48,16 @@ type AdminPageProps = {
 
 export function AdminPage({ activeKey = "dashboard" }: AdminPageProps) {
   const session = getStoredAuthSession();
+  const navItems = useMemo(() => {
+    const role = session?.type === "admin" ? session.admin?.role : null;
+
+    if (role === "MANAGER") {
+      const forbidden = new Set(["clients", "news", "catalog"]);
+      return adminNav.filter((item) => !forbidden.has(item.key));
+    }
+
+    return adminNav;
+  }, [session]);
   const adminName =
     [session?.admin?.firstName, session?.admin?.lastName].filter(Boolean).join(" ").trim() ||
     session?.admin?.email ||
@@ -181,9 +191,7 @@ export function AdminPage({ activeKey = "dashboard" }: AdminPageProps) {
            <aside className="absolute left-0 top-0 flex h-full w-[85vw] max-w-[340px] flex-col bg-[#211d1a] text-white">
             <div className="border-b border-white/10 px-6 py-8">
               <div className="flex items-center justify-between">
-                <p className="max-w-full text-[20px] italic uppercase leading-none tracking-[-0.04em] text-white [font-family:'Cormorant_Garamond',serif]">
-                  ВОСТОКСТРОЙЭКСПЕРТ
-                </p>
+                <img src="/logo.svg" alt="Climatrade" width="320" height="86" className="h-[48px] w-auto max-w-full object-contain [filter:invert(1)] sm:h-[56px]" />
                 <button type="button" aria-label="Закрыть меню" className="h-10 w-10 border border-white/20 text-white" onClick={() => setNavOpen(false)}>
                   ✕
                 </button>
@@ -193,7 +201,7 @@ export function AdminPage({ activeKey = "dashboard" }: AdminPageProps) {
               </p>
             </div>
              <nav className="flex-1 overflow-auto pt-4">
-              {adminNav.map((item) => {
+              {navItems.map((item) => {
                 const active = item.key === activeKey;
                 return (
                   <div key={item.key}>
@@ -232,16 +240,14 @@ export function AdminPage({ activeKey = "dashboard" }: AdminPageProps) {
       <div className="grid min-h-screen xl:grid-cols-[360px_1fr] 2xl:grid-cols-[400px_1fr]">
         <aside className="hidden min-h-screen flex-col bg-[#211d1a] text-white xl:flex">
           <div className="border-b border-white/10 px-8 py-12">
-            <p className="max-w-full text-[26px] italic uppercase leading-none tracking-[-0.04em] text-white 2xl:text-[30px] [font-family:'Cormorant_Garamond',serif]">
-              ВОСТОКСТРОЙЭКСПЕРТ
-            </p>
+            <img src="/logo.svg" alt="Climatrade" width="420" height="110" className="h-[64px] w-auto max-w-full object-contain [filter:invert(1)] 2xl:h-[74px]" />
             <p className="mt-6 text-[14px] uppercase tracking-[4px] text-white/50 2xl:text-[15px] [font-family:Jaldi,'JetBrains_Mono',monospace]">
               панель администратора
             </p>
           </div>
 
           <nav className="flex-1 overflow-auto pt-6">
-            {adminNav.map((item) => {
+            {navItems.map((item) => {
               const active = item.key === activeKey;
               return (
                 <div key={item.key}>

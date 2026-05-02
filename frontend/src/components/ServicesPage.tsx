@@ -43,15 +43,20 @@ export function ServicesPage({ services }: { services: ServiceView[] }) {
       slug: "business-center",
       titleLines: ["Проект вентиляции", "в\u00A0Бизнес Центре."],
       description:
-        "Готовим проект под офисные планировки и меняющиеся арендаторы: гибкие зоны, понятная автоматика, удобное обслуживание. Выстраиваем комфорт по CO₂ и температуре без переплат по мощности.",
+        "Готовим проект под офисные планировки и меняющихся арендаторов…",
       image: "/image/center.jpg",
     },
   ] as const;
 
-  const resolvedCards = serviceCards.map((card, index) => ({
-    ...card,
-    slug: services[index]?.slug ?? card.slug,
-  }));
+  const serviceBySlug = new Map(services.map((service) => [service.slug, service] as const));
+
+  const resolvedCards = serviceCards.map((card) => {
+    const resolved = serviceBySlug.get(card.slug);
+    return {
+      ...card,
+      image: resolved?.image || card.image,
+    };
+  });
 
   return (
     <main className="flex min-h-screen overflow-x-hidden bg-[#e1ddd6] text-[#111] [font-family:DM_Sans,Manrope,'Liberation_Sans',sans-serif]">
