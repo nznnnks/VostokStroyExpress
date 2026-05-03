@@ -1529,17 +1529,17 @@ export function CatalogPage({
   function renderCategoryTiles() {
     return (
       <section>
-        <div className="relative flex items-center justify-center gap-6">
-          <h2 className="w-full text-center text-[20px] uppercase tracking-[1.2px] md:text-[22px] [font-family:'TT_Firs_Neue',TT_Firs_Neue,DM_Sans,Manrope,sans-serif]">
+        <div className="flex flex-col items-center gap-1 text-center md:relative md:flex-row md:items-center md:justify-center md:gap-6">
+          <h2 className="w-full text-center text-[18px] uppercase tracking-[1.1px] md:text-[22px] [font-family:'TT_Firs_Neue',TT_Firs_Neue,DM_Sans,Manrope,sans-serif]">
             Категории
           </h2>
-          <span className="absolute right-0 top-1/2 -translate-y-1/2 text-[13px] uppercase tracking-[1.3px] text-[#7a7a75] md:text-[14px] [font-family:Jaldi,'JetBrains_Mono',monospace]">
+          <span className="text-[11px] uppercase tracking-[1.2px] text-[#7a7a75] md:absolute md:right-0 md:top-1/2 md:-translate-y-1/2 md:text-[14px] md:tracking-[1.3px] [font-family:Jaldi,'JetBrains_Mono',monospace]">
             Выберите раздел
           </span>
         </div>
 
         <div
-          className="mt-4 grid content-start grid-cols-2 gap-2 auto-rows-[minmax(180px,240px)] sm:grid-cols-2 md:grid-cols-3 md:gap-3 lg:grid-cols-4 2xl:grid-cols-5"
+          className="mt-4 grid content-start grid-cols-2 gap-2 auto-rows-[minmax(220px,300px)] sm:grid-cols-2 md:auto-rows-[minmax(180px,240px)] md:grid-cols-3 md:gap-3 lg:grid-cols-4 2xl:grid-cols-5"
           style={{ gridAutoFlow: "dense" }}
         >
           {categoryCards.map((category, index) => (
@@ -1571,7 +1571,7 @@ export function CatalogPage({
                 )}
               </div>
 
-              <div className="bg-[#ffffff] px-3 pb-4 pt-2 md:px-4 md:pb-4 md:pt-2">
+              <div className="shrink-0 bg-[#ffffff] px-3 pb-4 pt-2 md:px-4 md:pb-4 md:pt-2">
                 <h3 className="text-[13px] font-medium leading-[1.2] md:text-[14px] [font-family:Manrope,system-ui]">{category.name}</h3>
               </div>
             </a>
@@ -1727,7 +1727,7 @@ export function CatalogPage({
             </div>
 
             <div className="flex-1">
-              {isLanding && !hasActiveFilters ? <div className="-mt-14 mb-10 md:-mt-18">{renderCategoryTiles()}</div> : null}
+              {isLanding && !hasActiveFilters ? <div className="mb-10 md:-mt-18">{renderCategoryTiles()}</div> : null}
 
               {isLanding ? (
                 <div className="mb-6 md:mb-8">
