@@ -22,13 +22,25 @@ export default function BrandScroller({
   const [isPointerInside, setIsPointerInside] = useState(false);
   const interactionTimeoutRef = useRef<number | null>(null);
 
-  const duplicated = useMemo(() => {
-    // Repeat enough times so the track is always wider than the viewport
-    // (autoscroll is otherwise invisible on ultra-wide screens).
-    const repeat = Math.max(2, Math.ceil(48 / Math.max(1, logos.length)));
-    const result: BrandLogo[] = [];
-    for (let i = 0; i < repeat; i += 1) result.push(...logos);
-    return [...result, ...result];
+  const { topRow, bottomRow } = useMemo(() => {
+    const sourceTop = logos.filter((_, index) => index % 2 === 0);
+    const sourceBottom = logos.filter((_, index) => index % 2 === 1);
+    const topBase = sourceTop.length > 0 ? sourceTop : logos;
+    const bottomBase = sourceBottom.length > 0 ? sourceBottom : logos;
+
+    // Keep enough cards so autoscroll stays alive on wide screens.
+    const repeat = Math.max(3, Math.ceil(28 / Math.max(1, Math.min(topBase.length, bottomBase.length))));
+
+    const buildRow = (rowLogos: BrandLogo[]) => {
+      const result: BrandLogo[] = [];
+      for (let i = 0; i < repeat; i += 1) result.push(...rowLogos);
+      return [...result, ...result];
+    };
+
+    return {
+      topRow: buildRow(topBase),
+      bottomRow: buildRow(bottomBase),
+    };
   }, [logos]);
 
   useEffect(() => {
@@ -115,14 +127,25 @@ export default function BrandScroller({
       onTouchCancel={() => setIsInteracting(false)}
       aria-label="Бренды"
     >
-      <div ref={trackRef} className="brand-scroller__track">
-        {duplicated.map(({ path, alt }, index) => (
-          <article key={`${path}-${index}`} className={`brand-scroller__item ${itemClassName}`}>
-            <div className="brand-scroller__logo">
-              <img src={path} alt={alt} loading="lazy" decoding="async" className="h-full w-auto max-w-full object-contain object-center" />
-            </div>
-          </article>
-        ))}
+      <div ref={trackRef} className="brand-scroller__stack">
+        <div className="brand-scroller__track brand-scroller__track--top">
+          {topRow.map(({ path, alt }, index) => (
+            <article key={`top-${path}-${index}`} className={`brand-scroller__item ${itemClassName}`}>
+              <div className="brand-scroller__logo">
+                <img src={path} alt={alt} loading="lazy" decoding="async" className="h-full w-auto max-w-full object-contain object-center" />
+              </div>
+            </article>
+          ))}
+        </div>
+        <div className="brand-scroller__track brand-scroller__track--bottom">
+          {bottomRow.map(({ path, alt }, index) => (
+            <article key={`bottom-${path}-${index}`} className={`brand-scroller__item ${itemClassName}`}>
+              <div className="brand-scroller__logo">
+                <img src={path} alt={alt} loading="lazy" decoding="async" className="h-full w-auto max-w-full object-contain object-center" />
+              </div>
+            </article>
+          ))}
+        </div>
       </div>
     </div>
   );
