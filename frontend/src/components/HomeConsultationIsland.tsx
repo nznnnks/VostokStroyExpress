@@ -57,7 +57,7 @@ export default function HomeConsultationIsland() {
             </div>
             <div>
               <p className="text-[clamp(10px,0.38vw+9px,14px)] uppercase tracking-[1.4px] text-[#7a7a75] [font-family:'JetBrains_Mono',monospace]">Запросы</p>
-              <address className="mt-3 not-italic text-[clamp(16px,0.9vw+12px,22px)] leading-[1.65] text-[#111] md:leading-8">climatrade@mail.ru<br />+7 999 200 40 00</address>
+              <address className="mt-3 not-italic text-[clamp(16px,0.9vw+12px,22px)] leading-[1.65] text-[#111] md:leading-8">climatrade@mail.ru<br />+7 989 578 99 29</address>
             </div>
           </div>
           <form
