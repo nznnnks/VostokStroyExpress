@@ -1601,7 +1601,7 @@ export function CatalogPage({
   }
 
   return (
-    <main className="flex min-h-screen flex-col bg-white text-[#111] [font-family:DM_Sans,Manrope,'Liberation_Sans',sans-serif]">
+    <main className="flex min-h-screen flex-col bg-white text-[#111] [font-family:DM_Sans,Manrope,'Liberation_Sans',sans-serif] [overflow-anchor:none]">
       <div className="flex-1">
         <SiteHeader lockScrolledState={filtersOpen || allFiltersOpen} />
 
@@ -2023,7 +2023,7 @@ export function CatalogPage({
                   ref={resultsTopRef}
                   id="catalog-results-top"
                   key={resultsAnimationKey}
-                  className={`catalog-results mt-10 scroll-mt-[220px] grid grid-cols-2 gap-4 md:scroll-mt-[240px] md:gap-8 lg:grid-cols-2 xl:scroll-mt-[250px] ${isLanding ? "xl:grid-cols-4 2xl:grid-cols-4" : "xl:grid-cols-3 2xl:grid-cols-3"} 2xl:gap-10`}
+                  className={`catalog-results mt-10 scroll-mt-[220px] grid grid-cols-2 gap-4 md:scroll-mt-[240px] md:gap-8 lg:grid-cols-2 xl:scroll-mt-[250px] [overflow-anchor:none] ${isLanding ? "xl:grid-cols-4 2xl:grid-cols-4" : "xl:grid-cols-3 2xl:grid-cols-3"} 2xl:gap-10`}
                 >
                   {isFetchingResults && pageProducts.length === 0
                     ? Array.from({ length: itemsPerPage }).map((_, index) => (
